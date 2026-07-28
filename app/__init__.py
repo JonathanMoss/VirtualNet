@@ -4,7 +4,19 @@ from flask_socketio import SocketIO
 from app.database import init_db, db_session
 
 # Create SocketIO instance at module level (to be imported by sockets.py)
-socketio = SocketIO(cors_allowed_origins="*", async_mode='eventlet')
+socketio = SocketIO(
+    cors_allowed_origins="*",
+    async_mode='eventlet',
+    logger=False,
+    engineio_logger=False,
+    engineio_options={
+        'transports': ['websocket', 'polling'],
+        'allow_upgrades': True,
+        'pingInterval': 2,
+        'pingTimeout': 10,
+        'max_http_buffer_size': 2000000
+    }
+)
 
 def create_app():
     app = Flask(__name__, static_folder='../static', static_url_path='/static')

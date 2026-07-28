@@ -467,7 +467,7 @@ def handle_audio_chunk(data):
         return
 
     # Broadcast binary chunk to the room, excluding the sender
-    emit('audio_chunk', data, room=station.net_id, include_self=False)
+    emit('audio_chunk', data, room=station.net_id, include_self=False, binary=True)
 
 
 @socketio.on('sync_log_entry')
