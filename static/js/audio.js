@@ -6,8 +6,11 @@ export class WebAudioEngine {
     this.audioContext = null;
     this.micStream = null;
     this.scriptNode = null;
+    this.workletNode = null;
     this.encoder = null;
     this.decoder = null;
+    this.useOpus = false;
+    this.currentTxId = null;
     
     // Playback scheduling state
     this.nextStartTime = 0;
@@ -27,9 +30,9 @@ export class WebAudioEngine {
   }
 
   async init() {
-    // Lazy-initialize AudioContext on user interaction
+    // Lazy-initialize AudioContext on user interaction with the lowest latency hint.
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    this.audioContext = new AudioContextClass({ sampleRate: 16000 });
+    this.audioContext = new AudioContextClass({ latencyHint: 'interactive' });
     
     // Pre-generate a 1-second looping white noise buffer for static simulation
     this.generateNoiseBuffer();
@@ -98,7 +101,7 @@ export class WebAudioEngine {
       
       this.decoder.configure({
         codec: 'opus',
-        sampleRate: 16000,
+        sampleRate: this.audioContext.sampleRate,
         numberOfChannels: 1
       });
     } else {
@@ -107,12 +110,26 @@ export class WebAudioEngine {
   }
 
   static isMediaCaptureSupported() {
-    if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function') {
-      return true;
+    const getUserMediaAvailable = (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function') ||
+      typeof navigator.getUserMedia === 'function' ||
+      typeof navigator.webkitGetUserMedia === 'function' ||
+      typeof navigator.mozGetUserMedia === 'function';
+
+    return getUserMediaAvailable;
+  }
+
+  static getMediaCaptureSupportReason() {
+    if (!WebAudioEngine.isMediaCaptureSupported()) {
+      return 'Microphone capture is not supported by this browser.';
     }
 
-    const legacyGetUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
-    return typeof legacyGetUserMedia === 'function';
+    const host = window.location.hostname;
+    const isLocalhost = host === 'localhost' || host === '127.0.0.1' || host === '::1';
+    if (!window.isSecureContext && !isLocalhost) {
+      return 'Microphone capture requires a secure origin. Use HTTPS or run the app on localhost/127.0.0.1.';
+    }
+
+    return null;
   }
 
   getUserMedia(constraints) {
@@ -135,40 +152,31 @@ export class WebAudioEngine {
     
     const now = this.audioContext.currentTime;
     
-    // Clear any active dropout intervals
     if (this.dropoutInterval) {
       clearInterval(this.dropoutInterval);
       this.dropoutInterval = null;
     }
 
     if (quality === 'OK') {
-      // Clean signal, standard bandpass, no static
-      this.voiceGainNode.gain.setTargetAtTime(1.0, now, 0.1);
-      this.bandpassFilterNode.frequency.setTargetAtTime(1850, now, 0.1); // center (300Hz-3400Hz approx)
-      this.bandpassFilterNode.Q.setTargetAtTime(1.0, now, 0.1);
-      this.noiseGainNode.gain.setTargetAtTime(0.0, now, 0.1); // No static
+      // Clean signal, minimal filtering, no static
+      this.voiceGainNode.gain.setTargetAtTime(1.0, now, 0.05);
+      this.bandpassFilterNode.frequency.setTargetAtTime(1200, now, 0.05);
+      this.bandpassFilterNode.Q.setTargetAtTime(0.9, now, 0.05);
+      this.noiseGainNode.gain.setTargetAtTime(0.0, now, 0.05);
       
     } else if (quality === 'DIFFICULT') {
-      // Weak signal, slightly thinner bandpass, static hiss active
-      this.voiceGainNode.gain.setTargetAtTime(0.7, now, 0.1);
-      this.bandpassFilterNode.frequency.setTargetAtTime(1700, now, 0.1); // narrower center
-      this.bandpassFilterNode.Q.setTargetAtTime(1.8, now, 0.1);
-      this.noiseGainNode.gain.setTargetAtTime(0.12, now, 0.1); // moderate static
+      // Mildly filtered signal with subtle noise
+      this.voiceGainNode.gain.setTargetAtTime(0.9, now, 0.05);
+      this.bandpassFilterNode.frequency.setTargetAtTime(1200, now, 0.05);
+      this.bandpassFilterNode.Q.setTargetAtTime(1.2, now, 0.05);
+      this.noiseGainNode.gain.setTargetAtTime(0.05, now, 0.05);
       
     } else if (quality === 'UNWORKABLE') {
-      // Terrible link, muffled audio, heavy static, signal dropouts
-      this.voiceGainNode.gain.setTargetAtTime(0.25, now, 0.1);
-      this.bandpassFilterNode.frequency.setTargetAtTime(1000, now, 0.1); // severe bandpass
-      this.bandpassFilterNode.Q.setTargetAtTime(3.0, now, 0.1);
-      this.noiseGainNode.gain.setTargetAtTime(0.45, now, 0.1); // heavy static
-      
-      // Simulate signal fading/dropouts using a random interval modulator
-      this.dropoutInterval = setInterval(() => {
-        const randGain = Math.random() > 0.4 ? (Math.random() * 0.3) : 0.0;
-        if (this.voiceGainNode) {
-          this.voiceGainNode.gain.setTargetAtTime(randGain, this.audioContext.currentTime, 0.05);
-        }
-      }, 300);
+      // Still intelligible, softer radio-style effect without dropouts
+      this.voiceGainNode.gain.setTargetAtTime(0.75, now, 0.05);
+      this.bandpassFilterNode.frequency.setTargetAtTime(900, now, 0.05);
+      this.bandpassFilterNode.Q.setTargetAtTime(1.8, now, 0.05);
+      this.noiseGainNode.gain.setTargetAtTime(0.12, now, 0.05);
     }
   }
 
@@ -226,8 +234,9 @@ export class WebAudioEngine {
     }
 
     try {
-      if (!WebAudioEngine.isMediaCaptureSupported()) {
-        throw new Error('Media capture is not supported by this browser.');
+      const supportError = WebAudioEngine.getMediaCaptureSupportReason();
+      if (supportError) {
+        throw new Error(supportError);
       }
 
       this.micStream = await this.getUserMedia({
@@ -236,21 +245,18 @@ export class WebAudioEngine {
           noiseSuppression: true,
           autoGainControl: true,
           channelCount: 1,
-          sampleRate: 16000
+          sampleRate: this.audioContext.sampleRate
         }
       });
       
       const source = this.audioContext.createMediaStreamSource(this.micStream);
-      
-      // Setup raw PCM script capture node
-      this.scriptNode = this.audioContext.createScriptProcessor(2048, 1, 1);
-      
-      // Setup WebCodecs encoder if available
-      const useOpus = typeof AudioEncoder !== 'undefined';
-      if (useOpus) {
+      this.currentTxId = txId;
+
+      // Setup WebCodecs encoder if available for lower bandwidth and better quality.
+      this.useOpus = typeof AudioEncoder !== 'undefined';
+      if (this.useOpus) {
         this.encoder = new AudioEncoder({
           output: (chunk) => {
-            // Emits binary packet over SocketIO: [4 bytes transmissionId] + [compressed payload]
             const audioData = new Uint8Array(chunk.byteLength);
             chunk.copyTo(audioData);
             this.sendAudioPacket(txId, audioData);
@@ -260,44 +266,39 @@ export class WebAudioEngine {
         
         this.encoder.configure({
           codec: 'opus',
-          sampleRate: 16000,
+          sampleRate: this.audioContext.sampleRate,
           numberOfChannels: 1,
           bitrate: 24000
         });
       }
 
-      let timestampUs = 0;
-      this.scriptNode.onaudioprocess = (e) => {
-        const inputData = e.inputBuffer.getChannelData(0);
-        
-        if (useOpus && this.encoder) {
-          // Wrap raw floats into AudioData object for WebCodecs
-          const audioFrame = new AudioData({
-            format: 'f32-planar',
-            sampleRate: 16000,
-            numberOfFrames: inputData.length,
-            numberOfChannels: 1,
-            timestamp: timestampUs,
-            data: inputData
-          });
-          
-          this.encoder.encode(audioFrame);
-          audioFrame.close();
-          timestampUs += (inputData.length / 16000) * 1000000;
-        } else {
-          // Fallback to raw PCM packet sending (16-bit Int format to save bytes)
-          const pcm16 = new Int16Array(inputData.length);
-          for (let i = 0; i < inputData.length; i++) {
-            // clamp floats to int16 range
-            const s = Math.max(-1, Math.min(1, inputData[i]));
-            pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-          }
-          this.sendAudioPacket(txId, new Uint8Array(pcm16.buffer));
-        }
-      };
-
-      source.connect(this.scriptNode);
-      this.scriptNode.connect(this.audioContext.destination);
+      // Prefer AudioWorklet where available for lower latency capture.
+      if (this.audioContext.audioWorklet && typeof AudioWorkletNode !== 'undefined') {
+        await this.audioContext.audioWorklet.addModule(new URL('./audio-worklet-processor.js', import.meta.url));
+        this.workletNode = new AudioWorkletNode(this.audioContext, 'pcm-processor', {
+          numberOfInputs: 1,
+          numberOfOutputs: 0,
+          channelCount: 1
+        });
+        this.workletNode.port.onmessage = (event) => {
+          const floatData = new Float32Array(event.data);
+          this.processCapturedAudio(floatData);
+        };
+        source.connect(this.workletNode);
+      } else {
+        this.scriptNode = this.audioContext.createScriptProcessor(128, 1, 1);
+        let timestampUs = 0;
+        this.scriptNode.onaudioprocess = (e) => {
+          const inputData = e.inputBuffer.getChannelData(0);
+          this.processCapturedAudio(inputData, timestampUs);
+          timestampUs += (inputData.length / this.audioContext.sampleRate) * 1000000;
+        };
+        source.connect(this.scriptNode);
+        const dummyGain = this.audioContext.createGain();
+        dummyGain.gain.setValueAtTime(0, this.audioContext.currentTime);
+        this.scriptNode.connect(dummyGain);
+        dummyGain.connect(this.audioContext.destination);
+      }
       
     } catch (e) {
       console.error("Failed to start microphone recording:", e);
@@ -310,6 +311,11 @@ export class WebAudioEngine {
       this.scriptNode.disconnect();
       this.scriptNode = null;
     }
+    if (this.workletNode) {
+      this.workletNode.port.close();
+      this.workletNode.disconnect();
+      this.workletNode = null;
+    }
     if (this.micStream) {
       this.micStream.getTracks().forEach(track => track.stop());
       this.micStream = null;
@@ -317,6 +323,30 @@ export class WebAudioEngine {
     if (this.encoder) {
       this.encoder.close();
       this.encoder = null;
+    }
+    this.currentTxId = null;
+  }
+
+  processCapturedAudio(inputData, timestampUs = 0) {
+    const timestamp = timestampUs || Math.round(this.audioContext.currentTime * 1000000);
+    if (this.useOpus && this.encoder) {
+      const audioFrame = new AudioData({
+        format: 'f32-planar',
+        sampleRate: this.audioContext.sampleRate,
+        numberOfFrames: inputData.length,
+        numberOfChannels: 1,
+        timestamp,
+        data: inputData
+      });
+      this.encoder.encode(audioFrame);
+      audioFrame.close();
+    } else if (this.currentTxId) {
+      const pcm16 = new Int16Array(inputData.length);
+      for (let i = 0; i < inputData.length; i++) {
+        const s = Math.max(-1, Math.min(1, inputData[i]));
+        pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      }
+      this.sendAudioPacket(this.currentTxId, new Uint8Array(pcm16.buffer));
     }
   }
 
@@ -351,8 +381,16 @@ export class WebAudioEngine {
       this.audioContext.resume();
     }
 
+    let packet = binaryData;
+    if (packet instanceof ArrayBuffer) {
+      packet = new Uint8Array(packet);
+    }
+    if (!(packet instanceof Uint8Array)) {
+      packet = new Uint8Array(packet);
+    }
+
     // Split packet [4 bytes header] + payload
-    const payload = binaryData.slice(4);
+    const payload = packet.subarray(4);
 
     const useOpus = typeof AudioDecoder !== 'undefined' && this.decoder;
     if (useOpus) {
@@ -387,7 +425,7 @@ export class WebAudioEngine {
   }
 
   schedulePlaybackBuffer(floatArray) {
-    const audioBuf = this.audioContext.createBuffer(1, floatArray.length, 16000);
+    const audioBuf = this.audioContext.createBuffer(1, floatArray.length, this.audioContext.sampleRate);
     audioBuf.getChannelData(0).set(floatArray);
 
     const source = this.audioContext.createBufferSource();
@@ -398,8 +436,13 @@ export class WebAudioEngine {
 
     // Schedule playback at next smooth start time
     const now = this.audioContext.currentTime;
-    if (this.nextStartTime < now) {
-      this.nextStartTime = now;
+    const minLeadTime = 0.03;
+    const maxLeadTime = 0.2;
+
+    if (this.nextStartTime < now + minLeadTime) {
+      this.nextStartTime = now + minLeadTime;
+    } else if (this.nextStartTime > now + maxLeadTime) {
+      this.nextStartTime = now + minLeadTime;
     }
 
     source.start(this.nextStartTime);

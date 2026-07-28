@@ -97,13 +97,17 @@ class VirtualNetApp {
 
   setupPTTHandlers() {
     const pttBtn = document.getElementById('ptt-btn');
-    const mediaCaptureSupported = WebAudioEngine.isMediaCaptureSupported();
+    const supportReason = WebAudioEngine.getMediaCaptureSupportReason();
+    const supportWarning = document.getElementById('audio-support-warning');
+    const mediaCaptureSupported = !supportReason;
 
-    if (!mediaCaptureSupported) {
+    if (supportReason) {
       pttBtn.disabled = true;
       const instruction = document.getElementById('ptt-instruction');
-      instruction.textContent = 'Microphone capture unsupported by this browser.';
+      instruction.textContent = 'Audio unavailable for this session.';
       instruction.style.color = 'var(--color-tactical-amber)';
+      supportWarning.textContent = supportReason;
+      supportWarning.classList.remove('d-none');
     }
 
     // Trigger audio initialization on click
@@ -137,19 +141,21 @@ class VirtualNetApp {
     });
 
     pttBtn.addEventListener('mouseup', () => {
-      if (!mediaCaptureSupported) return;
+      if (this.isTransmitting || !mediaCaptureSupported) return;
       this.triggerPTTOn();
     });
 
     // Mobile touch controls (prevents zooming/scrolling on hot key)
     pttBtn.addEventListener('touchstart', async (e) => {
       e.preventDefault();
+      if (!mediaCaptureSupported) return;
       await startAudioContext();
       this.triggerPTTOff();
     });
 
     pttBtn.addEventListener('touchend', (e) => {
       e.preventDefault();
+      if (!mediaCaptureSupported) return;
       this.triggerPTTOn();
     });
   }
@@ -172,6 +178,19 @@ class VirtualNetApp {
     
     // Play end clicks tail
     this.audioEngine.playPTTEndSquelchTail();
+    this.updatePTTCardState('IDLE');
+  }
+
+  setAudioUnavailable(reason) {
+    const pttBtn = document.getElementById('ptt-btn');
+    const instruction = document.getElementById('ptt-instruction');
+    const supportWarning = document.getElementById('audio-support-warning');
+
+    pttBtn.disabled = true;
+    instruction.textContent = 'Audio unavailable for this session.';
+    instruction.style.color = 'var(--color-tactical-amber)';
+    supportWarning.textContent = reason;
+    supportWarning.classList.remove('d-none');
   }
 
   handleCreateResponse(data) {
@@ -273,7 +292,9 @@ class VirtualNetApp {
         this.audioEngine.playPTTStartChirp();
       }).catch((e) => {
         console.error('PTT start recording failed:', e);
+        this.setAudioUnavailable(e.message || 'Unable to access microphone.');
         this.triggerPTTOn(); // revert if mic permissions fail
+        this.updatePTTCardState('IDLE');
       });
     } else {
       // Access denied (Channel busy)

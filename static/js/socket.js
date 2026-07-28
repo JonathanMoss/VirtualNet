@@ -7,8 +7,9 @@ export class SocketManager {
   }
 
   connect() {
-    // Establish connection to host domain
-    this.socket = io();
+    // Establish connection to host domain using native websocket transport for lower latency.
+    this.socket = io({ transports: ['websocket'] });
+    this.socket.binaryType = 'arraybuffer';
 
     // Register event listeners
     this.socket.on('connect', () => {
@@ -86,7 +87,7 @@ export class SocketManager {
 
   sendAudioChunk(binaryData) {
     if (this.socket && this.socket.connected) {
-      this.socket.emit('audio_chunk', binaryData);
+      this.socket.volatile.emit('audio_chunk', binaryData);
     }
   }
 
