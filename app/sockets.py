@@ -209,6 +209,10 @@ def handle_join_net(data):
     nickname = data.get('nickname', '')
     role = data.get('role', 'SUB_STATION')  # CONTROL/INSTRUCTOR or SUB_STATION
 
+    if nickname.upper() in ["INSTRUCTOR", "CONTROL"]:
+        role = "CONTROL"
+
+
     session = db.query(NetSession).filter_by(pin=pin).first()
     if not session:
         emit('join_response', {"success": False, "reason": f"Invalid Net PIN '{pin}'."})
@@ -265,7 +269,12 @@ def handle_join_net(data):
         "stationId": station.id,
         "status": station.status,
         "callSign": station.call_sign,
-        "role": station.role
+        "role": station.role,
+        "netId": session.id,
+        "netName": session.name,
+        "netState": session.net_state,
+        "callsignIndicator": session.callsign_indicator,
+        "pin": session.pin
     })
 
     # Broadcast roster update (only active/assigned stations will be visible to students)
