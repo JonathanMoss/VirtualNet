@@ -256,7 +256,8 @@ class VirtualNetApp {
       this.audioEngine.startRecording(data.transmissionId).then(() => {
         // Synthesizer clicked beep
         this.audioEngine.playPTTStartChirp();
-      }).catch(() => {
+      }).catch((e) => {
+        console.error('PTT start recording failed:', e);
         this.triggerPTTOn(); // revert if mic permissions fail
       });
     } else {

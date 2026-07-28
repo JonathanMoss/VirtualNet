@@ -106,6 +106,21 @@ export class WebAudioEngine {
     }
   }
 
+  getUserMedia(constraints) {
+    if (navigator.mediaDevices && typeof navigator.mediaDevices.getUserMedia === 'function') {
+      return navigator.mediaDevices.getUserMedia(constraints);
+    }
+
+    const legacyGetUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia;
+    if (typeof legacyGetUserMedia === 'function') {
+      return new Promise((resolve, reject) => {
+        legacyGetUserMedia.call(navigator, resolve, reject, constraints);
+      });
+    }
+
+    return Promise.reject(new Error('Media capture is not supported by this browser.')); 
+  }
+
   updateSignalQualityEffects(quality) {
     if (!this.audioContext) return;
     
@@ -202,7 +217,7 @@ export class WebAudioEngine {
     }
 
     try {
-      this.micStream = await navigator.mediaDevices.getUserMedia({
+      this.micStream = await this.getUserMedia({
         audio: {
           echoCancellation: true,
           noiseSuppression: true,
