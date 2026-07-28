@@ -7,13 +7,36 @@ export class SocketManager {
   }
 
   connect() {
-    // Establish connection to host domain using native websocket transport for lower latency.
-    this.socket = io({ transports: ['websocket'] });
+    // Establish a Socket.IO connection using polling first, then upgrade to websocket if available.
+    const url = window.location.origin;
+    this.socket = io(url, {
+      path: '/socket.io',
+      transports: ['polling', 'websocket'],
+      upgrade: true,
+      secure: url.startsWith('https:'),
+      pingInterval: 2000,
+      pingTimeout: 5000
+    });
     this.socket.binaryType = 'arraybuffer';
 
     // Register event listeners
     this.socket.on('connect', () => {
-      console.log("WebSocket connected to server.");
+      console.log("Socket.IO connected to server.");
+    });
+    this.socket.on('connect_error', (err) => {
+      console.error('Socket.IO connect_error:', err);
+    });
+    this.socket.on('connect_timeout', () => {
+      console.warn('Socket.IO connection timed out');
+    });
+    this.socket.on('reconnect_error', (err) => {
+      console.error('Socket.IO reconnect_error:', err);
+    });
+    this.socket.on('reconnect_failed', () => {
+      console.error('Socket.IO reconnect failed');
+    });
+    this.socket.on('disconnect', (reason) => {
+      console.warn('Socket.IO disconnected:', reason);
     });
 
     this.socket.on('join_response', (data) => {

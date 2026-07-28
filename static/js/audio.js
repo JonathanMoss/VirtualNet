@@ -11,6 +11,11 @@ export class WebAudioEngine {
     this.decoder = null;
     this.useOpus = false;
     this.currentTxId = null;
+    this.packetSequence = 0;
+    this.receiveQueue = [];
+    this.receiveTimer = null;
+    this.receiveLatencyMs = 55;
+    this.expectedReceiveSequence = 0;
     
     // Playback scheduling state
     this.nextStartTime = 0;
@@ -18,7 +23,10 @@ export class WebAudioEngine {
     
     // Audio effects nodes
     this.voiceGainNode = null;
+    this.bypassGainNode = null;
+    this.compressorNode = null;
     this.bandpassFilterNode = null;
+    this.bandpassGainNode = null;
     this.noiseGainNode = null;
     this.noiseSourceNode = null;
     
@@ -58,31 +66,49 @@ export class WebAudioEngine {
     this.voiceGainNode = this.audioContext.createGain();
     this.voiceGainNode.gain.setValueAtTime(1.0, this.audioContext.currentTime);
 
-    // 2. Bandpass filter to thins voice frequency
+    // 2. Bypass path for clean audio quality when network conditions are good.
+    this.bypassGainNode = this.audioContext.createGain();
+    this.bypassGainNode.gain.setValueAtTime(1.0, this.audioContext.currentTime);
+
+    // 3. Bandpass filter to keep radio-quality fallback available.
     this.bandpassFilterNode = this.audioContext.createBiquadFilter();
     this.bandpassFilterNode.type = 'bandpass';
-    this.bandpassFilterNode.frequency.setValueAtTime(1850, this.audioContext.currentTime); // Center
+    this.bandpassFilterNode.frequency.setValueAtTime(1850, this.audioContext.currentTime);
     this.bandpassFilterNode.Q.setValueAtTime(1.0, this.audioContext.currentTime);
+    this.bandpassGainNode = this.audioContext.createGain();
+    this.bandpassGainNode.gain.setValueAtTime(0.0, this.audioContext.currentTime);
 
-    // 3. Noise node mixes white noise static hiss
+    // 4. Noise node mixes white noise static hiss
     this.noiseGainNode = this.audioContext.createGain();
     this.noiseGainNode.gain.setValueAtTime(0.0, this.audioContext.currentTime);
+
+    // Compressor for clean voice clarity on bypass path
+    this.compressorNode = this.audioContext.createDynamicsCompressor();
+    this.compressorNode.threshold.setValueAtTime(-24, this.audioContext.currentTime);
+    this.compressorNode.knee.setValueAtTime(30, this.audioContext.currentTime);
+    this.compressorNode.ratio.setValueAtTime(4, this.audioContext.currentTime);
+    this.compressorNode.attack.setValueAtTime(0.003, this.audioContext.currentTime);
+    this.compressorNode.release.setValueAtTime(0.25, this.audioContext.currentTime);
 
     // Play continuously static loop
     this.noiseSourceNode = this.audioContext.createBufferSource();
     this.noiseSourceNode.buffer = this.whiteNoiseBuffer;
     this.noiseSourceNode.loop = true;
-    
+
     // Connect static noise to output
     this.noiseSourceNode.connect(this.noiseGainNode);
-    
-    // Voice goes through bandpass and gain, then mixes with static noise
+
+    // Voice goes through both a clean bypass path and a filtered radio-style path.
+    this.voiceGainNode.connect(this.bypassGainNode);
     this.voiceGainNode.connect(this.bandpassFilterNode);
-    
-    // Connect both voice and noise output straight to audio destination (speakers)
-    this.bandpassFilterNode.connect(this.audioContext.destination);
+
+    // Connect both voice and noise output to destination
+    this.bypassGainNode.connect(this.compressorNode);
+    this.compressorNode.connect(this.audioContext.destination);
+    this.bandpassFilterNode.connect(this.bandpassGainNode);
+    this.bandpassGainNode.connect(this.audioContext.destination);
     this.noiseGainNode.connect(this.audioContext.destination);
-    
+
     // Start static noise source running
     this.noiseSourceNode.start(0);
   }
@@ -158,25 +184,28 @@ export class WebAudioEngine {
     }
 
     if (quality === 'OK') {
-      // Clean signal, minimal filtering, no static
-      this.voiceGainNode.gain.setTargetAtTime(1.0, now, 0.05);
-      this.bandpassFilterNode.frequency.setTargetAtTime(1200, now, 0.05);
-      this.bandpassFilterNode.Q.setTargetAtTime(0.9, now, 0.05);
+      // Clean signal, bypass radio-style filtering, no static.
+      this.bypassGainNode.gain.setTargetAtTime(1.0, now, 0.05);
+      this.bandpassGainNode.gain.setTargetAtTime(0.0, now, 0.05);
       this.noiseGainNode.gain.setTargetAtTime(0.0, now, 0.05);
-      
+      this.bandpassFilterNode.frequency.setTargetAtTime(this.audioContext.sampleRate / 2, now, 0.05);
+      this.bandpassFilterNode.Q.setTargetAtTime(0.7, now, 0.05);
+
     } else if (quality === 'DIFFICULT') {
-      // Mildly filtered signal with subtle noise
-      this.voiceGainNode.gain.setTargetAtTime(0.9, now, 0.05);
-      this.bandpassFilterNode.frequency.setTargetAtTime(1200, now, 0.05);
-      this.bandpassFilterNode.Q.setTargetAtTime(1.2, now, 0.05);
-      this.noiseGainNode.gain.setTargetAtTime(0.05, now, 0.05);
-      
+      // Mildly filtered signal with subtle noise.
+      this.bypassGainNode.gain.setTargetAtTime(0.0, now, 0.05);
+      this.bandpassGainNode.gain.setTargetAtTime(0.85, now, 0.05);
+      this.noiseGainNode.gain.setTargetAtTime(0.045, now, 0.05);
+      this.bandpassFilterNode.frequency.setTargetAtTime(1800, now, 0.05);
+      this.bandpassFilterNode.Q.setTargetAtTime(1.1, now, 0.05);
+
     } else if (quality === 'UNWORKABLE') {
-      // Still intelligible, softer radio-style effect without dropouts
-      this.voiceGainNode.gain.setTargetAtTime(0.75, now, 0.05);
-      this.bandpassFilterNode.frequency.setTargetAtTime(900, now, 0.05);
-      this.bandpassFilterNode.Q.setTargetAtTime(1.8, now, 0.05);
+      // Radio-style effect with heavier filtering and hiss.
+      this.bypassGainNode.gain.setTargetAtTime(0.0, now, 0.05);
+      this.bandpassGainNode.gain.setTargetAtTime(1.0, now, 0.05);
       this.noiseGainNode.gain.setTargetAtTime(0.12, now, 0.05);
+      this.bandpassFilterNode.frequency.setTargetAtTime(1200, now, 0.05);
+      this.bandpassFilterNode.Q.setTargetAtTime(1.8, now, 0.05);
     }
   }
 
@@ -241,16 +270,20 @@ export class WebAudioEngine {
 
       this.micStream = await this.getUserMedia({
         audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
           channelCount: 1,
-          sampleRate: this.audioContext.sampleRate
+          sampleRate: this.audioContext.sampleRate,
+          sampleSize: 16
         }
       });
       
       const source = this.audioContext.createMediaStreamSource(this.micStream);
       this.currentTxId = txId;
+      this.packetSequence = 0;
+      this.expectedReceiveSequence = 0;
+      this.receiveQueue = [];
 
       // Setup WebCodecs encoder if available for lower bandwidth and better quality.
       this.useOpus = typeof AudioEncoder !== 'undefined';
@@ -268,7 +301,8 @@ export class WebAudioEngine {
           codec: 'opus',
           sampleRate: this.audioContext.sampleRate,
           numberOfChannels: 1,
-          bitrate: 24000
+          bitrate: 32000,
+          bitrateMode: 'constant'
         });
       }
 
@@ -286,7 +320,7 @@ export class WebAudioEngine {
         };
         source.connect(this.workletNode);
       } else {
-        this.scriptNode = this.audioContext.createScriptProcessor(128, 1, 1);
+        this.scriptNode = this.audioContext.createScriptProcessor(64, 1, 1);
         let timestampUs = 0;
         this.scriptNode.onaudioprocess = (e) => {
           const inputData = e.inputBuffer.getChannelData(0);
@@ -351,18 +385,60 @@ export class WebAudioEngine {
   }
 
   sendAudioPacket(txId, payloadBytes) {
-    // Generate binary buffer: [4 bytes tx hash] + payload
-    // We convert the string UUID to a simple 4-byte hash string
+    // Generate binary buffer: [4 bytes tx hash] + [4 bytes sequence] + payload
     const txHash = this.hashCode(txId);
-    
-    const buffer = new Uint8Array(4 + payloadBytes.length);
+    const sequence = this.packetSequence++ >>> 0;
+
+    const buffer = new Uint8Array(8 + payloadBytes.length);
     buffer[0] = (txHash >> 24) & 0xFF;
     buffer[1] = (txHash >> 16) & 0xFF;
     buffer[2] = (txHash >> 8) & 0xFF;
     buffer[3] = txHash & 0xFF;
-    buffer.set(payloadBytes, 4);
+    buffer[4] = (sequence >> 24) & 0xFF;
+    buffer[5] = (sequence >> 16) & 0xFF;
+    buffer[6] = (sequence >> 8) & 0xFF;
+    buffer[7] = sequence & 0xFF;
+    buffer.set(payloadBytes, 8);
 
     this.app.socketManager.sendAudioChunk(buffer);
+  }
+
+  startReceiveScheduler() {
+    if (this.receiveTimer) return;
+    this.receiveTimer = setInterval(() => this.tryFlushReceiveQueue(), 10);
+  }
+
+  stopReceiveScheduler() {
+    if (this.receiveTimer) {
+      clearInterval(this.receiveTimer);
+      this.receiveTimer = null;
+    }
+  }
+
+  tryFlushReceiveQueue() {
+    if (!this.receiveQueue.length) {
+      this.stopReceiveScheduler();
+      return;
+    }
+
+    const now = performance.now();
+    const first = this.receiveQueue[0];
+    const isExpected = first.seq === this.expectedReceiveSequence;
+    const isLate = now - first.arrivedAt > 120;
+    const hasEnoughBuffered = this.receiveQueue.length >= 4;
+
+    if (!isExpected && !isLate && !hasEnoughBuffered) {
+      return;
+    }
+
+    if (first.seq > this.expectedReceiveSequence && (isLate || hasEnoughBuffered)) {
+      // Skip a missing packet if it has been delayed too long or enough audio is buffered.
+      this.expectedReceiveSequence = first.seq;
+    }
+
+    const frame = this.receiveQueue.shift();
+    this.schedulePlaybackBuffer(frame.float32);
+    this.expectedReceiveSequence = frame.seq + 1;
   }
 
   hashCode(str) {
@@ -389,27 +465,53 @@ export class WebAudioEngine {
       packet = new Uint8Array(packet);
     }
 
-    // Split packet [4 bytes header] + payload
-    const payload = packet.subarray(4);
+    if (packet.length <= 8) {
+      return;
+    }
+
+    const seq = (packet[4] << 24) | (packet[5] << 16) | (packet[6] << 8) | packet[7];
+    const payload = packet.subarray(8);
+    const arrivedAt = performance.now();
 
     const useOpus = typeof AudioDecoder !== 'undefined' && this.decoder;
+    let float32;
     if (useOpus) {
-      // Decode Opus packet
-      const chunk = new EncodedAudioChunk({
-        type: 'key',
-        timestamp: this.audioContext.currentTime * 1000000,
-        data: payload
-      });
-      this.decoder.decode(chunk);
-    } else {
-      // Decode raw PCM 16-bit
-      const pcm16 = new Int16Array(payload.buffer, payload.byteOffset, payload.length / 2);
-      const float32 = new Float32Array(pcm16.length);
-      for (let i = 0; i < pcm16.length; i++) {
-        float32[i] = pcm16[i] / 32768.0;
+      try {
+        const chunk = new EncodedAudioChunk({
+          type: 'key',
+          timestamp: this.audioContext.currentTime * 1000000,
+          data: payload
+        });
+        this.decoder.decode(chunk);
+        return;
+      } catch (e) {
+        console.warn('WebCodecs decode failed, falling back to raw PCM', e);
       }
-      this.schedulePlaybackBuffer(float32);
     }
+
+    const pcm16 = new Int16Array(payload.buffer, payload.byteOffset, payload.length / 2);
+    float32 = new Float32Array(pcm16.length);
+    for (let i = 0; i < pcm16.length; i++) {
+      float32[i] = pcm16[i] / 32768.0;
+    }
+
+    if (this.expectedReceiveSequence === 0) {
+      this.expectedReceiveSequence = seq;
+    }
+
+    if (seq < this.expectedReceiveSequence) {
+      return;
+    }
+
+    const duplicate = this.receiveQueue.some(frame => frame.seq === seq);
+    if (duplicate) {
+      return;
+    }
+
+    this.receiveQueue.push({ seq, float32, arrivedAt });
+    this.receiveQueue.sort((a, b) => a.seq - b.seq);
+    this.startReceiveScheduler();
+    this.tryFlushReceiveQueue();
   }
 
   handleDecodedAudio(audioData) {
@@ -434,10 +536,10 @@ export class WebAudioEngine {
     // Route playback node through our signal quality effects chain!
     source.connect(this.voiceGainNode);
 
-    // Schedule playback at next smooth start time
+    // Schedule playback with minimal buffer lead time for lower latency.
     const now = this.audioContext.currentTime;
-    const minLeadTime = 0.03;
-    const maxLeadTime = 0.2;
+    const minLeadTime = 0.015;
+    const maxLeadTime = 0.08;
 
     if (this.nextStartTime < now + minLeadTime) {
       this.nextStartTime = now + minLeadTime;
@@ -446,7 +548,7 @@ export class WebAudioEngine {
     }
 
     source.start(this.nextStartTime);
-    this.nextStartTime += audioBuf.duration;
+    this.nextStartTime = Math.max(this.nextStartTime + audioBuf.duration, now + minLeadTime);
   }
 
   clearPlaybackQueue() {
