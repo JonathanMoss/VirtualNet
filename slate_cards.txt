@@ -1,0 +1,2100 @@
+COMMANDER’S CARD
+
+Name
+Zap No
+Blood Gp
+Med (allergies etc)
+Remarks
+
+AC 71936
+
+AUTHORITY: LWC - JUN 25
+
+2IC’S CARD
+Name
+Wpn Ser No
+Ammo
+ECM
+Specialist Kit
+
+AC71936
+AC
+71936
+
+AUTHORITY: LWC - JUN
+FEB 25
+21
+
+WARNING ORDER (SKETCH ON REVERSE)
+Situation
+Ground OCOKA
+Enemy
+
+Friendly Forces
+
+Probable Mission
+
+Own Main Effort
+Timings
+H Hr
+NMB
+Other
+
+O Group
+Location
+Time
+
+CSS
+Changes to SOPs
+Med
+Other
+
+Acknowledge
+AC
+71936
+AC71936
+
+AUTHORITY: DLW
+LWC -- MAR
+JUN 25
+AUTHORITY:
+15
+
+Sketch/Notes
+
+AC 71936
+
+AUTHORITY: LWC - JUN 25
+
+QUICK BATTLE ORDERS (QBOs)
+
+Used by Sect Comds immediately before launching a section attack.
+Planned and delivered within <2 minutes.
+
+Prelims
+Task ORG Ground
+
+CFT:
+DFT:
+Ground Overview (En Pos, Ref Points):
+
+Situation
+
+Str:
+
+Enemy F
+
+Wpns:
+Arcs:
+Tactics:
+Type of Pos:
+Intentions:
+
+My Mission
+Execution (Concept of Ops)
+Explain task (PoF, LBP, LOE):
+
+Subordinate Msns:
+
+COORD Instructions
+Timings:
+AOs (Stoppage, Flank Interference, etc):
+Control Measures (R/NLFs, PACE):
+
+Service Support
+SOP Variations:
+
+Command and Signals
+ALT Comd:
+Codewords:
+
+Questions?
+SUMMARY inc H hr (Use Sketch Card)
+AC 71936
+
+AUTHORITY: LWC - JUN 25
+
+QUICK ATTACK ORDERS SLATE (QAOS)
+
+Used to regain the initiative when an unknown or unexpected situation occurs during a
+pre-planned tactical action. 5-15 minutes planning and delivered over radio.
+This card is for reacting to contact. Orders must have been delivered previously.
+
+01
+
+Ground
+(overlook ground,
+use a sketch or
+UAS feed)
+
+EnF Position:
+Assault Route:
+PoF:
+LBP / Break in Point:
+Strength
+
+02
+
+Enemy
+
+03
+
+ORBAT
+
+04
+
+SoM
+
+Wpns & Arcs
+(direct, indirect,
+near surface)
+
+Type of Pos
+
+FSp / Assault / Reserve / PoF / Lead Scout / UAS Operator
+
+Significant Phases
+
+Action
+
+Action On
+
+FSP
+
+Unable to Fire:
+
+06
+
+POF
+
+Contact:
+
+07
+
+Break in Point /
+Last Bound
+
+Cas / stoppage:
+
+08
+
+Clearance of Obj
+
+09
+
+Assault CM’s
+
+10
+
+LOE
+
+11
+
+Check / Switch
+Fire Sig
+
+Bowman / PRR / Flash Cards / Hand Sig / Smoke / Mini Flare / IR Flash /
+
+12
+
+FSCM
+
+Restricted Fire Lines / No fire Lines / Check Fires / Switch Fires
+
+13
+
+Combat ID
+
+Mini Flare / Panel / IR Flash / IR Strobe / LLM / Cyalume / Visual
+
+14
+
+Questions?
+
+15
+
+Summary
+
+16
+
+H Hr
+
+05
+
+(External is
+available)
+
+AC 71936
+
+Depth Contact:
+
+LoD:
+L Bdry:
+
+IR Strobe / LLM / Voice
+
+AXIS:
+R Bdry:
+
+P:
+
+A:
+
+C:
+
+E:
+
+AUTHORITY: LWC - JUN 25
+
+RANGE CARD
+No
+
+Grid ref
+
+1
+
+Bearing pt
+
+Tgt Description Range
+or DF No
+m
+
+Line
+switch
+mil (m)
+
+Angle
+of sight
+mil (m)
+
+QE
+mil
+(m)
+
+Own
+position
+GR
+Aiming point
+
+2
+
+GR
+
+3
+
+Bearing
+
+4
+
+Description
+
+5
+
+Range
+
+6
+
+Made out by
+
+7
+
+Date
+
+8
+
+Map sheet
+
+9
+
+Scale
+
+AC 71936
+
+AUTHORITY: LWC - JUN 25
+
+SURVEILLANCE TARGET ACQUISITION
+PLAN UPREP CARD
+
+Considerations:
+■ Identify enemy approaches and distances.
+■ Identify: boundaries; dead ground;
+restricted/no fire areas; DFs.
+■ Confirm arcs (Interlock and overlap)
+with FFs.
+
+OWN GRID
+
+■ Allocate troops and surv assets to tasks,
+areas and obstacles.
+■ Consider night/day and changing weather
+conditions.
+■ Brief orders for opening fire, incuding
+RoE, Fire Control and actions on UAS.
+
+LOA
+
+AXIS
+
+ROA
+
+Limit of Vis:
+
+Limit of Vis:
+
+Limit of Vis:
+
+Arc in mils:
+
+Arc in mils:
+
+Arc in mils:
+
+DEAD GROUND (Give 3 to 4 Grids marking boundary of main dead ground to the front)
+GRID 1:
+
+GRID 2:
+
+GRID 3:
+
+GRID 4:
+
+OBSTACLES (Give type e.g. trip flare, AT Mine etc and grid)
+Type:
+
+Type:
+
+Type:
+
+Type:
+
+Grid:
+
+Grid:
+
+Grid:
+
+Grid:
+
+AC 71936
+
+AUTHORITY: LWC - JUN 25
+
+UK ONLY: MIST (AT) REPORT
+Do not delay launch of MEDEVAC supply further information once available:
+Zap number
+
+If Known
+
+of injury
+M Mechanism
+(and at what time if known)
+
+I
+
+e.g. TA2324
+(M)
+
+(Time: ...…………….)
+
+(I)
+
+Injury or illness sustained
+Symptoms and Vital Signs
+
+(S)
+
+Time ..........
+
+Time ..........
+
+Time ..........
+
+M ................
+
+M ................
+
+M ................
+
+A ................
+
+A ................
+
+A ................
+
+R ................
+
+R ................
+
+R ................
+
+C - Circulation
+
+C ................
+
+C ................
+
+C ................
+
+H - Hypothermia / Head Injuries
+
+H ................
+
+H ................
+
+H ................
+
+M - Massive Bleeding
+
+S A - Airway
+
+R - Respiratory Distress
+
+(T)
+
+given
+T Treatment
+(Tourniquet and time applied, fentanyl)
+of the casualty
+A Age
+(Adult/Child at least)
+
+T Time of wounding
+Notes:
+
+1. Specify if critical medical supplies are needed to be brought in with MEDEVAC.
+2. ‘9-Line’ is not used for requests to move casualties who are Killed in Action (KIA) at the scene.
+
+Note to Med Staff,
+please return to
+AC 71936
+
+.........................................................................................................(Unit)
+...................................................................................................(location)
+
+AUTHORITY: LWC - JUN 25
+
+SYMPTOMS AND VITAL SIGNS
+M
+
+Massive
+Bleeding
+
+A
+
+Airway
+
+Tourniquet(s) Time on ........................................
+
+Celox
+
+ Left arm  Right arm  Left leg  Right leg
+
+Location........................
+
+ Clear
+ NPA
+
+ Compromised
+ Surgical  Other
+
+ Immobilised  C-Spine injury suspected
+
+Breathing Rate ………………………..
+
+Immediate Lifesaving Treatment
+
+Injuries to Chest & Back
+
+R
+
+Respiration
+
+ Left Chest  Right Chest  Left Back  Right Back
+
+Symmetry of Chest
+
+ Equal
+
+Effort
+
+ Equal
+
+ Abnormal
+
+Treatment
+
+Chest Seal
+ Left  Right
+
+Needle Decompression
+ Left  Right
+
+ Tourniquets Checked
+
+ Other External
+bleeding (FFD)
+
+ Celox Checked
+
+Suspected Internal Bleeding
+
+Pulse Rate
+....................
+
+C
+
+ Abnormal
+
+ Chest
+
+Circulation
+
+ Abdomen
+
+ IO Access
+
+Treatment
+
+ Pelvis
+
+ IV Access
+
+ Long bones
+ Fluids
+
+ Other
+
+ TXA
+
+ Other.................................................................................
+
+Tourniquet Conversion (release)
+
+ Yes
+
+ No
+
+Left Leg Time......... Right Leg Time......... Left Arm Time......... Right Arm Time.........
+
+Secondary Treatment
+
+H
+
+Head Injuries
+
+ Alert
+
+ Voice
+
+ Pain
+
+ Unresponsive
+
+ Eye Shield
+
+Hypothermia  Hypothermia prevention
+
+P
+
+Pain
+
+A
+
+Antibiotics
+
+W
+
+Wounds
+
+S
+
+Splints
+
+Treatment by:
+
+Combat Pill Pack:
+Combat Pill Pack:
+
+ Paracetamol
+
+ Ibuprofen
+
+ Ketamine
+
+ Other...............................................
+
+ Cefalexin
+
+ Other...............................................
+
+Other wounds / burns not recorded above
+..............................................................................................................................
+ Pelvic Binder
+ASM
+
+CLS
+
+ Left Leg
+CLS +
+
+CMT
+
+ Right Leg
+Paramedic
+
+Use permanent pen. Tick boxes you have done or are present.
+Attach card to casualty or hand over to next medical provider.
+
+AC 71936
+
+ Fentanyl Lozenge
+
+ Left Arm
+
+ Right Arm
+
+MO
+
+Other.................
+
+ Update MIST AT
+
+AUTHORITY: LWC - JUN 25
+
+NATO IMMEDIATE ACTION CONTACT REPORT
+Prefix
+
+Description/Notes
+
+Message Content
+
+Call sign To/From
+
+……...............This is……...............
+
+Message
+
+CONTACT - WAIT OUT
+
+NATO FULL CONTACT REPORT
+Prefix
+
+Description/Notes
+
+Message Content
+
+Call sign To/From
+
+……...............This is……...............
+
+Message
+
+Contact as at:
+
+Size of Enemy
+
+A
+
+(S)
+
+Details of the strength of
+enemy/who is involved.
+
+Enemy Activity
+
+B
+
+C
+
+D
+
+E
+
+AC 71936
+
+Details of what has happened
+
+(A)
+
+Location
+
+Enemy location is:
+
+Location/grid reference of
+enemy forces (if known) &
+friendly forces
+
+Friendly forces location is:
+
+Date Time Group
+(DTG) of Contact
+DTG of enemy contact
+
+Action of Friendly
+Forces
+Details of what you have done
+and what you intend to do
+
+(L)
+
+Confirm time only:
+
+(T)
+
+(A)
+
+AUTHORITY: LWC - JUN 25
+
+UK ONLY: C-UAS REPORT
+C/S, Name, Contact No
+
+1
+
+UNIT
+
+Date & Time of Detection
+
+2
+
+DTG
+
+3
+
+Method of
+detection
+
+4
+
+Location of
+observer
+
+Seen, Heard, Radar, Signal (Which Freq Band)
+
+Grid or Bld Number/Name
+
+5
+
+Description
+
+6
+
+Action taken
+
+Post incident
+considerations
+
+AC 71936
+
+A
+
+Bearing
+
+Bearing to sUAS
+
+B
+
+Activity
+
+What is/was it doing - Moving/Hovering
+
+C
+
+Movement
+
+Where did it come from/Where did it go
+
+D
+
+Type
+
+E
+
+Number
+
+Single/Multiple
+Visible - Type/Not visible
+
+Rotary/Fixed Wing
+
+F
+
+Payload
+
+G
+
+Size
+
+H
+
+Height
+
+Grounded, VLow, Low, Medium
+
+I
+
+Other
+
+Lights/Colour/Speed
+
+<4kg/<25kg/>25kg
+
+Single/Multiple
+
+1. Has your location/mission been compromised?
+2. EOD Clearance
+3. Exploitation
+4. Informed Local Authorities
+
+AUTHORITY: LWC - JUN 25
+
+UK ONLY: FIRE MISSION - CALL FOR FIRE
+“Fire Mission, Over”
+A
+
+Target location
+
+B
+
+Direction
+
+C
+
+Target description
+“From tgt, East 750m, section in NW corner of woodblock.” or “I am
+nearest friendly troops.”
+
+D
+
+Position of
+nearest FF or
+Non-Combatants
+in relation to tgt
+(Only use Grids in
+extremis)
+
+NB: if distance from tgt to closest FF/Non-combatants is <900m Danger
+Close procedures may be used - more info will be required and special
+instructions issued over the radio.
+
+E
+
+Effect required
+
+F
+
+For how long?
+
+G
+
+When?
+
+(from observer to target in mils):
+
+SMK (Smoke)
+
+NEU (Neutralise)
+
+ILLUM (Illumination)
+
+DEST (Destroy)
+
+HAR (Harassing fire)
+
+ADJ (Adjust)
+
+If a qualified observer cannot confirm “target identified” they will then request
+“send corrections.”
+Corrections:
+Correct for line then bracket for range.
+ADD, DROP, LEFT, or RIGHT (as you see it).
+Make BOLD corrections (in multiples of 50m).
+Voice Procedure:
+‘On target’: adjusting rounds have hit target.
+‘Repeat’: fire same type/amount of ammo at same target.
+‘Check firing’: STOP firing but not loading, guns/mors will NOT fire again until.
+‘Cancel check-firing’.
+‘Record as target’: Store target for reference/future use.
+‘End of mission’: Mission successful.
+AC 71936
+
+AUTHORITY: LWC - JUN 25
+
+NATO CLOSE COMBAT ATTACK/
+ATTACK AVIATION CALL FOR FIRE
+Observer and Warning Order
+1
+
+“
+
+, this is
+(aircraft callsign)
+
+, fire mission, over ”
+(observer callsign)
+
+Friendly location and Mark
+2
+
+“My position
+
+, marked by
+(TRP, Grid, Brg/Distance)
+
+”
+(strobe, beacon, panel, pointer)
+
+Target location
+3
+
+“Target location
+
+”
+
+(bearing, (magnetic) and range (metres), TRP, grid, building number/floor etc.)
+
+Target Description and Mark
+4
+
+“
+
+, marked by
+(target description)
+
+”
+
+(pointer, tracer, smoke, laser code XXXX)
+
+Remarks
+
+5
+
+“
+
+, over.”
+
+(threats, nearest/other friendly forces or non-combatants, danger close, time on target
+(impact), at my command, etc.)
+NOTES
+
+1. Clearance. Once airspace has been cleared between the employing aircraft and the target,
+transmission of this brief is clearance to fire unless “danger close” or “at my command” is
+stated.
+2. Danger Close. For danger close fire, the observer or commander must accept responsibility
+for the increased risk. State “cleared danger close” in line 5 and pass the initials on the onscene ground commander. This clearance may be pre-planned.
+3. At My Command. For positive control of the aircraft, state “at my command” on line 5. The
+aircraft will call “ready to fire” when ready.
+4. If you do not want the pilot to engage, or want them to stop engaging, call Abort Code as
+agreed to in the mission brief.
+
+AC 71936
+
+AUTHORITY: LWC - JUN 25
+
+NATO SITUATION REPORT (SITREP)
+Hello
+
+To
+
+This is
+
+From
+
+Description/notes
+
+Message content
+
+Message
+
+SITREP
+
+When?
+A
+
+B
+
+C
+
+D
+
+DTG of current
+situation or event
+this report refers to
+
+Own location?
+
+Give your location/
+grid reference
+
+What is
+happening?
+
+(what it is and
+what it is doing)
+
+What are you
+doing about it?
+Details of any
+actions taken or
+to be taken
+
+Purpose: This report is initiated by the call sign (CS) to make routine reports as
+per orders, or to report a significant or unusual event. It can be requested or
+initiated at any time.
+AC 71936
+
+AUTHORITY: LWC - JUN 25
+
+NATO MEDEVAC
+UNIT:
+
+DTG:
+
+9-Line REQUEST
+.......... .......... D .......... ...........
+(1)
+
+1
+
+Call sign & Freq
+
+2
+
+Location (Grid of HLS)
+
+3
+
+(2)
+
+Number of Patients/Precedence
+PRIORITY 1
+
+5
+
+B - Hoist
+
+7
+
+D - Ventilator
+
+E - Other
+
+S ........... W ........... E ........... O ...........
+
+W (Walking)
+
+E (Escort)
+
+O (Other, give details)
+
+(6)
+
+N - No Enemy
+
+E - Enemy in Area
+
+P - Possible Enemy
+
+X - Armed Escort Required
+
+HLS Marking Method
+A - Panels
+
+(4)
+
+C - Extraction Equip
+
+Security at Pick up zone
+6
+
+(to be at R2 or R3 within 24 hrs)
+
+(5)
+
+Number of Patients/Type
+S (Stretcher)
+
+PRIORITY 3
+
+(to be at R2 or R3 within 4 hrs)
+
+Special Equipment Required
+A - None
+
+P1 ........... P2 ........... P3 ...........
+
+PRIORITY 2
+
+(to be at R2 or R3 within 60 mins)
+
+4
+
+(3)
+
+B - Pyro
+
+(7)
+
+C - Smoke (colour?)
+
+D - None
+
+E - Other
+
+(8)
+
+Number of Patients by
+Nationality/Status
+8
+A - UK / NATO Military
+B - UK / NATO Civilian
+C - Non-UK/NATO Military
+
+9
+
+Tactical considerations
+and other information
+
+AC 71936
+
+A ............ B ............ C ..............
+
+D...............
+
+E ............ F............. G..............
+
+H...............
+
+D - Non-UK/NATO Civilian
+E - Detainees/PW
+F - Embedded Interpreter
+
+G - Civ Cas caused by FF
+H - Child
+
+(9)
+
+AUTHORITY: LWC - JUN 25
+
+UK ONLY: CBRN 1 CHEM/BIO/RAD
+To
+
+Immediate
+
+VALCODE
+(M)
+ALFA (O)
+BRAVO (M)
+DELTA (M)
+
+Observer’s report giving basic data
+DTG Message/Report Created
+
+From
+
+Flash
+
+Z
+
+Validation Code
+Sequence Number
+
+ValCode
+
+Incident Serial Number
+Geographical Entry
+
+Sequence Number
+
+Unit Code
+
+Type of Incident
+
+Location of Observer and Direction to incident
+Location of Observer (UTM/MGRS/UPS/MUPS/Grid/Names)
+
+Direction
+
+Unit of Measurement
+MILS
+
+DEG
+
+GRID
+
+MAG
+
+TRUE
+
+Date Time Group of Incident
+DTG Start
+
+DTG End
+
+Z
+
+Z
+
+Location of Incident
+Actual
+
+Estimated
+
+NKN2
+
+FOXTROT (O)
+
+Location (Lat/Long/MGRS/UPS/MUPS/Grid/Names)1
+
+Fields 1 and 2 (left)
+are repeatable to
+accommodate up
+to 6 data entries.
+In order to define a
+line or area attack.
+
+Delivery and Quantity Information
+Qualification of incident
+
+GOLF (M)
+
+OBS
+
+Types/Means of Delivery
+
+Number of Delivery Systems
+
+Container Type
+
+SUS
+
+Type of Burst/Release
+
+Release Height
+
+Qty/Size of Spill/Release for CHEM
+SMLCHEM up to 200Ltr/Kg
+
+MEDCHEM 200-1500Ltr/Kg
+
+LRGCHEM 1500-50K Ltr/Kg
+
+XLGCHEM >50K Ltr/Kg
+
+NKN
+
+LRGBIO 10-100Ltr/Kg
+
+XLGBIO >100K Ltr/Kg
+
+NKN
+
+Qty/Size of Spill/Release for BIO/TIB
+SMLCHEM less than 1Kg
+AC 71936
+
+MEDBIO 1-10Ltr/Kg
+
+AUTHORITY: LWC - JUN 25
+
+SMLRAD Evidence of Disruption
+or Intact Package/Device
+
+LRGRAD Fire/Exposed
+Source
+
+XLGRAD Explosion/Fire/Damaged package
+and Contamination
+
+Substances Name/Type/ID
+
+Presistency Type
+NP
+
+Type of Detection
+T
+
+YANKEE (O)
+
+TANGO (O)
+
+Description and Status of CBRN Incidents
+
+Type of Source
+
+Isotope/ID no./Radiation Type
+
+Detection Method
+
+Detection Confidence
+Level (ind/Pre/Def/Evi)
+
+NKN
+
+INDIA ROMEO (O)
+
+P
+
+Release and Sampling Information on Radiological Incidents
+
+ZULU (O)
+
+NKN
+
+Substance Information on Incidents
+
+MIKE ROMEO
+(O)
+
+INDIA (M)
+
+GOLF (M)
+
+UK ONLY: CBRN 1 CHEM/BIO/RAD
+Qty/Size of Spill/Release for RAD/TIR
+
+Radioactive Half Life
+
+Detection Confidence Level (ind/Pre/Def/Evi)
+
+Incident Status
+
+Status of Incident CONT/PUFF/SPRAY ETC.
+
+Description of Incident
+
+Terrain/Topography and Vegetation Description
+Terrain
+
+Flat
+
+Vegetation
+
+Bare
+
+Hill
+
+Urban
+
+Scrub
+
+Sea
+
+Woods
+
+Valley
+Urban
+
+NKN
+NKN
+
+Downwind Direction and Downwind Speed
+Downwind Direction
+
+Unit of Measurement
+
+Wind Status (Steady/Gusting/VAB)
+
+KPH
+
+KTS
+
+MPS
+
+Windspeed
+
+MPH
+
+Measured Weather Conditions
+Air Stability Cat
+
+Surface Air Temperature
+
+C
+
+o
+
+Humidity Range
+
+Sig Weather
+
+Cloud Cover
+
+F
+
+o
+
+General Text (to include additional information relevent to specific event)
+
+GENTEXT (O)
+
+Text Indicator (Comds Assessment/Update etc):
+
+AC 71936
+
+AUTHORITY: LWC - JUN 25
+
+UK ONLY: MIST (AT) REPORT
+Do not delay launch of MEDEVAC supply further information once available:
+Zap number
+
+If Known
+
+of injury
+M Mechanism
+(and at what time if known)
+
+I
+
+e.g. TA2324
+(M)
+
+(Time: ...…………….)
+
+(I)
+
+Injury or illness sustained
+Symptoms and Vital Signs
+
+(S)
+
+Time ..........
+
+Time ..........
+
+Time ..........
+
+M ................
+
+M ................
+
+M ................
+
+A ................
+
+A ................
+
+A ................
+
+R ................
+
+R ................
+
+R ................
+
+C - Circulation
+
+C ................
+
+C ................
+
+C ................
+
+H - Hypothermia / Head Injuries
+
+H ................
+
+H ................
+
+H ................
+
+M - Massive Bleeding
+
+S A - Airway
+
+R - Respiratory Distress
+
+(T)
+
+given
+T Treatment
+(Tourniquet and time applied, fentanyl)
+of the casualty
+A Age
+(Adult/Child at least)
+
+T Time of wounding
+Notes:
+
+1. Specify if critical medical supplies are needed to be brought in with MEDEVAC.
+2. ‘9-Line’ is not used for requests to move casualties who are Killed in Action (KIA) at the scene.
+
+Note to Med Staff,
+please return to
+AC 71936
+
+.........................................................................................................(Unit)
+...................................................................................................(location)
+
+AUTHORITY: LWC - JUN 25
+
+UK ONLY: IMMEDIATE ACTION JAMMING REPORT
+Prefix
+
+Description/Notes
+
+Message Content
+
+Call sign To/From
+
+……...............This is……...............
+
+Message
+
+JAMREP - WAIT OUT
+
+FULL JAMMING REPORT
+Prefix
+
+Description/Notes
+
+Message Content
+
+Call sign To/From
+
+……...............This is……...............
+
+Message
+
+JAMREP as at:
+
+Type of jamming / deception
+
+A
+
+MUSIC
+TONES
+CARRIER WAVE
+NOISE
+VOICE
+
+Strength of jamming
+
+B
+
+C
+
+WEAK
+MEDIUM
+STRONG
+
+Mode of jamming
+RESPONSIVE
+CONSTANT
+
+D
+
+Frequency / channel affected
+
+E
+
+Location of victim
+
+F
+
+Time -
+
+Effective date time group of start
+and duration of attack in minutes
+
+G
+
+Additional information
+
+H
+
+Declassification trigger -
+
+AC 71936
+
+GR
+
+time, date or event
+
+AUTHORITY: LWC - JUN 25
+
+UK ONLY: INITIAL CPERS REPORT
+Line
+
+Content
+
+1
+
+Capturing
+Call sign
+
+2
+
+DTG of
+Capture
+
+(1)
+
+(2)
+e.g. 221500JAN25
+(3)
+
+3
+
+Place of
+Capture
+Use full UTM GR
+
+4
+
+Number
+of CPERS
+(Total)
+CPERS
+Category
+
+5
+
+(4)
+
+(5)
+
+A................
+
+A - Person of
+Interest
+(1) Male
+(2) Female
+
+BCombatant
+(1) Male
+(2) Female
+
+B................
+CCivilian
+(1) Male
+(2) Female
+
+C................
+
+D................
+
+D - Child/
+Juvenile
+(1) Male
+(2) Female
+
+E................
+E - Retained
+Person (Medical/
+
+Religious Personnel)
+(1) Male
+(2) Female
+
+(6)
+
+6
+
+Reason for
+Capture
+
+(7)
+
+7
+
+Current
+Location
+Use full UTM GR
+
+Safety - Search - Secure - Segregate - Safeguard
+Protection, Reporting & Recording, Individual Rights, Medical, Evacuate
+AC 71936
+
+AUTHORITY: LWC - JUN 25
+
+UK ONLY: CPERS EVACUATION REQUEST
+1
+
+Requesting
+Call sign
+
+(1)
+
+2
+
+Location (Grid of
+Collection Point)
+
+(2)
+
+3
+
+Use full UTM GR
+(3)
+NB: Padres and medics should be included in the numbers for evacuation
+under this serial using C - Other
+
+Number of
+Pax (Total)
+
+A ...................
+A - CPERS
+
+CPERS Category
+4
+
+A - Person of
+Interest
+(1) Male
+(2) Female
+
+5
+
+6
+
+8
+
+C - Other
+
+A.............
+
+(1) Male
+(2) Female
+
+B.............
+
+C.............
+
+CCivilian
+
+D.............
+
+DChild/Juvenile
+
+(1) Male
+(2) Female
+
+(1) Male
+(2) Female
+
+E.............
+E - Retained
+
+Person (Medical/
+Religious Personnel)
+(1) Male
+(2) Female
+
+(5)
+
+(Evidence, IED
+components,
+Weapons, Property,
+Intelligence
+(Documents/Mobiles)
+
+Security at
+Collection
+Point (CP)
+NNo Enemy
+
+7
+
+C ...................
+
+(4)
+
+BCombatant
+
+Cargo/Addtl Load
+
+B ...................
+
+B - Escorts
+
+(6)
+
+N................
+E - Enemy in
+Area
+
+CP Marking
+Method
+APanels
+
+P - Possible
+Enemy
+
+P................
+
+X................
+
+XEscort required
+
+(7)
+
+BPyro
+
+CP Terrain/
+Obstacles
+
+E................
+
+C - Smoke
+(colour?)
+
+DNone
+
+EOther
+
+(8)
+
+Safety - Search - Secure - Segregate - Safeguard
+
+Protection, Reporting & Recording, Individual Rights, Medical, Evacuate
+AC 71936
+
+AUTHORITY: LWC - JUN 25
+
+NATO EXPLOSIVE ORDNANCE INCIDENT REPORT
+Prefix Description/Notes
+
+1
+2
+3
+4
+
+Message Content
+
+Call sign To/From
+
+……...............This is……...............
+
+Message
+
+EOINCREP
+
+Date Time Group (DTG)
+Give the DTG of incident/find
+
+Reporting unit
+Give the name and location of reporting unit
+
+Location of link-up with requesting force
+Give the rendezvous point (RV) location/grid and safe
+route to RV
+
+Link-up/comms method
+Give the radio frequency, callsign, point of contact and
+contact details
+
+Type and description of EO
+5
+
+6
+
+Give as much detail as possible about the type of
+incident and type of EO. Including quantity, description,
+colour, any markings, dimensions and other useful
+information
+
+Location of EO
+Enter the coordinates, description of location and item
+position relative to the surroundings
+
+Tactical situation
+7
+
+Give a short description of:
+Current threat, environment, effects on operations
+from: nil, minor, major, totally disrupted or unknown
+
+Damage
+8
+
+9
+
+10
+
+Give details of the collateral damage or potential
+damage to the infrastucture, equipment or other assets
+that are threatened
+
+Protective actions taken
+Give details of the implemented measures taken e.g.
+Confirm, Clear, Corden or Control marking
+
+Recommended priority
+1 - Immediate
+2 - Urgent (pre or post explosion)
+
+3 - Routine
+4 - No threat
+
+4 Cs: Confirm, Clear, Cordon, Control
+AC 71936
+
+AUTHORITY: LWC - JUN 25
+
+UK ONLY: BOMBREP
+
+A
+
+Bombardment type
+
+ARTY (Artillery)
+MOR (Mortar)
+RKT (Rocket)
+ACFT (Aircraft)
+HEL (Helicopter)
+UAS (Uncrewed aircraft system)
+Other Effector
+
+B
+
+Observer’s location
+
+GR:
+
+C
+
+Hostile battery /
+launch site location
+
+GR:
+
+D
+
+Observer to hostile
+battery / launch site
+location
+
+E
+
+F
+
+Bombardment
+duration / frequency
+
+Mils:
+Range (m):
+Flash/Bang time:
+
+FROM:
+
+TO:
+
+Bombardment area
+
+GR:
+
+G
+
+Type of fire
+
+LT (Light/Sporadic/Harassing)
+HY (Heavy)
+ADJ (Adjustment)
+FFE (Fire For Effect)
+UAS (Loitering/Swarm/FPV)
+
+H
+
+Damage to target
+area
+
+LT (Light)
+MED (Medium)
+HY (Heavy)
+DEST (Destroyed)
+
+AC 71936
+
+AUTHORITY: LWC - JUN 25
+
+NATO EQUIPMENT RECOVERY REQUEST
+(EQUIPRECREQ)
+Hello
+
+To
+
+Description/notes
+Message
+
+This is
+
+From
+
+Message content
+EQUIPRECREQ
+Location/grid reference and nearest feature to recovery location
+
+A
+
+Recovery
+location
+
+Give vehicle details including nationality,
+make, model and designation
+
+B
+
+Vehicle
+details
+
+Description of the problem/reason for recovery
+
+C
+
+AC 71936
+
+Vehicle
+problem
+
+AUTHORITY: LWC - JUN 25
+
+NATO EQUIPMENT RECOVERY REQUEST
+(EQUIPRECREQ)
+Description/notes
+Message
+
+Message content
+EQUIPRECREQ
+State whether crew is with the vehicle (YES or NO)
+
+D
+
+Crew available
+
+Location/grid reference and nearest feature of
+destination location (if known)
+
+E
+
+Destination
+location
+
+To include details of cargo size and weight (if applicable),
+
+ground/terrain considerations and tactical considerations
+
+F
+
+Additional
+information
+
+Purpose: This report is used to request equipment recovery by troops who do not
+have integral maintenance personnel.
+
+Example: 0 This is Y12A
+
+EQUIPRECREQ
+
+A. Recovery location: 780 580
+B. DEU, EAGLE
+C. Stuck in ditch
+
+D. Yes
+E. Unknown
+F. No cargo, area flooded, nil tactical considerations
+
+AC 71936
+
+AUTHORITY: LWC - JUN 25
+
+

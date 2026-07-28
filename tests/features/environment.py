@@ -1,0 +1,36 @@
+import os
+import sys
+
+# Ensure project root is in the path
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
+from app import create_app, socketio
+from app.database import Base, engine, db_session
+
+def before_all(context):
+    context.app = create_app()
+    context.app.config['TESTING'] = True
+    context.app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+    
+    # Initialize DB
+    Base.metadata.create_all(bind=engine)
+    context.db = db_session()
+
+def after_all(context):
+    Base.metadata.drop_all(bind=engine)
+    db_session.remove()
+
+def before_scenario(context, scenario):
+    # Clear tables before each scenario to isolate tests
+    context.db.rollback()
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+    
+    # Clean memory mappings and active check sequences
+    from app.sockets import sid_to_station_id, station_id_to_sid, active_radio_checks
+    sid_to_station_id.clear()
+    station_id_to_sid.clear()
+    active_radio_checks.clear()
+
+    # Track open client sockets to close them after the scenario
+    context.clients = {}

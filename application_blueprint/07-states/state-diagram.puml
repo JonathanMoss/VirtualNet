@@ -1,0 +1,117 @@
+@startuml VirtualNet_State_Machines
+
+' --- STYLES & CONFIG ---
+skinparam monochrome false
+skinparam class {
+    BackgroundColor White
+    ArrowColor Black
+    BorderColor Black
+}
+
+' --- NET SESSION STATE MACHINE ---
+state NetSession {
+    [*] --> Hosted : Instructor hosts net
+    
+    state Hosted {
+        Hosted : PIN generated
+        Hosted : Awaiting student connections
+    }
+    
+    state NetActive {
+        state DirectedNet {
+            DirectedNet : Stations need NCS permission to speak
+        }
+        state FreeNet {
+            FreeNet : Stations can communicate directly
+        }
+        
+        [*] --> DirectedNet
+        DirectedNet --> FreeNet : NCS declares Net Free
+        FreeNet --> DirectedNet : NCS declares Net Directed
+    }
+    
+    state NetSuspended {
+        NetSuspended : Audio disabled
+        NetSuspended : Logs & status visible
+    }
+    
+    Hosted --> NetActive : Instructor starts exercise
+    NetActive --> NetSuspended : Instructor pauses
+    NetSuspended --> NetActive : Instructor resumes
+    
+    NetActive --> Closed : Instructor clicks "End Net Session"
+    NetSuspended --> Closed : Instructor clicks "End Net Session"
+    Hosted --> Closed : Instructor cancels
+    
+    state Closed {
+        Closed : Force disconnect all clients
+        Closed : Delete ephemeral session data
+    }
+    
+    Closed --> [*]
+}
+
+' --- STATION STATE MACHINE ---
+state Station {
+    [*] --> Disconnected
+    Disconnected --> Connecting : Join request (PIN & Nickname)
+    
+    state Connecting {
+        Connecting : Validate PIN
+    }
+    
+    Connecting --> AwaitingAssignment : PIN Approved by server
+    Connecting --> Disconnected : Invalid PIN / Timeout
+    
+    state AwaitingAssignment {
+        AwaitingAssignment : UI locked with spinner
+        AwaitingAssignment : Awaiting callsign assignment from instructor
+    }
+    
+    AwaitingAssignment --> Idle : Instructor assigns Callsign
+    
+    state Idle {
+        Idle : Audio input muted
+        Idle : Speaker ready
+    }
+    
+    state Transmitting {
+        Transmitting : Microphone streaming
+        Transmitting : Red 'TRANSMITTING' status on UI
+    }
+    
+    state Receiving {
+        Receiving : Speaker playing stream
+        Receiving : PTT blocked (standard stations)
+    }
+    
+    state Overridden {
+        Overridden : Play override warning tone
+        Overridden : Microphone muted
+    }
+    
+    state Muted {
+        Muted : PTT key blocked
+        Muted : Can hear incoming audio
+    }
+    
+    Idle --> Transmitting : Hold PTT (Channel Free)
+    Transmitting --> Idle : Release PTT
+    
+    Idle --> Receiving : Incoming voice audio starts
+    Receiving --> Idle : Incoming audio ends
+    
+    Transmitting --> Overridden : NCS triggers PTT Override
+    Overridden --> Idle : Auto-release after 2s delay
+    
+    Idle --> Muted : Stuck-PTT timeout / Instructor admin action
+    Muted --> Idle : Instructor unmutes / PTT reset
+    
+    Idle --> Disconnected : Session Terminated / Kick
+    Transmitting --> Disconnected : Session Terminated / Kick
+    Receiving --> Disconnected : Session Terminated
+    Muted --> Disconnected : Kick
+    AwaitingAssignment --> Disconnected : Session Terminated / Cancel
+}
+
+@endum

@@ -216,3 +216,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# VirtualNet PDF documents
+*.pdf
+
+# VirtualNet dynamic databases
+virtualnet.db
+data/

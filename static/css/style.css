@@ -1,0 +1,302 @@
+/* Night-Ops CRT Monospace Tactical Theme - VirtualNet */
+
+@import url('https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@300;400;700&display=swap');
+
+:root {
+  --bg-color-main: #141714;
+  --bg-color-card: #202420;
+  --border-color-tactical: #3c423c;
+  --color-phosphor-green: #33ff33;
+  --color-tactical-amber: #ffb000;
+  --color-desert-sand: #c2b280;
+  --color-hot-red: #ff3333;
+  --color-muted-gray: #7a827a;
+}
+
+body {
+  background-color: var(--bg-color-main);
+  color: var(--color-desert-sand);
+  font-family: 'Roboto Mono', Courier, monospace;
+  font-size: 0.9rem;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+}
+
+/* Custom Scanlines Screen Effect */
+.crt-screen {
+  position: relative;
+  overflow: hidden;
+}
+
+.crt-screen::after {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+  z-index: 10;
+  background-size: 100% 4px, 6px 100%;
+  pointer-events: none;
+}
+
+/* Stencil and Capitalized Monospace Headers */
+h1, h2, h3, h4, h5, h6, .tactical-header {
+  color: var(--color-phosphor-green);
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-weight: 700;
+  border-bottom: 1px solid var(--border-color-tactical);
+  padding-bottom: 0.4rem;
+  margin-bottom: 1rem;
+}
+
+/* Disable all Rounded Corners for Rugged Hardware look */
+.card, .btn, .form-control, .form-select, .list-group-item, .modal-content, .badge {
+  border-radius: 0 !important;
+}
+
+/* Custom Cards */
+.card {
+  background-color: var(--bg-color-card);
+  border: 1px solid var(--border-color-tactical);
+  color: var(--color-desert-sand);
+}
+
+.card-header {
+  background-color: rgba(51, 255, 51, 0.05);
+  border-bottom: 1px solid var(--border-color-tactical);
+  font-weight: 700;
+  color: var(--color-phosphor-green);
+}
+
+/* Form Styling */
+.form-control, .form-select {
+  background-color: var(--bg-color-main);
+  border: 1px solid var(--border-color-tactical);
+  color: var(--color-phosphor-green);
+}
+
+.form-control:focus, .form-select:focus {
+  background-color: var(--bg-color-main);
+  border-color: var(--color-phosphor-green);
+  color: var(--color-phosphor-green);
+  box-shadow: 0 0 8px rgba(51, 255, 51, 0.3);
+}
+
+.form-control::placeholder {
+  color: var(--color-muted-gray);
+}
+
+/* Tactical Glow Buttons */
+.btn-outline-tactical {
+  border: 1px solid var(--color-phosphor-green);
+  color: var(--color-phosphor-green);
+  background: transparent;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-outline-tactical:hover {
+  background-color: rgba(51, 255, 51, 0.15);
+  color: var(--color-phosphor-green);
+  box-shadow: 0 0 10px rgba(51, 255, 51, 0.4);
+}
+
+.btn-tactical {
+  background-color: var(--color-phosphor-green);
+  color: var(--bg-color-main);
+  font-weight: 700;
+  border: 1px solid var(--color-phosphor-green);
+}
+
+.btn-tactical:hover, .btn-tactical:focus {
+  background-color: #2be02b;
+  box-shadow: 0 0 12px rgba(51, 255, 51, 0.6);
+}
+
+.btn-tactical:disabled {
+  background-color: var(--border-color-tactical);
+  border-color: var(--border-color-tactical);
+  color: var(--color-muted-gray);
+  box-shadow: none;
+}
+
+/* Monospace Tables */
+.table-tactical {
+  color: var(--color-desert-sand);
+  border-color: var(--border-color-tactical);
+  background-color: var(--bg-color-card);
+}
+
+.table-tactical th {
+  background-color: rgba(51, 255, 51, 0.05);
+  color: var(--color-phosphor-green);
+  border-color: var(--border-color-tactical);
+  text-transform: uppercase;
+  font-size: 0.8rem;
+  letter-spacing: 0.05em;
+}
+
+.table-tactical td {
+  border-color: var(--border-color-tactical);
+  padding: 0.3rem 0.5rem;
+}
+
+.table-tactical input, .table-tactical select {
+  padding: 0.15rem 0.3rem;
+  font-size: 0.85rem;
+  background-color: transparent;
+  border: 1px solid transparent;
+  color: var(--color-desert-sand);
+  width: 100%;
+}
+
+.table-tactical input:focus, .table-tactical select:focus {
+  background-color: var(--bg-color-main);
+  border-color: var(--color-phosphor-green);
+  color: var(--color-phosphor-green);
+  outline: none;
+}
+
+/* PTT UI Panel & Custom Card States */
+.ptt-card-idle {
+  border-color: var(--border-color-tactical) !important;
+}
+
+.ptt-card-transmitting {
+  border-color: var(--color-hot-red) !important;
+  background-color: rgba(255, 51, 51, 0.08) !important;
+}
+
+.ptt-card-receiving {
+  border-color: var(--color-tactical-amber) !important;
+  background-color: rgba(255, 176, 0, 0.08) !important;
+}
+
+.ptt-card-overridden {
+  border-color: #ffffff !important;
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  animation: flash-border 0.5s infinite alternate;
+}
+
+@keyframes flash-border {
+  from { border-color: var(--border-color-tactical); }
+  to { border-color: #ffffff; }
+}
+
+.ptt-button {
+  width: 130px;
+  height: 130px;
+  border-radius: 50% !important; /* Circular PTT trigger */
+  background: radial-gradient(circle, var(--color-hot-red) 40%, #cc1111 100%);
+  border: 4px solid #5a0e0e;
+  box-shadow: 0 4px 15px rgba(255, 51, 51, 0.4), inset 0 -4px 8px rgba(0, 0, 0, 0.5);
+  font-weight: 700;
+  color: white;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+  user-select: none;
+  touch-action: none;
+  transition: all 0.1s ease;
+}
+
+.ptt-button:active, .ptt-button.active {
+  background: radial-gradient(circle, #ff5555 40%, var(--color-hot-red) 100%);
+  box-shadow: 0 0 25px rgba(255, 51, 51, 0.8), inset 0 4px 8px rgba(0, 0, 0, 0.6);
+  transform: scale(0.96);
+}
+
+.ptt-button:disabled {
+  background: radial-gradient(circle, var(--bg-color-main) 40%, var(--bg-color-card) 100%);
+  border-color: var(--border-color-tactical);
+  color: var(--color-muted-gray);
+  box-shadow: none;
+  text-shadow: none;
+}
+
+/* Pulsing Recording Indicator */
+.pulse-indicator {
+  width: 10px;
+  height: 10px;
+  background-color: var(--color-hot-red);
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 5px;
+  animation: pulse-dot 1.2s infinite;
+}
+
+@keyframes pulse-dot {
+  0% { transform: scale(0.85); box-shadow: 0 0 0 0 rgba(255, 51, 51, 0.7); }
+  70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(255, 51, 51, 0); }
+  100% { transform: scale(0.85); box-shadow: 0 0 0 0 rgba(255, 51, 51, 0); }
+}
+
+/* Roster List Group */
+.list-group-tactical .list-group-item {
+  background-color: var(--bg-color-card);
+  border-color: var(--border-color-tactical);
+  color: var(--color-desert-sand);
+}
+
+.list-group-tactical .list-group-item.active-speaking {
+  background-color: rgba(255, 176, 0, 0.1);
+  border-color: var(--color-tactical-amber);
+  color: var(--color-tactical-amber);
+}
+
+/* Slide-out Off-canvas Panel */
+.offcanvas-tactical {
+  background-color: var(--bg-color-card);
+  border-left: 2px solid var(--border-color-tactical);
+  color: var(--color-desert-sand);
+}
+
+.offcanvas-tactical .offcanvas-header {
+  border-bottom: 1px solid var(--border-color-tactical);
+}
+
+/* BATCO Slider Cipher Ruler styling */
+.batco-grid-container {
+  overflow-x: auto;
+  border: 1px solid var(--border-color-tactical);
+  position: relative;
+}
+
+.batco-row-highlight {
+  border: 2px solid var(--color-phosphor-green);
+  background-color: rgba(51, 255, 51, 0.1) !important;
+  box-shadow: 0 0 8px rgba(51, 255, 51, 0.4);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-color-main);
+  border-left: 1px solid var(--border-color-tactical);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-color-tactical);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-phosphor-green);
+}
+
+/* Watermark for Paper Logging Mode */
+.paper-mode-watermark {
+  border: 2px dashed var(--border-color-tactical);
+  color: var(--color-muted-gray);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* Popover details */
+.info-popover {
+  border: 1px solid var(--color-phosphor-green);
+  background-color: var(--bg-color-card);
+  color: var(--color-desert-sand);
+}
