@@ -97,6 +97,14 @@ class VirtualNetApp {
 
   setupPTTHandlers() {
     const pttBtn = document.getElementById('ptt-btn');
+    const mediaCaptureSupported = WebAudioEngine.isMediaCaptureSupported();
+
+    if (!mediaCaptureSupported) {
+      pttBtn.disabled = true;
+      const instruction = document.getElementById('ptt-instruction');
+      instruction.textContent = 'Microphone capture unsupported by this browser.';
+      instruction.style.color = 'var(--color-tactical-amber)';
+    }
 
     // Trigger audio initialization on click
     const startAudioContext = async () => {
@@ -107,6 +115,7 @@ class VirtualNetApp {
 
     // Keyboard Spacebar PTT events
     document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && !mediaCaptureSupported) return;
       if (e.code === 'Space' && !this.isTransmitting && !this.isEditingInput(e.target)) {
         e.preventDefault();
         startAudioContext().then(() => this.triggerPTTOff());
@@ -122,11 +131,13 @@ class VirtualNetApp {
 
     // UI Click PTT events
     pttBtn.addEventListener('mousedown', async () => {
+      if (!mediaCaptureSupported) return;
       await startAudioContext();
       this.triggerPTTOff();
     });
 
     pttBtn.addEventListener('mouseup', () => {
+      if (!mediaCaptureSupported) return;
       this.triggerPTTOn();
     });
 
@@ -188,7 +199,9 @@ class VirtualNetApp {
         // Unlock full dashboard directly (Instructor lacks Callsign lock)
         document.getElementById('callsign-lock-overlay').classList.add('d-none');
         document.getElementById('header-callsign').textContent = `Callsign: CONTROL`;
-        document.getElementById('ptt-btn').disabled = false;
+        if (WebAudioEngine.isMediaCaptureSupported()) {
+          document.getElementById('ptt-btn').disabled = false;
+        }
         
         // Show Instructor Dashboard controls
         document.getElementById('instructor-section').classList.remove('d-none');
@@ -232,7 +245,9 @@ class VirtualNetApp {
       document.getElementById('header-net-name').textContent = `Net: ${this.netName}`;
       document.getElementById('header-net-name').classList.remove('d-none');
       document.getElementById('header-callsign').textContent = `Callsign: ${this.myCallSign}`;
-      document.getElementById('ptt-btn').disabled = false;
+      if (WebAudioEngine.isMediaCaptureSupported()) {
+        document.getElementById('ptt-btn').disabled = false;
+      }
 
       // Update Net Mode UI State
       const badge = document.getElementById('net-mode-badge');
