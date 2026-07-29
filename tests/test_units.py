@@ -1,23 +1,26 @@
-import pytest
-from datetime import datetime
-from app import create_app, socketio
-from app.database import Base, engine, db_session
-from app.models import NetSession, Station, LogEntry, Transmission
-from app.schemas import NetSessionCreate, StationCreate, LogEntryCreate
+"""Unit tests for models, validation schemas, database access, and HTTP routes."""
+import eventlet
 from pydantic import ValidationError
+import pytest
+
+from app import create_app, socketio, database
+from app.database import Base, engine, db_session
+from app.models import NetSession, Station, LogEntry
+from app.schemas import NetSessionCreate, StationCreate, LogEntryCreate
+
 
 @pytest.fixture(scope="module")
 def app():
-    # Setup testing environment configurations
-    app = create_app()
-    app.config['TESTING'] = True
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
-    
+    """Module-level Flask app test fixture."""
+    app_instance = create_app()
+    app_instance.config['TESTING'] = True
+    app_instance.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
+
     # Initialize database
     Base.metadata.create_all(bind=engine)
-    
-    yield app
-    
+
+    yield app_instance
+
     # Cleanup
     Base.metadata.drop_all(bind=engine)
     db_session.remove()
@@ -25,15 +28,18 @@ def app():
 
 @pytest.fixture(scope="function")
 def db(app):
-    # Truncate tables for each test
-    db = db_session()
+    # pylint: disable=redefined-outer-name,unused-argument
+
+    """Function-level isolated DB session fixture."""
+    session = db_session()
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
-    yield db
-    db.rollback()
+    yield session
+    session.rollback()
 
 
 def test_net_session_create_validation():
+    """Test NetSessionCreate schema validation rules."""
     # Valid parameters
     payload = {"name": "Exercise Drill One", "callsign_indicator": "R"}
     model = NetSessionCreate(**payload)
@@ -54,6 +60,7 @@ def test_net_session_create_validation():
 
 
 def test_station_create_validation():
+    """Test StationCreate schema validation rules."""
     # Valid nickname & PIN
     payload = {"nickname": "Operator-1", "pin": "A3F9"}
     model = StationCreate(**payload)
@@ -62,11 +69,11 @@ def test_station_create_validation():
 
     # Invalid PINs
     with pytest.raises(ValidationError):
-        StationCreate(nickname="Operator-1", pin="A3F") # Too short
+        StationCreate(nickname="Operator-1", pin="A3F")  # Too short
     with pytest.raises(ValidationError):
-        StationCreate(nickname="Operator-1", pin="A3F99") # Too long
+        StationCreate(nickname="Operator-1", pin="A3F99")  # Too long
     with pytest.raises(ValidationError):
-        StationCreate(nickname="Operator-1", pin="A*F9") # Special char
+        StationCreate(nickname="Operator-1", pin="A*F9")  # Special char
 
     # Invalid nickname
     with pytest.raises(ValidationError):
@@ -74,6 +81,7 @@ def test_station_create_validation():
 
 
 def test_log_entry_validation():
+    """Test LogEntryCreate schema validation rules."""
     # Valid DTG formats and parameters
     payload = {
         "dtg": "281015Z JUL 26",
@@ -88,13 +96,13 @@ def test_log_entry_validation():
 
     # Invalid DTG (wrong month spelling, wrong day number, etc.)
     with pytest.raises(ValidationError):
-        LogEntryCreate(**{**payload, "dtg": "321015Z JUL 26"}) # Day 32
+        LogEntryCreate(**{**payload, "dtg": "321015Z JUL 26"})  # Day 32
     with pytest.raises(ValidationError):
-        LogEntryCreate(**{**payload, "dtg": "282515Z JUL 26"}) # Hour 25
+        LogEntryCreate(**{**payload, "dtg": "282515Z JUL 26"})  # Hour 25
     with pytest.raises(ValidationError):
-        LogEntryCreate(**{**payload, "dtg": "281015Z JUX 26"}) # Bad month
+        LogEntryCreate(**{**payload, "dtg": "281015Z JUX 26"})  # Bad month
     with pytest.raises(ValidationError):
-        LogEntryCreate(**{**payload, "dtg": "281015Z JUL 266"}) # 3 digit year
+        LogEntryCreate(**{**payload, "dtg": "281015Z JUL 266"})  # 3 digit year
 
     # Invalid precedence
     with pytest.raises(ValidationError):
@@ -112,6 +120,8 @@ def test_log_entry_validation():
 
 
 def test_database_persistence(db):
+    # pylint: disable=redefined-outer-name
+    """Test saving and querying models in database."""
     # Insert Net Session
     session = NetSession(name="Test Session", pin="B2Y8", callsign_indicator="H")
     db.add(session)
@@ -157,6 +167,8 @@ def test_database_persistence(db):
 
 
 def test_routing_endpoints(app, db):
+    # pylint: disable=redefined-outer-name
+    """Test HTTP API endpoints for roster and logs."""
     # Setup session, station, log in db
     session = NetSession(name="Routing Net", pin="R9Y2", callsign_indicator="T")
     db.add(session)
@@ -218,26 +230,30 @@ def test_routing_endpoints(app, db):
 
 
 def test_socketio_session_creation(app):
+    # pylint: disable=redefined-outer-name
+    """Test creating a net session via SocketIO."""
     # Test client using Flask-SocketIO's test_client
     client = socketio.test_client(app)
     assert client.is_connected()
-    
+
     # Emit create_net event
     client.emit('create_net', {"name": "Socket Net", "callsign_indicator": "H"})
-    
+
     received = client.get_received()
     assert len(received) > 0
-    
+
     # Locate create_response in messages
     response = next(msg for msg in received if msg['name'] == 'create_response')
     assert response['args'][0]['success'] is True
     pin = response['args'][0]['pin']
     assert len(pin) == 4
-    
+
     client.disconnect()
 
 
 def test_socketio_station_join_and_callsign_assignment(app, db):
+    # pylint: disable=redefined-outer-name
+    """Test joining net and callsign assignment via SocketIO."""
     # Setup a net session in db
     session = NetSession(name="Join Session", pin="K9F2", callsign_indicator="T")
     db.add(session)
@@ -262,7 +278,7 @@ def test_socketio_station_join_and_callsign_assignment(app, db):
 
     # Instructor assigns callsign '10' (which should prepend 'T' prefix to make 'T10')
     instructor.emit('assign_callsign', {"stationId": student_id, "callSign": "10", "role": "SUB_STATION"})
-    
+
     # Check student client receives callsign_assigned event
     received_stud_after = student.get_received()
     callsign_event = next(m for m in received_stud_after if m['name'] == 'callsign_assigned')['args'][0]
@@ -274,7 +290,8 @@ def test_socketio_station_join_and_callsign_assignment(app, db):
 
 
 def test_radio_check_timer_and_defaulting(app, db):
-    import eventlet
+    # pylint: disable=redefined-outer-name
+    """Test collective radio check turn sequencing and timeout defaulting."""
     # Create session
     session = NetSession(name="Check Session", pin="W7Y8", callsign_indicator="R")
     db.add(session)
@@ -304,7 +321,7 @@ def test_radio_check_timer_and_defaulting(app, db):
 
     # Start check
     instructor.emit('start_radio_check', {})
-    
+
     # H10 should be the first turn
     events = student1.get_received()
     status_events = [m for m in events if m['name'] == 'radio_check_status']
@@ -316,7 +333,6 @@ def test_radio_check_timer_and_defaulting(app, db):
 
     # Now verify Mike got the status update
     events2 = student2.get_received()
-    print("DEBUG TEST EVENTS FOR MIKE:", events2)
     status_events2 = [m for m in events2 if m['name'] == 'radio_check_status']
     assert len(status_events2) > 0
     assert status_events2[-1]['args'][0]['activeCallSign'] == 'R12'
@@ -328,22 +344,21 @@ def test_radio_check_timer_and_defaulting(app, db):
 
 
 def test_get_db_exception_rollback(monkeypatch):
-    from app import database
+    """Test get_db rollback on session error."""
     def mock_db_session():
         raise RuntimeError("Database connection failure")
-    
+
     monkeypatch.setattr(database, 'db_session', mock_db_session)
     with pytest.raises(RuntimeError):
         database.get_db()
 
 
 def test_init_db_creates_directory(tmp_path, monkeypatch):
-    from app import database
+    """Test database directory creation during init_db."""
     target_dir = tmp_path / "subdir"
     db_file = target_dir / "test.db"
     fake_url = f"sqlite:///{db_file}"
-    
+
     monkeypatch.setattr(database, 'DATABASE_URL', fake_url)
     database.init_db()
     assert target_dir.exists()
-

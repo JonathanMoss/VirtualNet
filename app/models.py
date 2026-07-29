@@ -1,3 +1,4 @@
+"""SQLAlchemy ORM database models for VirtualNet."""
 import uuid
 from datetime import datetime
 from sqlalchemy import Column, String, Integer, DateTime, ForeignKey, Text, UniqueConstraint
@@ -5,7 +6,10 @@ from sqlalchemy.orm import declarative_base, relationship
 
 Base = declarative_base()
 
+
 class NetSession(Base):
+    """Represents a hosted radio net session."""
+    # pylint: disable=too-few-public-methods
     __tablename__ = 'net_sessions'
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -24,6 +28,8 @@ class NetSession(Base):
 
 
 class Station(Base):
+    """Represents a connected radio station (instructor or student sub-station)."""
+    # pylint: disable=too-few-public-methods
     __tablename__ = 'stations'
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -32,7 +38,7 @@ class Station(Base):
     call_sign = Column(String(15), nullable=True, index=True)
     role = Column(String(15), default="SUB_STATION", nullable=False)  # CONTROL, SUB_STATION, INSTRUCTOR
     ip_address = Column(String(45), nullable=True)
-    status = Column(String(20), default="AWAITING_ASSIGNMENT", nullable=False)  # AWAITING_ASSIGNMENT, CONNECTED, MUTED, DISCONNECTED
+    status = Column(String(20), default="AWAITING_ASSIGNMENT", nullable=False)
     transmission_status = Column(String(20), default="IDLE", nullable=False)  # IDLE, TRANSMITTING, BLOCKED
     signal_quality = Column(String(15), default="OK", nullable=False)  # OK, DIFFICULT, UNWORKABLE
     connected_at = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -46,6 +52,8 @@ class Station(Base):
 
 
 class Transmission(Base):
+    """Represents a voice PTT transmission record."""
+    # pylint: disable=too-few-public-methods
     __tablename__ = 'transmissions'
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -54,12 +62,14 @@ class Transmission(Base):
     start_time = Column(DateTime, default=datetime.utcnow, nullable=False)
     end_time = Column(DateTime, nullable=True)
     audio_file_path = Column(String(255), nullable=True)
-    termination_reason = Column(String(30), nullable=True)  # PTT_RELEASED, OVERRIDDEN, TIMEOUT, DISCONNECTED
+    termination_reason = Column(String(30), nullable=True)
 
     net_session = relationship("NetSession", back_populates="transmissions")
 
 
 class LogEntry(Base):
+    """Represents a radio message log sheet entry."""
+    # pylint: disable=too-few-public-methods
     __tablename__ = 'log_entries'
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
@@ -68,7 +78,7 @@ class LogEntry(Base):
     dtg = Column(String(20), nullable=False)  # DDHHMMZ MON YY format
     from_call_sign = Column(String(15), nullable=False)
     to_call_sign = Column(String(15), nullable=False)
-    precedence = Column(String(10), default="ROUTINE", nullable=False)  # ROUTINE, PRIORITY, IMMEDIATE, FLASH
+    precedence = Column(String(10), default="ROUTINE", nullable=False)
     event_text = Column(String(255), nullable=False)
     operator_initials = Column(String(3), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -78,6 +88,8 @@ class LogEntry(Base):
 
 
 class InstructorInject(Base):
+    """Represents an instructor training inject scenario item."""
+    # pylint: disable=too-few-public-methods
     __tablename__ = 'instructor_injects'
 
     id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
