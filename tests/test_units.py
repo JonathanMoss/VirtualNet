@@ -326,3 +326,24 @@ def test_radio_check_timer_and_defaulting(app, db):
     student1.disconnect()
     student2.disconnect()
 
+
+def test_get_db_exception_rollback(monkeypatch):
+    from app import database
+    def mock_db_session():
+        raise RuntimeError("Database connection failure")
+    
+    monkeypatch.setattr(database, 'db_session', mock_db_session)
+    with pytest.raises(RuntimeError):
+        database.get_db()
+
+
+def test_init_db_creates_directory(tmp_path, monkeypatch):
+    from app import database
+    target_dir = tmp_path / "subdir"
+    db_file = target_dir / "test.db"
+    fake_url = f"sqlite:///{db_file}"
+    
+    monkeypatch.setattr(database, 'DATABASE_URL', fake_url)
+    database.init_db()
+    assert target_dir.exists()
+
