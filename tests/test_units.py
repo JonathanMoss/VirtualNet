@@ -4,7 +4,7 @@ from pydantic import ValidationError
 import pytest
 
 from app import create_app, socketio, database
-from app.database import Base, engine, db_session
+from app.database import Base, engine, db_session, init_db
 from app.models import NetSession, Station, LogEntry
 from app.schemas import NetSessionCreate, StationCreate, LogEntryCreate
 
@@ -14,9 +14,10 @@ def app():
     """Module-level Flask app test fixture."""
     app_instance = create_app()
     app_instance.config['TESTING'] = True
-    app_instance.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
 
     # Initialize database
+    init_db()
+    Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
 
     yield app_instance
@@ -26,16 +27,7 @@ def app():
     db_session.remove()
 
 
-@pytest.fixture(scope="function")
-def db(app):
-    # pylint: disable=redefined-outer-name,unused-argument
 
-    """Function-level isolated DB session fixture."""
-    session = db_session()
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-    yield session
-    session.rollback()
 
 
 def test_net_session_create_validation():
@@ -229,8 +221,9 @@ def test_routing_endpoints(app, db):
     assert resp.status_code == 404
 
 
-def test_socketio_session_creation(app):
-    # pylint: disable=redefined-outer-name
+def test_socketio_session_creation(app, db):
+    # pylint: disable=redefined-outer-name,unused-argument
+
     """Test creating a net session via SocketIO."""
     # Test client using Flask-SocketIO's test_client
     client = socketio.test_client(app)

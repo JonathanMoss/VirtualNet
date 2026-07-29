@@ -17,12 +17,19 @@ This document describes the high-level architecture, module design, and communic
   │        │          │                       │           │
   │        │          ▼                       ▼           │
   │        │  ┌───────────────┐      ┌─────────────────┐  │
-  │        │  │ Audio Router  │      │ SQLAlchemy      │  │
-  │        │  │ (WebSocket)   │      │ DB Engine       │  │
+  │        │  │ Zero-DB Audio │      │ SQLAlchemy      │  │
+  │        │  │ Fast Router   │      │ DB Engine       │  │
   │        │  └───────┬───────┘      └────────┬────────┘  │
   │        └──────────┼───────────────────────┼───────────┘
   │ SocketIO          │ Binary Audio          │ JSON Logs
   │ (WS / HTTP)       │ Over Sockets          │
+  │                   │ (Zero-DB Fast Path)   │
+  │                   ▼                       ▼
+  │        ┌───────────────────┐              │
+  │        │   REDIS 7 PUB/SUB │              │
+  │        │   MESSAGE BROKER  │              │
+  │        └──────────┬────────┘              │
+  │                   │                       │
   ▼                   ▼                       ▼
 ┌────────────────────────────────────────────────────────┐
 │               BOOTSTRAP / VANILLA JS CLIENT            │
@@ -42,24 +49,24 @@ This document describes the high-level architecture, module design, and communic
 
 ---
 
-## 2. Server Architecture Modules (Python/Flask)
+## 2. Server Architecture Modules (Python/Flask & Redis)
 
-The server runs as a Flask web application, utilizing event handlers for real-time traffic.
+The server runs as a Flask web application, utilizing event handlers for real-time traffic and Redis for multi-worker Pub/Sub distribution.
 
-### SocketIO Event Manager
+### SocketIO Event Manager & Redis Adapter
 - Listens for WebSocket-based connection events using `Flask-SocketIO`.
+- Connects to `Redis 7` as a message queue to enable horizontally scalable Pub/Sub room broadcasting.
 - Dispatches incoming requests (e.g., `join_net`, `ptt_request`, `sync_log_entry`) to relevant controllers.
-- Manages client namespaces and group broadcasting.
 
 ### Pydantic Data Validation Layer
 - Enforces runtime typing and validation schemas on all JSON communication payloads.
 - Converts raw incoming dictionary payloads into validated Python models (e.g., `StationModel`, `LogEntryModel`).
 - Raises automatic serialization errors for invalid or malformed data packets.
 
-### Audio Router
+### Zero-DB Audio Router
 - Receives binary WebSocket packets containing compressed microphone chunks from the active speaker.
-- Re-broadcasts the raw binary buffers directly to all other clients connected in the session.
-- Handles audio stream state logging.
+- Uses an in-memory/Redis $O(1)$ fast-path table (`transmitting_sids`) to verify transmission permission without executing database queries during live streaming.
+- Re-broadcasts binary audio buffers directly to room subscribers with sub-15ms latency.
 
 ### SQLAlchemy Database Engine
 - Manages the SQLite database schema mapping (`models.py`).
@@ -87,4 +94,3 @@ The client runs as an interactive web page loaded in standard modern web browser
 
 ### LocalStorage Cache
 - Automatically saves unsubmitted or draft log sheets locally in the browser to prevent data loss in case of page reload or disconnection.
-

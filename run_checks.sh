@@ -4,7 +4,7 @@ set -e
 echo "=========================================="
 echo "  1/3: Running Pylint on all Python files"
 echo "=========================================="
-pylint --fail-under=9.0 app tests
+pylint --fail-under=10.0 app tests
 
 echo "=========================================="
 echo "  2/3: Running Pytest with 90% Coverage"

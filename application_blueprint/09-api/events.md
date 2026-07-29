@@ -25,7 +25,7 @@ Triggered when a station leaves or is disconnected.
 
 ---
 
-## 2. Transmission Events
+## 2. Transmission & Audio Events
 
 ### `TransmissionStartedEvent`
 Triggered when a station initiates PTT and acquires the channel lock.
@@ -33,6 +33,13 @@ Triggered when a station initiates PTT and acquires the channel lock.
   - `timestamp`: DateTime
   - `transmissionId`: UUID
   - `senderCallSign`: String
+
+### `AudioChunkEvent` (`audio_chunk`)
+Streaming binary WebSocket event routed via Zero-DB fast path (< 15ms broadcast latency target).
+- **Binary Header & Payload**:
+  - Bytes 0-3: `transmissionId` (32-bit uint)
+  - Bytes 4+: Raw Audio Frame / Timestamped Payload
+- **Routing**: Zero-Database $O(1)$ memory lookup via active `transmitting_sids` table.
 
 ### `TransmissionEndedEvent`
 Triggered when a station releases PTT and the channel returns to idle.

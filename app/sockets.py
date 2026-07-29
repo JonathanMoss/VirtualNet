@@ -17,6 +17,9 @@ from app.schemas import NetSessionCreate, LogEntryCreate
 sid_to_station_id = {}
 station_id_to_sid = {}
 
+# Fast-path in-memory mapping of transmitting SIDs to net_id (Zero-DB audio streaming)
+transmitting_sids = {}
+
 # Active radio checks state by net_id
 # Format: { net_id: { "in_progress": bool, "sequence": [callsigns], "active_index": int,
 #                     "defaulted": [callsigns], "completed": [callsigns], "timer_greenlet": greenlet } }
@@ -76,6 +79,7 @@ def start_radio_check_timer(net_id, active_callsign):
             # Advance index
             check_state["active_index"] += 1
             advance_radio_check(db, net_id)
+            db.commit()
         # pylint: disable=broad-exception-caught
         except Exception:
             db.rollback()
@@ -84,7 +88,6 @@ def start_radio_check_timer(net_id, active_callsign):
 def advance_radio_check(db, net_id):
     # pylint: disable=unused-argument
     """Advances the radio check to the next station in sequence or concludes it."""
-
     check_state = active_radio_checks.get(net_id)
     if not check_state or not check_state["in_progress"]:
         return
@@ -141,6 +144,7 @@ def handle_connect():
 @socketio.on('disconnect')
 def handle_disconnect():
     """Client disconnected socket event. Cleans up session records."""
+    transmitting_sids.pop(request.sid, None)
     db = get_db()
     station = get_station_from_sid(db, request.sid)
     if station:
@@ -200,6 +204,8 @@ def handle_create_net(data):
         "netId": session.id,
         "netName": session.name
     })
+
+
 
 
 @socketio.on('join_net')
@@ -375,6 +381,9 @@ def handle_ptt_request(data):
         db.add(tx)
         db.commit()
 
+        # Register SID in zero-DB fast-path transmitting map
+        transmitting_sids[request.sid] = net_id
+
         # Cancel radio check timer if the speaker is the active turn
         check_state = active_radio_checks.get(net_id)
         if check_state and check_state["in_progress"]:
@@ -399,6 +408,7 @@ def handle_ptt_request(data):
                 # Emit override event to cut-off socket
                 cur_sid = station_id_to_sid.get(cur_sender.id)
                 if cur_sid:
+                    transmitting_sids.pop(cur_sid, None)
                     socketio.emit('ptt_override', {"reason": "NCS_BREAK_IN"}, to=cur_sid)
 
             active_tx.end_time = datetime.utcnow()
@@ -414,6 +424,9 @@ def handle_ptt_request(data):
             db.add(new_tx)
             db.commit()
 
+            # Register CONTROL SID in zero-DB fast-path transmitting map
+            transmitting_sids[request.sid] = net_id
+
             emit('ptt_response', {"allowed": True, "transmissionId": new_tx.id})
             broadcast_roster(db, net_id)
         else:
@@ -427,6 +440,7 @@ def handle_ptt_request(data):
 @socketio.on('ptt_release')
 def handle_ptt_release(data):
     """Station releases PTT key, freeing the channel."""
+    transmitting_sids.pop(request.sid, None)
     db = get_db()
     station = get_station_from_sid(db, request.sid)
     if not station:
@@ -463,13 +477,13 @@ def handle_audio_chunk(data):
     if not isinstance(data, (bytes, bytearray)) or len(data) < 4:
         return
 
-    db = get_db()
-    station = get_station_from_sid(db, request.sid)
-    if not station or station.transmission_status != "TRANSMITTING":
+    # Fast-path O(1) memory lookup - ZERO database queries per frame
+    net_id = transmitting_sids.get(request.sid)
+    if not net_id:
         return
 
     # Broadcast binary chunk to the room, excluding the sender
-    emit('audio_chunk', data, room=station.net_id, include_self=False, binary=True)
+    emit('audio_chunk', data, room=net_id, include_self=False, binary=True)
 
 
 @socketio.on('sync_log_entry')
@@ -599,6 +613,7 @@ def handle_set_signal_quality(data):
 def handle_end_session(data):
     """Instructor ends and terminates the net session. Purges ephemeral data."""
     # pylint: disable=unused-argument
+    transmitting_sids.pop(request.sid, None)
     db = get_db()
     instructor = get_station_from_sid(db, request.sid)
     if not instructor or instructor.role not in ["CONTROL", "INSTRUCTOR"]:
@@ -627,6 +642,7 @@ def handle_end_session(data):
                 leave_room(net_id, sid=sid)
                 sid_to_station_id.pop(sid, None)
                 station_id_to_sid.pop(s.id, None)
+                transmitting_sids.pop(sid, None)
 
         # Ephemeral Purge
         db.query(InstructorInject).filter_by(net_id=net_id).delete()

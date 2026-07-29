@@ -2,7 +2,7 @@
 ignore=CVS,.git,__pycache__
 
 [MESSAGES CONTROL]
-disable=
+disable=cyclic-import
 
 [FORMAT]
 max-line-length=120

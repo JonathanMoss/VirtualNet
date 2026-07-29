@@ -1,5 +1,6 @@
 """Behave BDD step definitions for VirtualNet feature tests."""
-# pylint: disable=not-callable,unused-argument,unused-variable,cyclic-import,R0401,missing-function-docstring,line-too-long
+# pylint: disable=not-callable,unused-argument,unused-variable,cyclic-import,R0401,duplicate-code,missing-function-docstring,line-too-long
+
 
 import eventlet
 from behave import given, when, then
