@@ -56,6 +56,10 @@
                 <label for="create-ci" class="form-label text-uppercase">Daily Callsign Indicator letter prefix</label>
                 <input type="text" class="form-control text-uppercase text-center" id="create-ci" placeholder="e.g. R" maxlength="1" value="R" required>
               </div>
+              <div class="mb-3">
+                <label for="create-instructor-pin" class="form-label text-uppercase">Daily Instructor 6-Digit PIN</label>
+                <input type="password" class="form-control text-center" id="create-instructor-pin" placeholder="Enter 6-digit PIN" maxlength="6" pattern="\d{6}" required>
+              </div>
               <button type="submit" class="btn btn-tactical w-100 mt-2">CREATE NET SESSION</button>
             </form>
             <div id="create-success-box" class="mt-3 p-3 border border-success d-none bg-dark text-center">
@@ -85,6 +89,7 @@
         </a>
         <div class="d-flex align-items-center gap-3">
           <span class="badge border border-success text-success text-uppercase" id="net-mode-badge">DIRECTED NET</span>
+          <span class="badge border border-warning text-warning text-uppercase" id="header-net-pin">PIN: ----</span>
           <span class="text-white d-none d-sm-inline" id="header-net-name">Net: -</span>
           <span class="text-warning font-weight-bold" id="header-callsign">Callsign: AWAITING</span>
           <button id="btn-callsign-summary" class="btn btn-sm btn-outline-tactical" data-bs-toggle="modal" data-bs-target="#allocationModal">📞 ALLOCATION SUMMARY</button>
@@ -92,6 +97,7 @@
         </div>
       </div>
     </header>
+
 
     <!-- Main Workspace -->
     <div class="container-fluid flex-grow-1 py-3 px-3">

@@ -49,6 +49,56 @@ class VirtualNetApp {
 
     // 6. Connect Socket
     this.socketManager.connect();
+
+    // 7. Check for saved session persistence and auto-reconnect
+    const saved = this.loadSavedSession();
+    if (saved && saved.pin && saved.nickname) {
+      console.log("Restoring active session from storage/cookie:", saved);
+      this.myNickname = saved.nickname;
+      this.myRole = saved.role || 'SUB_STATION';
+      this.socketManager.joinNet(saved.pin, saved.nickname, saved.role);
+    }
+  }
+
+  saveSession(pin, nickname, role, stationId) {
+    try {
+      const data = { pin, nickname, role, stationId, timestamp: Date.now() };
+      const sessionStr = JSON.stringify(data);
+      localStorage.setItem('virtualnet_session', sessionStr);
+      document.cookie = `virtualnet_session=${encodeURIComponent(sessionStr)}; path=/; max-age=86400; SameSite=Lax`;
+    } catch (e) {
+      console.warn("Failed to save session credentials:", e);
+    }
+  }
+
+  loadSavedSession() {
+    try {
+      let sessionStr = localStorage.getItem('virtualnet_session');
+      if (!sessionStr) {
+        const match = document.cookie.match(/(?:^|; )virtualnet_session=([^;]*)/);
+        if (match) {
+          sessionStr = decodeURIComponent(match[1]);
+        }
+      }
+      if (!sessionStr) return null;
+      const data = JSON.parse(sessionStr);
+      if (Date.now() - data.timestamp > 86400 * 1000) {
+        this.clearSavedSession();
+        return null;
+      }
+      return data;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  clearSavedSession() {
+    try {
+      localStorage.removeItem('virtualnet_session');
+      document.cookie = 'virtualnet_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+    } catch (e) {
+      // Ignored
+    }
   }
 
   setupLandingForms() {
@@ -83,8 +133,9 @@ class VirtualNetApp {
       e.preventDefault();
       const name = document.getElementById('create-name').value.trim();
       const ci = document.getElementById('create-ci').value.trim();
+      const instructorPin = document.getElementById('create-instructor-pin').value.trim();
       
-      this.socketManager.createNet(name, ci);
+      this.socketManager.createNet(name, ci, instructorPin);
     });
 
     // Host Success dashboard transition click
@@ -94,6 +145,7 @@ class VirtualNetApp {
       this.socketManager.joinNet(pin, "Instructor", "CONTROL");
     });
   }
+
 
   setupPTTHandlers() {
     const pttBtn = document.getElementById('ptt-btn');
@@ -207,6 +259,17 @@ class VirtualNetApp {
       this.myStationId = data.stationId;
       this.myRole = data.role;
       
+      const currentPin = (document.getElementById('join-pin').value.trim() || document.getElementById('generated-pin').textContent.trim() || this.netPin || '').toUpperCase();
+      this.netPin = currentPin;
+
+      if (currentPin) {
+        this.saveSession(currentPin, this.myNickname, this.myRole, this.myStationId);
+        const headerPinBadge = document.getElementById('header-net-pin');
+        if (headerPinBadge) {
+          headerPinBadge.textContent = `PIN: ${currentPin}`;
+        }
+      }
+
       // Shift landing screens
       document.getElementById('landing-section').classList.add('d-none');
       document.getElementById('dashboard-section').classList.remove('d-none');
@@ -226,7 +289,8 @@ class VirtualNetApp {
         document.getElementById('instructor-section').classList.remove('d-none');
         
         // Populate Instructor Details
-        document.getElementById('instructor-pin-badge').textContent = `PIN: ${document.getElementById('join-pin').value.toUpperCase() || 'HOST'}`;
+        document.getElementById('instructor-pin-badge').textContent = `PIN: ${currentPin || 'HOST'}`;
+
         
         // Setup Instructor Session controls
         document.getElementById('btn-end-session').addEventListener('click', () => {
@@ -615,15 +679,22 @@ class VirtualNetApp {
   }
 
   resetToLanding() {
+    this.clearSavedSession();
     this.netId = null;
     this.myStationId = null;
     this.myCallSign = null;
+    this.netPin = null;
     
     document.getElementById('dashboard-section').classList.add('d-none');
     document.getElementById('landing-section').classList.remove('d-none');
     document.getElementById('join-pin').value = '';
     document.getElementById('create-success-box').classList.add('d-none');
+    const headerPinBadge = document.getElementById('header-net-pin');
+    if (headerPinBadge) {
+      headerPinBadge.textContent = 'PIN: ----';
+    }
   }
+
 }
 
 // Instantiate and initialize the app
