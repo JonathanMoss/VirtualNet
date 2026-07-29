@@ -1,40 +1,42 @@
 """Socket event integration tests for VirtualNet WebSocket communication."""
-import os
+import struct
+import time
 import pytest
 
 from app import create_app, socketio
 from app.database import Base, db_session, engine, init_db
 from app.models import NetSession, Station
-from app.sockets import sid_to_station_id, station_id_to_sid
+from app.sockets import sid_to_station_id, station_id_to_sid, transmitting_sids
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture(scope="function")
 def app():
     """Create the Flask app and initialize the database for socket tests."""
-    # Ensure the test database is available for the imported database engine.
-    os.environ.setdefault('DATABASE_URL', 'sqlite:///./virtualnet_test.db')
     app_instance = create_app()
     app_instance.config['TESTING'] = True
-
     init_db()
     yield app_instance
-
     db_session.remove()
     Base.metadata.drop_all(bind=engine)
     sid_to_station_id.clear()
     station_id_to_sid.clear()
+    transmitting_sids.clear()
+
 
 
 @pytest.fixture
-def socket_client(app):
-    # pylint: disable=redefined-outer-name
+def socket_client(app, db):
+    # pylint: disable=redefined-outer-name,unused-argument
     """Fixture providing a connected SocketIO test client."""
-    client = socketio.test_client(app, flask_test_client=app.test_client())
+    client = socketio.test_client(app)
     assert client.is_connected()
+
+
     yield client
     client.disconnect()
     sid_to_station_id.clear()
     station_id_to_sid.clear()
+    transmitting_sids.clear()
 
 
 def test_join_net_and_assign_callsign(app, socket_client):
@@ -55,7 +57,7 @@ def test_join_net_and_assign_callsign(app, socket_client):
     assert join_response['args'][0]['success'] is True
     assert join_response['args'][0]['role'] == 'INSTRUCTOR'
 
-    student_client = socketio.test_client(app, flask_test_client=app.test_client())
+    student_client = socketio.test_client(app)
     assert student_client.is_connected()
     student_client.emit('join_net', {'pin': pin, 'nickname': 'StudentA', 'role': 'SUB_STATION'})
     student_events = student_client.get_received()
@@ -99,7 +101,7 @@ def test_audio_chunk_broadcasts_to_other_clients(app, socket_client):
     assert instruct_join['args'][0]['success'] is True
 
     # Student joins and receives a callsign
-    student_client = socketio.test_client(app, flask_test_client=app.test_client())
+    student_client = socketio.test_client(app)
     assert student_client.is_connected()
     student_client.emit('join_net', {'pin': pin, 'nickname': 'StudentB', 'role': 'SUB_STATION'})
     student_join = next(item for item in student_client.get_received() if item['name'] == 'join_response')
@@ -140,7 +142,6 @@ def test_create_net_validation_error(app, socket_client):
 def test_join_net_error_cases(app, socket_client):
     # pylint: disable=redefined-outer-name,too-many-locals
     """Test edge cases and error responses when joining net sessions."""
-
     # Test invalid PIN
     socket_client.emit('join_net', {'pin': 'XXXX', 'nickname': 'User1', 'role': 'SUB_STATION'})
     received = socket_client.get_received()
@@ -156,9 +157,8 @@ def test_join_net_error_cases(app, socket_client):
     ctrl_resp = socket_client.get_received()
     ctrl_pin = next(item for item in ctrl_resp if item['name'] == 'create_response')['args'][0]['pin']
 
-
     # Join student with nickname 'INSTRUCTOR' (defaults to CONTROL role and callsign)
-    student1 = socketio.test_client(app, flask_test_client=app.test_client())
+    student1 = socketio.test_client(app)
     student1.emit('join_net', {'pin': ctrl_pin, 'nickname': 'INSTRUCTOR', 'role': 'SUB_STATION'})
     resp_ctrl = next(item for item in student1.get_received() if item['name'] == 'join_response')['args'][0]
     assert resp_ctrl['success'] is True
@@ -166,11 +166,11 @@ def test_join_net_error_cases(app, socket_client):
     student1.disconnect()
 
     # Try duplicate active nickname on Join Errors Net
-    student2 = socketio.test_client(app, flask_test_client=app.test_client())
+    student2 = socketio.test_client(app)
     student2.emit('join_net', {'pin': pin, 'nickname': 'OperatorA', 'role': 'SUB_STATION'})
     student2.get_received()
 
-    student3 = socketio.test_client(app, flask_test_client=app.test_client())
+    student3 = socketio.test_client(app)
     student3.emit('join_net', {'pin': pin, 'nickname': 'OperatorA', 'role': 'SUB_STATION'})
     resp_dup = next(item for item in student3.get_received() if item['name'] == 'join_response')['args'][0]
     assert resp_dup['success'] is False
@@ -180,12 +180,12 @@ def test_join_net_error_cases(app, socket_client):
     student3.disconnect()
 
     # Test joining a CLOSED session
-    db = db_session()
+    session_db = db_session()
     closed_session = NetSession(name="Closed Net", pin="CLOS", callsign_indicator="C", status="CLOSED")
-    db.add(closed_session)
-    db.commit()
+    session_db.add(closed_session)
+    session_db.commit()
 
-    student_closed = socketio.test_client(app, flask_test_client=app.test_client())
+    student_closed = socketio.test_client(app)
     student_closed.emit('join_net', {'pin': 'CLOS', 'nickname': 'OperatorB'})
     resp_closed = next(item for item in student_closed.get_received() if item['name'] == 'join_response')['args'][0]
     assert resp_closed['success'] is False
@@ -200,11 +200,10 @@ def test_assign_callsign_error_cases(app, socket_client):
     socket_client.emit('create_net', {'name': 'Assign Net', 'callsign_indicator': 'A'})
     pin = next(item for item in socket_client.get_received() if item['name'] == 'create_response')['args'][0]['pin']
 
-    student = socketio.test_client(app, flask_test_client=app.test_client())
+    student = socketio.test_client(app)
     student.emit('join_net', {'pin': pin, 'nickname': 'StudentX', 'role': 'SUB_STATION'})
     s_resp = student.get_received()
     student_id = next(item for item in s_resp if item['name'] == 'join_response')['args'][0]['stationId']
-
 
     # Unauthorized client (student trying to assign callsign)
     student.emit('assign_callsign', {'stationId': student_id, 'callSign': '10'})
@@ -226,7 +225,7 @@ def test_assign_callsign_error_cases(app, socket_client):
     student.get_received()
 
     # Join student2 and try to assign duplicate callsign
-    student2 = socketio.test_client(app, flask_test_client=app.test_client())
+    student2 = socketio.test_client(app)
     student2.emit('join_net', {'pin': pin, 'nickname': 'StudentY', 'role': 'SUB_STATION'})
     s2_id = next(item for item in student2.get_received() if item['name'] == 'join_response')['args'][0]['stationId']
 
@@ -249,7 +248,7 @@ def test_ptt_request_denials_and_control_override(app, socket_client):
     socket_client.get_received()
 
     # Student 1 joins but is AWAITING_ASSIGNMENT
-    student1 = socketio.test_client(app, flask_test_client=app.test_client())
+    student1 = socketio.test_client(app)
     student1.emit('join_net', {'pin': pin, 'nickname': 'UnassignedStudent'})
     s1_id = next(item for item in student1.get_received() if item['name'] == 'join_response')['args'][0]['stationId']
 
@@ -270,7 +269,7 @@ def test_ptt_request_denials_and_control_override(app, socket_client):
     assert ptt_granted['allowed'] is True
 
     # Student 2 tries PTT while Student 1 is transmitting -> Channel Busy
-    student2 = socketio.test_client(app, flask_test_client=app.test_client())
+    student2 = socketio.test_client(app)
     student2.emit('join_net', {'pin': pin, 'nickname': 'StudentTwo'})
     s2_id = next(item for item in student2.get_received() if item['name'] == 'join_response')['args'][0]['stationId']
     socket_client.emit('assign_callsign', {'stationId': s2_id, 'callSign': '02'})
@@ -297,10 +296,10 @@ def test_ptt_request_denials_and_control_override(app, socket_client):
     socket_client.get_received()
 
     # Test MUTED student PTT request
-    db = db_session()
-    st1 = db.query(Station).filter_by(id=s1_id).first()
+    session_db = db_session()
+    st1 = session_db.query(Station).filter_by(id=s1_id).first()
     st1.status = 'MUTED'
-    db.commit()
+    session_db.commit()
     db_session.remove()
 
     student1.emit('ptt_request', {})
@@ -309,11 +308,11 @@ def test_ptt_request_denials_and_control_override(app, socket_client):
     assert 'muted' in ptt_muted['reason']
 
     # Test PTT request when NetSession status is SUSPENDED
-    st1 = db.query(Station).filter_by(id=s1_id).first()
+    st1 = session_db.query(Station).filter_by(id=s1_id).first()
     st1.status = 'CONNECTED'
-    session_obj = db.query(NetSession).filter_by(pin=pin).first()
+    session_obj = session_db.query(NetSession).filter_by(pin=pin).first()
     session_obj.status = 'SUSPENDED'
-    db.commit()
+    session_db.commit()
     db_session.remove()
 
     student1.emit('ptt_request', {})
@@ -328,7 +327,6 @@ def test_ptt_request_denials_and_control_override(app, socket_client):
 def test_audio_chunk_edge_cases(app, socket_client):
     # pylint: disable=redefined-outer-name,unused-argument
     """Test audio_chunk edge cases for short payloads and non-transmitting stations."""
-
     socket_client.emit('create_net', {'name': 'Audio Edge Net', 'callsign_indicator': 'E'})
     pin = next(item for item in socket_client.get_received() if item['name'] == 'create_response')['args'][0]['pin']
 
@@ -352,7 +350,7 @@ def test_sync_log_entry_draft_and_finalized_locking(app, socket_client):
     pin = next(item for item in socket_client.get_received() if item['name'] == 'create_response')['args'][0]['pin']
 
     # Student joins and gets callsign
-    student = socketio.test_client(app, flask_test_client=app.test_client())
+    student = socketio.test_client(app)
     student.emit('join_net', {'pin': pin, 'nickname': 'LogStudent'})
     join_resp = next(item for item in student.get_received() if item['name'] == 'join_response')['args'][0]
     net_id = join_resp['netId']
@@ -407,11 +405,10 @@ def test_radio_check_start_and_set_signal_quality(app, socket_client):
     socket_client.emit('create_net', {'name': 'Radio Check Net', 'callsign_indicator': 'R'})
     pin = next(item for item in socket_client.get_received() if item['name'] == 'create_response')['args'][0]['pin']
 
-    student = socketio.test_client(app, flask_test_client=app.test_client())
+    student = socketio.test_client(app)
     student.emit('join_net', {'pin': pin, 'nickname': 'RadioCheckStudent'})
     st_resp = student.get_received()
     student_id = next(item for item in st_resp if item['name'] == 'join_response')['args'][0]['stationId']
-
 
     # Student attempts start_radio_check or set_signal_quality -> Unauthorized
     student.emit('start_radio_check', {})
@@ -451,7 +448,7 @@ def test_end_session_and_ephemeral_purge(app, socket_client):
     socket_client.emit('create_net', {'name': 'Purge Net', 'callsign_indicator': 'P'})
     pin = next(item for item in socket_client.get_received() if item['name'] == 'create_response')['args'][0]['pin']
 
-    student = socketio.test_client(app, flask_test_client=app.test_client())
+    student = socketio.test_client(app)
     student.emit('join_net', {'pin': pin, 'nickname': 'PurgeStudent'})
     student.get_received()
 
@@ -470,3 +467,80 @@ def test_end_session_and_ephemeral_purge(app, socket_client):
     assert ended_evt['reason'] == 'SESSION_CLOSED_BY_INSTRUCTOR'
 
     student.disconnect()
+
+
+def test_realtime_audio_transmission_latency_benchmark(app, db):
+    # pylint: disable=redefined-outer-name,too-many-locals,unused-argument
+    """Benchmark real-time zero-DB audio packet forwarding latency between 2 clients."""
+    # Create Net Session
+    instructor = socketio.test_client(app)
+    instructor.emit('create_net', {'name': 'Latency Net', 'callsign_indicator': 'L'})
+    pin = next(item for item in instructor.get_received() if item['name'] == 'create_response')['args'][0]['pin']
+
+    # Join Instructor & Student
+    instructor.emit('join_net', {'pin': pin, 'nickname': 'InstCtrl', 'role': 'INSTRUCTOR'})
+    instructor.get_received()
+
+    student = socketio.test_client(app)
+    student.emit('join_net', {'pin': pin, 'nickname': 'StudentSpeaker'})
+    s_resp = student.get_received()
+    student_id = next(item for item in s_resp if item['name'] == 'join_response')['args'][0]['stationId']
+
+    # Assign Callsign to Student
+    instructor.emit('assign_callsign', {'stationId': student_id, 'callSign': '01'})
+    instructor.get_received()
+    student.get_received()
+
+    # Student Requests PTT
+    student.emit('ptt_request', {})
+    ptt_resp = next(item for item in student.get_received() if item['name'] == 'ptt_response')['args'][0]
+    assert ptt_resp['allowed'] is True
+
+    # Stream 100 timestamped audio chunks from Student to Instructor
+    latencies_ms = []
+    num_packets = 100
+
+    for idx in range(1, num_packets + 1):
+        send_time = time.time()
+        # Binary payload: 4-byte tx_id + 8-byte send timestamp + 64-byte audio frame
+        payload = struct.pack('!I d', 1, send_time) + (b'X' * 64)
+
+        student.emit('audio_chunk', payload)
+
+        # Instructor receives packet
+        received = instructor.get_received()
+        recv_time = time.time()
+
+        audio_evt = next((m for m in received if m['name'] == 'audio_chunk'), None)
+        assert audio_evt is not None, f"Packet {idx} dropped or missing!"
+
+        recv_payload = audio_evt['args'][0]
+        _, pkt_send_time = struct.unpack('!I d', recv_payload[:12])
+
+        latency = (recv_time - pkt_send_time) * 1000.0  # ms
+        latencies_ms.append(latency)
+
+    # Calculate Benchmark Metrics
+    avg_latency = sum(latencies_ms) / len(latencies_ms)
+    min_latency = min(latencies_ms)
+    max_latency = max(latencies_ms)
+    sorted_latencies = sorted(latencies_ms)
+    p99_latency = sorted_latencies[int(len(sorted_latencies) * 0.99) - 1]
+
+    print("\n" + "=" * 50)
+    print(" 🚀 REAL-TIME ZERO-DB AUDIO LATENCY BENCHMARK RESULT")
+    print("=" * 50)
+    print(f" Packets Sent / Delivered: {num_packets} / {len(latencies_ms)} (100% Delivery)")
+    print(f" Average Broadcast Latency: {avg_latency:.3f} ms")
+    print(f" Minimum Latency          : {min_latency:.3f} ms")
+    print(f" Maximum Latency          : {max_latency:.3f} ms")
+    print(f" 99th Percentile (p99)    : {p99_latency:.3f} ms")
+    print("=" * 50)
+
+    # Assert sub-15ms average latency inside container
+    assert avg_latency < 15.0, f"Average latency too high: {avg_latency:.3f} ms"
+
+    # Clean up
+    student.emit('ptt_release', {'transmissionId': ptt_resp['transmissionId']})
+    student.disconnect()
+    instructor.disconnect()
