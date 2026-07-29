@@ -4,8 +4,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, scoped_session
 from app.models import Base
 
-# Default to SQLite database path inside the application folder or container volume
-DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///virtualnet.db')
+# Default to SQLite database path inside the data directory volume
+DATABASE_URL = os.environ.get('DATABASE_URL', 'sqlite:///data/virtualnet.db')
+
 
 # For SQLite, check if we need to enable multi-thread access
 connect_args = {}
