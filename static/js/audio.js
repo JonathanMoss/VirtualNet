@@ -33,9 +33,12 @@ export class WebAudioEngine {
     // Audio fade interval for UNWORKABLE simulation
     this.dropoutInterval = null;
     
-    // Squelch click assets
+    // Squelch click assets & transmitter sidetone
     this.whiteNoiseBuffer = null;
+    this.sidetoneOsc = null;
+    this.sidetoneGain = null;
   }
+
 
   async init() {
     // Lazy-initialize AudioContext on user interaction with the lowest latency hint.
@@ -253,6 +256,47 @@ export class WebAudioEngine {
     osc.stop(now + 0.04);
   }
 
+  startTransmitterSidetone() {
+    if (!this.audioContext) return;
+    this.stopTransmitterSidetone();
+
+    const now = this.audioContext.currentTime;
+
+    // Subtle transmitter carrier sidetone (750 Hz sine wave at -36 dB / gain 0.015)
+    this.sidetoneOsc = this.audioContext.createOscillator();
+    this.sidetoneOsc.type = 'sine';
+    this.sidetoneOsc.frequency.setValueAtTime(750, now);
+
+    this.sidetoneGain = this.audioContext.createGain();
+    this.sidetoneGain.gain.setValueAtTime(0.001, now);
+    // Smooth 20ms attack envelope to prevent click artifacts
+    this.sidetoneGain.gain.linearRampToValueAtTime(0.015, now + 0.02);
+
+    this.sidetoneOsc.connect(this.sidetoneGain);
+    this.sidetoneGain.connect(this.audioContext.destination);
+
+    this.sidetoneOsc.start(now);
+  }
+
+  stopTransmitterSidetone() {
+    if (this.sidetoneGain && this.audioContext) {
+      const now = this.audioContext.currentTime;
+      this.sidetoneGain.gain.cancelScheduledValues(now);
+      this.sidetoneGain.gain.setValueAtTime(this.sidetoneGain.gain.value, now);
+      // Smooth 30ms decay envelope
+      this.sidetoneGain.gain.linearRampToValueAtTime(0.0001, now + 0.03);
+    }
+    if (this.sidetoneOsc && this.audioContext) {
+      try {
+        this.sidetoneOsc.stop(this.audioContext.currentTime + 0.03);
+      } catch (e) {
+        // Ignored if already stopped
+      }
+    }
+    this.sidetoneOsc = null;
+    this.sidetoneGain = null;
+  }
+
   playPTTEndSquelchTail() {
     if (!this.audioContext || !this.whiteNoiseBuffer) return;
     const now = this.audioContext.currentTime;
@@ -283,6 +327,9 @@ export class WebAudioEngine {
     if (this.audioContext.state === 'suspended') {
       await this.audioContext.resume();
     }
+
+    // Start subtle local transmitter carrier sidetone while keying PTT
+    this.startTransmitterSidetone();
 
     try {
       const supportError = WebAudioEngine.getMediaCaptureSupportReason();
@@ -357,12 +404,14 @@ export class WebAudioEngine {
       }
       
     } catch (e) {
+      this.stopTransmitterSidetone();
       console.error("Failed to start microphone recording:", e);
       throw e;
     }
   }
 
   stopRecording() {
+    this.stopTransmitterSidetone();
     if (this.scriptNode) {
       this.scriptNode.disconnect();
       this.scriptNode = null;
