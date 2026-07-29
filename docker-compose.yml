@@ -34,5 +34,5 @@ services:
       - DATABASE_URL=sqlite:////app/data/virtualnet_test.db
       - PYTHONPATH=/app
     working_dir: /app
-    command: ["pytest", "--maxfail=1", "--disable-warnings", "--cov=app", "--cov-fail-under=90"]
+    command: ["./run_checks.sh"]
     restart: "no"

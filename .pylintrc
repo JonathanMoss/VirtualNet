@@ -1,0 +1,29 @@
+[MAIN]
+ignore=CVS,.git,__pycache__
+
+[MESSAGES CONTROL]
+disable=
+    C0114, # missing-module-docstring
+    C0115, # missing-class-docstring
+    C0116, # missing-function-docstring
+    C0301, # line-too-long
+    C0303, # trailing-whitespace
+    C0305, # trailing-newlines
+    C0411, # wrong-import-order
+    C0413, # wrong-import-position
+    C0415, # import-outside-toplevel
+    R0903, # too-few-public-methods
+    R0914, # too-many-locals
+    R0915, # too-many-statements
+    R0801, # duplicate-code
+    R0401, # cyclic-import
+    W0718, # broad-exception-caught
+    W0613, # unused-argument
+    W0612, # unused-variable
+    W0611, # unused-import
+    W0621, # redefined-outer-name (pytest fixture parameters)
+    W0107, # unnecessary-pass
+    E1102  # not-callable (behave decorators @given, @when, @then)
+
+[FORMAT]
+max-line-length=120

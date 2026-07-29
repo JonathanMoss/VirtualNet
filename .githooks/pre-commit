@@ -1,0 +1,5 @@
+#!/bin/bash
+set -e
+
+echo "🔍 Running pre-commit test battery in Docker container..."
+docker compose run --rm test
