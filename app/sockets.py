@@ -1,7 +1,10 @@
 """WebSocket event handlers and radio net session management for VirtualNet."""
 from datetime import datetime
+import json
+from pathlib import Path
 import random
 import string
+
 
 import eventlet
 from flask import request
@@ -173,6 +176,25 @@ def handle_disconnect():
         broadcast_roster(db, net_id)
 
 
+PINS_FILE = Path(__file__).resolve().parent / "instructor_pins.json"
+
+
+
+def verify_instructor_pin(pin: str) -> bool:
+    """Validate 6-digit instructor PIN against today's day-of-month PIN table."""
+    if not PINS_FILE.exists():
+        return False
+    try:
+        with open(PINS_FILE, 'r', encoding='utf-8') as f:
+            pins_data = json.load(f)
+        day_str = str(datetime.utcnow().day)
+        expected_pin = pins_data.get(day_str)
+        return expected_pin is not None and pin == expected_pin
+    except (OSError, KeyError, json.JSONDecodeError):
+        return False
+
+
+
 @socketio.on('create_net')
 def handle_create_net(data):
     """Instructor hosts a new net session."""
@@ -181,6 +203,11 @@ def handle_create_net(data):
         validated = NetSessionCreate(**data)
     except ValidationError as e:
         emit('create_response', {"success": False, "reason": str(e)})
+        return
+
+    # Verify 6-digit daily Instructor PIN
+    if not verify_instructor_pin(validated.instructor_pin):
+        emit('create_response', {"success": False, "reason": "Invalid 6-digit Instructor PIN for today."})
         return
 
     # Generate a unique 4-character alphanumeric PIN
@@ -204,6 +231,7 @@ def handle_create_net(data):
         "netId": session.id,
         "netName": session.name
     })
+
 
 
 

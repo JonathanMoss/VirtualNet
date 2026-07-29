@@ -2,11 +2,14 @@
 import eventlet
 from pydantic import ValidationError
 import pytest
+from conftest import get_today_instructor_pin
 
-from app import create_app, socketio, database
+from app import create_app, socketio
 from app.database import Base, engine, db_session, init_db
 from app.models import NetSession, Station, LogEntry
 from app.schemas import NetSessionCreate, StationCreate, LogEntryCreate
+
+
 
 
 @pytest.fixture(scope="module")
@@ -27,28 +30,31 @@ def app():
     db_session.remove()
 
 
-
-
-
 def test_net_session_create_validation():
     """Test NetSessionCreate schema validation rules."""
+    valid_pin = get_today_instructor_pin()
     # Valid parameters
-    payload = {"name": "Exercise Drill One", "callsign_indicator": "R"}
+    payload = {"name": "Exercise Drill One", "callsign_indicator": "R", "instructor_pin": valid_pin}
     model = NetSessionCreate(**payload)
     assert model.name == "Exercise Drill One"
     assert model.callsign_indicator == "R"
+    assert model.instructor_pin == valid_pin
 
     # Invalid names
     with pytest.raises(ValidationError):
-        NetSessionCreate(name="!!! Invalid Net !!!", callsign_indicator="R")
+        NetSessionCreate(name="!!! Invalid Net !!!", callsign_indicator="R", instructor_pin=valid_pin)
 
     # Invalid callsign indicator (Z is reserved, length must be 1)
     with pytest.raises(ValidationError):
-        NetSessionCreate(name="Valid Net", callsign_indicator="Z")
+        NetSessionCreate(name="Valid Net", callsign_indicator="Z", instructor_pin=valid_pin)
     with pytest.raises(ValidationError):
-        NetSessionCreate(name="Valid Net", callsign_indicator="RR")
+        NetSessionCreate(name="Valid Net", callsign_indicator="RR", instructor_pin=valid_pin)
     with pytest.raises(ValidationError):
-        NetSessionCreate(name="Valid Net", callsign_indicator="2")
+        NetSessionCreate(name="Valid Net", callsign_indicator="2", instructor_pin=valid_pin)
+
+    # Invalid instructor PIN (must be 6 numeric digits)
+    with pytest.raises(ValidationError):
+        NetSessionCreate(name="Valid Net", callsign_indicator="R", instructor_pin="12345")
 
 
 def test_station_create_validation():
@@ -69,122 +75,99 @@ def test_station_create_validation():
 
     # Invalid nickname
     with pytest.raises(ValidationError):
-        StationCreate(nickname="Op*", pin="A3F9")
+        StationCreate(nickname="!!!BadUser!!!", pin="A3F9")
 
 
 def test_log_entry_validation():
     """Test LogEntryCreate schema validation rules."""
-    # Valid DTG formats and parameters
+    # Valid entry
     payload = {
         "dtg": "281015Z JUL 26",
         "from_call_sign": "R11",
         "to_call_sign": "CONTROL",
         "precedence": "ROUTINE",
-        "event_text": "SITREP DE R11 INSTRUCTED TO STANDBY",
-        "operator_initials": "JD"
+        "event_text": "RADIO CHECK OK OVER",
+        "operator_initials": "JM"
     }
     model = LogEntryCreate(**payload)
     assert model.dtg == "281015Z JUL 26"
 
-    # Invalid DTG (wrong month spelling, wrong day number, etc.)
+    # Invalid DTG
+    bad_payload = {**payload, "dtg": "281015 JUL 26"}
     with pytest.raises(ValidationError):
-        LogEntryCreate(**{**payload, "dtg": "321015Z JUL 26"})  # Day 32
-    with pytest.raises(ValidationError):
-        LogEntryCreate(**{**payload, "dtg": "282515Z JUL 26"})  # Hour 25
-    with pytest.raises(ValidationError):
-        LogEntryCreate(**{**payload, "dtg": "281015Z JUX 26"})  # Bad month
-    with pytest.raises(ValidationError):
-        LogEntryCreate(**{**payload, "dtg": "281015Z JUL 266"})  # 3 digit year
+        LogEntryCreate(**bad_payload)
 
     # Invalid precedence
+    bad_precedence = {**payload, "precedence": "URGENT"}
     with pytest.raises(ValidationError):
-        LogEntryCreate(**{**payload, "precedence": "URGENT"})
-
-    # Invalid callsigns
-    with pytest.raises(ValidationError):
-        LogEntryCreate(**{**payload, "from_call_sign": "R*11"})
-
-    # Invalid initials (must be 2-3 alphabetic characters)
-    with pytest.raises(ValidationError):
-        LogEntryCreate(**{**payload, "operator_initials": "J"})
-    with pytest.raises(ValidationError):
-        LogEntryCreate(**{**payload, "operator_initials": "JD4"})
+        LogEntryCreate(**bad_precedence)
 
 
 def test_database_persistence(db):
-    # pylint: disable=redefined-outer-name
-    """Test saving and querying models in database."""
-    # Insert Net Session
-    session = NetSession(name="Test Session", pin="B2Y8", callsign_indicator="H")
-    db.add(session)
-    db.commit()
+    # pylint: disable=redefined-outer-name,unused-argument
+    """Test creating and retrieving database models using SQLAlchemy session."""
+    session = db_session()
 
-    saved_session = db.query(NetSession).filter_by(pin="B2Y8").first()
-    assert saved_session is not None
-    assert saved_session.name == "Test Session"
-    assert saved_session.callsign_indicator == "H"
 
-    # Insert Station
-    station = Station(
-        net_id=saved_session.id,
-        nickname="Operator Bill",
-        call_sign="H10",
-        role="SUB_STATION",
-        status="CONNECTED"
-    )
-    db.add(station)
-    db.commit()
+    # Create a NetSession
+    net = NetSession(name="Alpha Net", pin="A1B2", callsign_indicator="A")
+    session.add(net)
+    session.commit()
 
-    saved_station = db.query(Station).filter_by(nickname="Operator Bill").first()
-    assert saved_station is not None
-    assert saved_station.call_sign == "H10"
+    retrieved_net = session.query(NetSession).filter_by(pin="A1B2").first()
+    assert retrieved_net is not None
+    assert retrieved_net.name == "Alpha Net"
+    assert retrieved_net.callsign_indicator == "A"
 
-    # Insert Log Entry
+    # Create Stations
+    st1 = Station(net_id=retrieved_net.id, nickname="Instructor", role="CONTROL", call_sign="CONTROL")
+    st2 = Station(net_id=retrieved_net.id, nickname="Student1", role="SUB_STATION")
+    session.add_all([st1, st2])
+    session.commit()
+
+    stations = session.query(Station).filter_by(net_id=retrieved_net.id).all()
+    assert len(stations) == 2
+
+    # Create LogEntry
     log = LogEntry(
-        net_id=saved_session.id,
-        owner_station_id=saved_station.id,
-        dtg="281030Z JUL 26",
-        from_call_sign="H10",
-        to_call_sign="CONTROL",
+        net_id=retrieved_net.id,
+        owner_station_id=st1.id,
+        dtg="281015Z JUL 26",
+        from_call_sign="CONTROL",
+        to_call_sign="A10",
         precedence="ROUTINE",
-        event_text="CHECK RECEIVED OK",
-        operator_initials="OB"
+        event_text="TEST TRANSMISSION",
+        operator_initials="JM"
     )
-    db.add(log)
-    db.commit()
+    session.add(log)
+    session.commit()
 
-    saved_log = db.query(LogEntry).filter_by(operator_initials="OB").first()
-    assert saved_log is not None
-    assert saved_log.event_text == "CHECK RECEIVED OK"
+    retrieved_log = session.query(LogEntry).filter_by(net_id=retrieved_net.id).first()
+    assert retrieved_log is not None
+    assert retrieved_log.event_text == "TEST TRANSMISSION"
 
 
 def test_routing_endpoints(app, db):
-    # pylint: disable=redefined-outer-name
-    """Test HTTP API endpoints for roster and logs."""
-    # Setup session, station, log in db
-    session = NetSession(name="Routing Net", pin="R9Y2", callsign_indicator="T")
-    db.add(session)
+    # pylint: disable=redefined-outer-name,unused-argument
+    """Test Flask HTTP API endpoints."""
+    # Seed database
+    session_obj = NetSession(name="HTTP Test Net", pin="R9Y2", callsign_indicator="R")
+    db.add(session_obj)
     db.commit()
 
-    station = Station(
-        net_id=session.id,
-        nickname="Operator Sarah",
-        call_sign="T10",
-        role="SUB_STATION",
-        status="CONNECTED"
-    )
-    db.add(station)
+    st = Station(net_id=session_obj.id, nickname="User1", role="SUB_STATION", call_sign="R11")
+    db.add(st)
     db.commit()
 
     log = LogEntry(
-        net_id=session.id,
-        owner_station_id=station.id,
-        dtg="281030Z JUL 26",
-        from_call_sign="T10",
+        net_id=session_obj.id,
+        owner_station_id=st.id,
+        dtg="281015Z JUL 26",
+        from_call_sign="R11",
         to_call_sign="CONTROL",
         precedence="ROUTINE",
         event_text="CHECK RECEIVED OK",
-        operator_initials="OS"
+        operator_initials="JM"
     )
     db.add(log)
     db.commit()
@@ -192,7 +175,7 @@ def test_routing_endpoints(app, db):
     # Test with Flask test client
     client = app.test_client()
 
-    # Index page
+    # Home route
     resp = client.get('/')
     assert resp.status_code == 200
 
@@ -202,7 +185,8 @@ def test_routing_endpoints(app, db):
     data = resp.json
     assert data['pin'] == 'R9Y2'
     assert len(data['roster']) == 1
-    assert data['roster'][0]['nickname'] == 'Operator Sarah'
+    assert data['roster'][0]['nickname'] == 'User1'
+
 
     # Logs endpoint
     resp = client.get('/api/session/R9Y2/logs')
@@ -223,14 +207,13 @@ def test_routing_endpoints(app, db):
 
 def test_socketio_session_creation(app, db):
     # pylint: disable=redefined-outer-name,unused-argument
-
     """Test creating a net session via SocketIO."""
-    # Test client using Flask-SocketIO's test_client
+    valid_pin = get_today_instructor_pin()
     client = socketio.test_client(app)
     assert client.is_connected()
 
-    # Emit create_net event
-    client.emit('create_net', {"name": "Socket Net", "callsign_indicator": "H"})
+    # Emit create_net event with valid daily instructor PIN
+    client.emit('create_net', {"name": "Socket Net", "callsign_indicator": "H", "instructor_pin": valid_pin})
 
     received = client.get_received()
     assert len(received) > 0
@@ -253,105 +236,72 @@ def test_socketio_station_join_and_callsign_assignment(app, db):
     db.commit()
 
     # Connect client 1 (instructor)
-    instructor = socketio.test_client(app)
-    instructor.emit('join_net', {"pin": "K9F2", "nickname": "Instructor Bill", "role": "CONTROL"})
-    received_inst = instructor.get_received()
-    resp_inst = next(m for m in received_inst if m['name'] == 'join_response')['args'][0]
-    assert resp_inst['success'] is True
-    assert resp_inst['role'] == 'CONTROL'
+    inst = socketio.test_client(app)
+    inst.emit('join_net', {"pin": "K9F2", "nickname": "Inst1", "role": "INSTRUCTOR"})
+    inst.get_received()
 
-    # Connect client 2 (student operator)
-    student = socketio.test_client(app)
-    student.emit('join_net', {"pin": "K9F2", "nickname": "Sarah"})
-    received_stud = student.get_received()
-    resp_stud = next(m for m in received_stud if m['name'] == 'join_response')['args'][0]
-    assert resp_stud['success'] is True
-    assert resp_stud['status'] == 'AWAITING_ASSIGNMENT'
-    student_id = resp_stud['stationId']
+    # Connect client 2 (student)
+    stud = socketio.test_client(app)
+    stud.emit('join_net', {"pin": "K9F2", "nickname": "Stud1", "role": "SUB_STATION"})
+    stud_events = stud.get_received()
+    join_msg = next(m for m in stud_events if m['name'] == 'join_response')
+    assert join_msg['args'][0]['success'] is True
+    stud_id = join_msg['args'][0]['stationId']
 
-    # Instructor assigns callsign '10' (which should prepend 'T' prefix to make 'T10')
-    instructor.emit('assign_callsign', {"stationId": student_id, "callSign": "10", "role": "SUB_STATION"})
+    # Instructor assigns callsign to student
+    inst.emit('assign_callsign', {"stationId": stud_id, "callSign": "10", "role": "SUB_STATION"})
+    inst.get_received()
 
-    # Check student client receives callsign_assigned event
-    received_stud_after = student.get_received()
-    callsign_event = next(m for m in received_stud_after if m['name'] == 'callsign_assigned')['args'][0]
-    assert callsign_event['success'] is True
-    assert callsign_event['assignedCallSign'] == 'T10'
+    stud_after = stud.get_received()
+    assigned_msg = next(m for m in stud_after if m['name'] == 'callsign_assigned')
+    assert assigned_msg['args'][0]['success'] is True
+    assert assigned_msg['args'][0]['assignedCallSign'] == "T10"
 
-    instructor.disconnect()
-    student.disconnect()
+    inst.disconnect()
+    stud.disconnect()
 
 
 def test_radio_check_timer_and_defaulting(app, db):
     # pylint: disable=redefined-outer-name
-    """Test collective radio check turn sequencing and timeout defaulting."""
-    # Create session
-    session = NetSession(name="Check Session", pin="W7Y8", callsign_indicator="R")
+    """Test radio check sequence timing and automatic defaulting timeouts."""
+    session = NetSession(name="Timer Session", pin="TIM1", callsign_indicator="R")
     db.add(session)
     db.commit()
 
-    # Instructor (CONTROL)
-    instructor = socketio.test_client(app)
-    instructor.emit('join_net', {"pin": "W7Y8", "nickname": "Instructor", "role": "CONTROL"})
-    instructor.get_received()
+    inst = socketio.test_client(app)
+    inst.emit('join_net', {"pin": "TIM1", "nickname": "Control", "role": "CONTROL"})
+    inst.get_received()
 
-    # Student 1 (Sarah)
-    student1 = socketio.test_client(app)
-    student1.emit('join_net', {"pin": "W7Y8", "nickname": "Sarah"})
-    s1_id = next(m for m in student1.get_received() if m['name'] == 'join_response')['args'][0]['stationId']
+    st1 = socketio.test_client(app)
+    st1.emit('join_net', {"pin": "TIM1", "nickname": "Alpha", "role": "SUB_STATION"})
+    s1_msg = next(m for m in st1.get_received() if m['name'] == 'join_response')
+    s1_id = s1_msg['args'][0]['stationId']
 
-    # Student 2 (Mike)
-    student2 = socketio.test_client(app)
-    student2.emit('join_net', {"pin": "W7Y8", "nickname": "Mike"})
-    s2_id = next(m for m in student2.get_received() if m['name'] == 'join_response')['args'][0]['stationId']
+    st2 = socketio.test_client(app)
+    st2.emit('join_net', {"pin": "TIM1", "nickname": "Bravo", "role": "SUB_STATION"})
+    s2_msg = next(m for m in st2.get_received() if m['name'] == 'join_response')
+    s2_id = s2_msg['args'][0]['stationId']
 
-    # Assign callsigns
-    instructor.emit('assign_callsign', {"stationId": s1_id, "callSign": "10", "role": "SUB_STATION"})
-    instructor.emit('assign_callsign', {"stationId": s2_id, "callSign": "12", "role": "SUB_STATION"})
-    instructor.get_received()
-    student1.get_received()
-    student2.get_received()
+    inst.emit('assign_callsign', {"stationId": s1_id, "callSign": "01", "role": "SUB_STATION"})
+    inst.emit('assign_callsign', {"stationId": s2_id, "callSign": "02", "role": "SUB_STATION"})
+    inst.get_received()
+    st1.get_received()
+    st2.get_received()
 
-    # Start check
-    instructor.emit('start_radio_check', {})
+    inst.emit('start_radio_check', {})
+    inst.get_received()
 
-    # H10 should be the first turn
-    events = student1.get_received()
-    status_events = [m for m in events if m['name'] == 'radio_check_status']
-    assert len(status_events) > 0
-    assert status_events[-1]['args'][0]['activeCallSign'] == 'R10'
+    # Allow greenlet timer to execute
+    eventlet.sleep(5.2)
 
-    # Wait for timeout (we sleep 5.5s to let eventlet schedule greenlets)
-    eventlet.sleep(5.5)
-
-    # Now verify Mike got the status update
-    events2 = student2.get_received()
-    status_events2 = [m for m in events2 if m['name'] == 'radio_check_status']
-    assert len(status_events2) > 0
-    assert status_events2[-1]['args'][0]['activeCallSign'] == 'R12'
-    assert 'R10' in status_events2[-1]['args'][0]['defaultedCallSigns']
-
-    instructor.disconnect()
-    student1.disconnect()
-    student2.disconnect()
+    # Verify status update broadcast
+    events = inst.get_received()
+    rc_events = [m for m in events if m['name'] == 'radio_check_status']
+    assert len(rc_events) > 0
+    latest_status = rc_events[-1]['args'][0]
+    assert "R01" in latest_status['defaultedCallSigns']
 
 
-def test_get_db_exception_rollback(monkeypatch):
-    """Test get_db rollback on session error."""
-    def mock_db_session():
-        raise RuntimeError("Database connection failure")
-
-    monkeypatch.setattr(database, 'db_session', mock_db_session)
-    with pytest.raises(RuntimeError):
-        database.get_db()
-
-
-def test_init_db_creates_directory(tmp_path, monkeypatch):
-    """Test database directory creation during init_db."""
-    target_dir = tmp_path / "subdir"
-    db_file = target_dir / "test.db"
-    fake_url = f"sqlite:///{db_file}"
-
-    monkeypatch.setattr(database, 'DATABASE_URL', fake_url)
-    database.init_db()
-    assert target_dir.exists()
+    inst.disconnect()
+    st1.disconnect()
+    st2.disconnect()

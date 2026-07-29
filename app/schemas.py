@@ -20,6 +20,7 @@ class NetSessionCreate(BaseModel):
     # pylint: disable=too-few-public-methods
     name: str = Field(..., min_length=1, max_length=50)
     callsign_indicator: str = Field(default="R", min_length=1, max_length=1)
+    instructor_pin: str = Field(..., min_length=6, max_length=6)
 
     @field_validator('name')
     @classmethod
@@ -37,6 +38,15 @@ class NetSessionCreate(BaseModel):
         if not v_upper.isalpha() or v_upper == 'Z':
             raise ValueError("Callsign indicator must be a single letter from A-Y")
         return v_upper
+
+    @field_validator('instructor_pin')
+    @classmethod
+    def validate_pin(cls, v: str) -> str:
+        """Validate 6-digit numeric instructor PIN format."""
+        if not re.match(r"^\d{6}$", v):
+            raise ValueError("Instructor PIN must be exactly 6 numeric digits")
+        return v
+
 
 
 class NetSessionSchema(BaseModel):

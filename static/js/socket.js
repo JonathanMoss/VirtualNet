@@ -92,9 +92,10 @@ export class SocketManager {
     this.socket.emit('join_net', { pin, nickname, role });
   }
 
-  createNet(name, callsignIndicator) {
-    this.socket.emit('create_net', { name, callsign_indicator: callsignIndicator });
+  createNet(name, callsignIndicator, instructorPin) {
+    this.socket.emit('create_net', { name, callsign_indicator: callsignIndicator, instructor_pin: instructorPin });
   }
+
 
   assignCallsign(stationId, callSign, role) {
     this.socket.emit('assign_callsign', { stationId, callSign, role });
