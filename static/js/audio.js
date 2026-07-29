@@ -61,28 +61,49 @@ export class WebAudioEngine {
     }
   }
 
+  makeDistortionCurve(amount = 20) {
+    const k = typeof amount === 'number' ? amount : 20;
+    const nSamples = 44100;
+    const curve = new Float32Array(nSamples);
+    const deg = Math.PI / 180;
+    for (let i = 0; i < nSamples; ++i) {
+      const x = (i * 2) / nSamples - 1;
+      curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
+    }
+    return curve;
+  }
+
   setupEffectsChain() {
-    // 1. Voice gain controls voice level
+    // 1. Voice gain controls overall voice volume
     this.voiceGainNode = this.audioContext.createGain();
     this.voiceGainNode.gain.setValueAtTime(1.0, this.audioContext.currentTime);
 
-    // 2. Bypass path for clean audio quality when network conditions are good.
-    this.bypassGainNode = this.audioContext.createGain();
-    this.bypassGainNode.gain.setValueAtTime(1.0, this.audioContext.currentTime);
+    // 2. Tactical Highpass (cuts sub-bass mud < 300 Hz)
+    this.highpassFilterNode = this.audioContext.createBiquadFilter();
+    this.highpassFilterNode.type = 'highpass';
+    this.highpassFilterNode.frequency.setValueAtTime(300, this.audioContext.currentTime);
+    this.highpassFilterNode.Q.setValueAtTime(0.7, this.audioContext.currentTime);
 
-    // 3. Bandpass filter to keep radio-quality fallback available.
-    this.bandpassFilterNode = this.audioContext.createBiquadFilter();
-    this.bandpassFilterNode.type = 'bandpass';
-    this.bandpassFilterNode.frequency.setValueAtTime(1850, this.audioContext.currentTime);
-    this.bandpassFilterNode.Q.setValueAtTime(1.0, this.audioContext.currentTime);
+    // 3. Tactical Lowpass (cuts ultrasonic frequencies > 3400 Hz)
+    this.lowpassFilterNode = this.audioContext.createBiquadFilter();
+    this.lowpassFilterNode.type = 'lowpass';
+    this.lowpassFilterNode.frequency.setValueAtTime(3400, this.audioContext.currentTime);
+    this.lowpassFilterNode.Q.setValueAtTime(0.7, this.audioContext.currentTime);
+
+    // 4. WaveShaper distortion node for subtle radio clipping on weak signals
+    this.distortionNode = this.audioContext.createWaveShaper();
+    this.distortionNode.curve = this.makeDistortionCurve(0);
+    this.distortionNode.oversample = '4x';
+
+    // 5. Bandpass Gain node for processed radio audio
     this.bandpassGainNode = this.audioContext.createGain();
-    this.bandpassGainNode.gain.setValueAtTime(0.0, this.audioContext.currentTime);
+    this.bandpassGainNode.gain.setValueAtTime(1.0, this.audioContext.currentTime);
 
-    // 4. Noise node mixes white noise static hiss
+    // 6. Static Noise Gain node for white noise overlay
     this.noiseGainNode = this.audioContext.createGain();
     this.noiseGainNode.gain.setValueAtTime(0.0, this.audioContext.currentTime);
 
-    // Compressor for clean voice clarity on bypass path
+    // Dynamics Compressor to maintain clear voice amplitude
     this.compressorNode = this.audioContext.createDynamicsCompressor();
     this.compressorNode.threshold.setValueAtTime(-24, this.audioContext.currentTime);
     this.compressorNode.knee.setValueAtTime(30, this.audioContext.currentTime);
@@ -90,23 +111,22 @@ export class WebAudioEngine {
     this.compressorNode.attack.setValueAtTime(0.003, this.audioContext.currentTime);
     this.compressorNode.release.setValueAtTime(0.25, this.audioContext.currentTime);
 
-    // Play continuously static loop
+    // Play continuously looping static noise source
     this.noiseSourceNode = this.audioContext.createBufferSource();
     this.noiseSourceNode.buffer = this.whiteNoiseBuffer;
     this.noiseSourceNode.loop = true;
-
-    // Connect static noise to output
     this.noiseSourceNode.connect(this.noiseGainNode);
 
-    // Voice goes through both a clean bypass path and a filtered radio-style path.
-    this.voiceGainNode.connect(this.bypassGainNode);
-    this.voiceGainNode.connect(this.bandpassFilterNode);
-
-    // Connect both voice and noise output to destination
-    this.bypassGainNode.connect(this.compressorNode);
+    // Connect voice processing chain:
+    // Voice -> Highpass (300Hz) -> Lowpass (3400Hz) -> Distortion -> Bandpass Gain -> Compressor -> Destination
+    this.voiceGainNode.connect(this.highpassFilterNode);
+    this.highpassFilterNode.connect(this.lowpassFilterNode);
+    this.lowpassFilterNode.connect(this.distortionNode);
+    this.distortionNode.connect(this.bandpassGainNode);
+    this.bandpassGainNode.connect(this.compressorNode);
     this.compressorNode.connect(this.audioContext.destination);
-    this.bandpassFilterNode.connect(this.bandpassGainNode);
-    this.bandpassGainNode.connect(this.audioContext.destination);
+
+    // Connect static noise directly to output destination
     this.noiseGainNode.connect(this.audioContext.destination);
 
     // Start static noise source running
@@ -183,29 +203,31 @@ export class WebAudioEngine {
       this.dropoutInterval = null;
     }
 
-    if (quality === 'OK') {
-      // Clean signal, bypass radio-style filtering, no static.
-      this.bypassGainNode.gain.setTargetAtTime(1.0, now, 0.05);
-      this.bandpassGainNode.gain.setTargetAtTime(0.0, now, 0.05);
-      this.noiseGainNode.gain.setTargetAtTime(0.0, now, 0.05);
-      this.bandpassFilterNode.frequency.setTargetAtTime(this.audioContext.sampleRate / 2, now, 0.05);
-      this.bandpassFilterNode.Q.setTargetAtTime(0.7, now, 0.05);
+    const q = (quality || 'OK').toUpperCase();
 
-    } else if (quality === 'DIFFICULT') {
-      // Mildly filtered signal with subtle noise.
-      this.bypassGainNode.gain.setTargetAtTime(0.0, now, 0.05);
+    if (q === 'OK') {
+      // Standard Tactical VHF/UHF Radio Bandpass (300 Hz - 3400 Hz), 0 static noise
+      this.highpassFilterNode.frequency.setTargetAtTime(300, now, 0.05);
+      this.lowpassFilterNode.frequency.setTargetAtTime(3400, now, 0.05);
+      this.distortionNode.curve = this.makeDistortionCurve(0);
+      this.bandpassGainNode.gain.setTargetAtTime(1.0, now, 0.05);
+      this.noiseGainNode.gain.setTargetAtTime(0.0, now, 0.05);
+
+    } else if (q === 'POOR' || q === 'DIFFICULT') {
+      // Tightened bandpass (450 Hz - 2800 Hz), mild radio clipping, subtle static hiss
+      this.highpassFilterNode.frequency.setTargetAtTime(450, now, 0.05);
+      this.lowpassFilterNode.frequency.setTargetAtTime(2800, now, 0.05);
+      this.distortionNode.curve = this.makeDistortionCurve(15);
       this.bandpassGainNode.gain.setTargetAtTime(0.85, now, 0.05);
       this.noiseGainNode.gain.setTargetAtTime(0.045, now, 0.05);
-      this.bandpassFilterNode.frequency.setTargetAtTime(1800, now, 0.05);
-      this.bandpassFilterNode.Q.setTargetAtTime(1.1, now, 0.05);
 
-    } else if (quality === 'UNWORKABLE') {
-      // Radio-style effect with heavier filtering and hiss.
-      this.bypassGainNode.gain.setTargetAtTime(0.0, now, 0.05);
-      this.bandpassGainNode.gain.setTargetAtTime(1.0, now, 0.05);
+    } else if (q === 'WEAK' || q === 'UNWORKABLE') {
+      // Heavily constricted bandpass (600 Hz - 1800 Hz), noticeable radio clipping, heavy static hiss
+      this.highpassFilterNode.frequency.setTargetAtTime(600, now, 0.05);
+      this.lowpassFilterNode.frequency.setTargetAtTime(1800, now, 0.05);
+      this.distortionNode.curve = this.makeDistortionCurve(45);
+      this.bandpassGainNode.gain.setTargetAtTime(0.70, now, 0.05);
       this.noiseGainNode.gain.setTargetAtTime(0.12, now, 0.05);
-      this.bandpassFilterNode.frequency.setTargetAtTime(1200, now, 0.05);
-      this.bandpassFilterNode.Q.setTargetAtTime(1.8, now, 0.05);
     }
   }
 

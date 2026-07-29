@@ -9,9 +9,10 @@ VirtualNet is built as a containerized web application using a Python Flask back
 ### Frontend (Client)
 - **UI Framework**: **Bootstrap 5** (CSS framework for clean, responsive, military-themed interface design).
 - **Logic**: **Vanilla JavaScript (ES6+)** (Zero framework overhead, handling real-time DOM updates, WebSocket connection lifecycle, and Web Audio API stream capturing/playback).
-- **Audio Capture & Playback**: **Web Audio API**
+- **Audio Capture & Playback**: **Web Audio API & Client-Side DSP Engine**
   - Capture microphone streams using `getUserMedia` and send raw PCM or Opus packet chunks.
-  - Play back incoming streams using `AudioContext` with gain nodes.
+  - Play back incoming streams using `AudioContext` with hardware-accelerated DSP nodes: dual Biquad filters for tactical VHF/UHF radio bandpass (300 Hz – 3400 Hz), `WaveShaperNode` non-linear clipping distortion, static noise generator, and squelch tail effects.
+
 
 ### Backend (Server)
 - **Framework**: **Python Flask** (Serves the frontend static files and handles API routing).
