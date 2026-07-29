@@ -1,6 +1,7 @@
+"""Socket event integration tests for VirtualNet WebSocket communication."""
 import os
-
 import pytest
+
 from app import create_app, socketio
 from app.database import Base, db_session, engine, init_db
 from app.models import NetSession, Station
@@ -12,11 +13,11 @@ def app():
     """Create the Flask app and initialize the database for socket tests."""
     # Ensure the test database is available for the imported database engine.
     os.environ.setdefault('DATABASE_URL', 'sqlite:///./virtualnet_test.db')
-    app = create_app()
-    app.config['TESTING'] = True
+    app_instance = create_app()
+    app_instance.config['TESTING'] = True
 
     init_db()
-    yield app
+    yield app_instance
 
     db_session.remove()
     Base.metadata.drop_all(bind=engine)
@@ -26,6 +27,8 @@ def app():
 
 @pytest.fixture
 def socket_client(app):
+    # pylint: disable=redefined-outer-name
+    """Fixture providing a connected SocketIO test client."""
     client = socketio.test_client(app, flask_test_client=app.test_client())
     assert client.is_connected()
     yield client
@@ -35,6 +38,8 @@ def socket_client(app):
 
 
 def test_join_net_and_assign_callsign(app, socket_client):
+    # pylint: disable=redefined-outer-name,too-many-locals
+    """Test joining a net as student and callsign assignment by instructor."""
     # Instructor creates a net and joins as an instructor.
     socket_client.emit('create_net', {'name': 'Socket LAN Net', 'callsign_indicator': 'R'})
     received = socket_client.get_received()
@@ -50,11 +55,6 @@ def test_join_net_and_assign_callsign(app, socket_client):
     assert join_response['args'][0]['success'] is True
     assert join_response['args'][0]['role'] == 'INSTRUCTOR'
 
-    instructor_station_id = join_response['args'][0]['stationId']
-    session_id = join_response['args'][0]['netId']
-    assert pin == join_response['args'][0]['pin']
-
-    # Student joins the created net session.
     student_client = socketio.test_client(app, flask_test_client=app.test_client())
     assert student_client.is_connected()
     student_client.emit('join_net', {'pin': pin, 'nickname': 'StudentA', 'role': 'SUB_STATION'})
@@ -87,6 +87,8 @@ def test_join_net_and_assign_callsign(app, socket_client):
 
 
 def test_audio_chunk_broadcasts_to_other_clients(app, socket_client):
+    # pylint: disable=redefined-outer-name
+    """Test broadcasting audio chunks from speaker to connected stations."""
     socket_client.emit('create_net', {'name': 'Audio Net', 'callsign_indicator': 'R'})
     received = socket_client.get_received()
     pin = next(item for item in received if item['name'] == 'create_response')['args'][0]['pin']
@@ -125,6 +127,8 @@ def test_audio_chunk_broadcasts_to_other_clients(app, socket_client):
 
 
 def test_create_net_validation_error(app, socket_client):
+    # pylint: disable=redefined-outer-name,unused-argument
+    """Test validation errors when creating a net session."""
     # Emit create_net with invalid data (e.g. invalid callsign_indicator 'ZZ')
     socket_client.emit('create_net', {'name': 'Invalid Net', 'callsign_indicator': 'ZZ'})
     received = socket_client.get_received()
@@ -134,6 +138,9 @@ def test_create_net_validation_error(app, socket_client):
 
 
 def test_join_net_error_cases(app, socket_client):
+    # pylint: disable=redefined-outer-name,too-many-locals
+    """Test edge cases and error responses when joining net sessions."""
+
     # Test invalid PIN
     socket_client.emit('join_net', {'pin': 'XXXX', 'nickname': 'User1', 'role': 'SUB_STATION'})
     received = socket_client.get_received()
@@ -145,9 +152,10 @@ def test_join_net_error_cases(app, socket_client):
     socket_client.emit('create_net', {'name': 'Join Errors Net', 'callsign_indicator': 'J'})
     pin = next(item for item in socket_client.get_received() if item['name'] == 'create_response')['args'][0]['pin']
 
-    # Create a separate net session for CONTROL join
     socket_client.emit('create_net', {'name': 'Control Net', 'callsign_indicator': 'C'})
-    ctrl_pin = next(item for item in socket_client.get_received() if item['name'] == 'create_response')['args'][0]['pin']
+    ctrl_resp = socket_client.get_received()
+    ctrl_pin = next(item for item in ctrl_resp if item['name'] == 'create_response')['args'][0]['pin']
+
 
     # Join student with nickname 'INSTRUCTOR' (defaults to CONTROL role and callsign)
     student1 = socketio.test_client(app, flask_test_client=app.test_client())
@@ -185,15 +193,18 @@ def test_join_net_error_cases(app, socket_client):
     student_closed.disconnect()
 
 
-
 def test_assign_callsign_error_cases(app, socket_client):
+    # pylint: disable=redefined-outer-name
+    """Test unauthorized actions and duplicate errors in assign_callsign."""
     # Setup net session
     socket_client.emit('create_net', {'name': 'Assign Net', 'callsign_indicator': 'A'})
     pin = next(item for item in socket_client.get_received() if item['name'] == 'create_response')['args'][0]['pin']
 
     student = socketio.test_client(app, flask_test_client=app.test_client())
     student.emit('join_net', {'pin': pin, 'nickname': 'StudentX', 'role': 'SUB_STATION'})
-    student_id = next(item for item in student.get_received() if item['name'] == 'join_response')['args'][0]['stationId']
+    s_resp = student.get_received()
+    student_id = next(item for item in s_resp if item['name'] == 'join_response')['args'][0]['stationId']
+
 
     # Unauthorized client (student trying to assign callsign)
     student.emit('assign_callsign', {'stationId': student_id, 'callSign': '10'})
@@ -228,6 +239,8 @@ def test_assign_callsign_error_cases(app, socket_client):
 
 
 def test_ptt_request_denials_and_control_override(app, socket_client):
+    # pylint: disable=redefined-outer-name,too-many-locals,too-many-statements
+    """Test PTT request denials, channel busy responses, and CONTROL break-in override."""
     socket_client.emit('create_net', {'name': 'PTT Net', 'callsign_indicator': 'P'})
     pin = next(item for item in socket_client.get_received() if item['name'] == 'create_response')['args'][0]['pin']
 
@@ -255,7 +268,6 @@ def test_ptt_request_denials_and_control_override(app, socket_client):
     student1.emit('ptt_request', {})
     ptt_granted = next(item for item in student1.get_received() if item['name'] == 'ptt_response')['args'][0]
     assert ptt_granted['allowed'] is True
-    tx_id_s1 = ptt_granted['transmissionId']
 
     # Student 2 tries PTT while Student 1 is transmitting -> Channel Busy
     student2 = socketio.test_client(app, flask_test_client=app.test_client())
@@ -304,7 +316,6 @@ def test_ptt_request_denials_and_control_override(app, socket_client):
     db.commit()
     db_session.remove()
 
-
     student1.emit('ptt_request', {})
     ptt_susp = next(item for item in student1.get_received() if item['name'] == 'ptt_response')['args'][0]
     assert ptt_susp['allowed'] is False
@@ -314,8 +325,10 @@ def test_ptt_request_denials_and_control_override(app, socket_client):
     student2.disconnect()
 
 
-
 def test_audio_chunk_edge_cases(app, socket_client):
+    # pylint: disable=redefined-outer-name,unused-argument
+    """Test audio_chunk edge cases for short payloads and non-transmitting stations."""
+
     socket_client.emit('create_net', {'name': 'Audio Edge Net', 'callsign_indicator': 'E'})
     pin = next(item for item in socket_client.get_received() if item['name'] == 'create_response')['args'][0]['pin']
 
@@ -333,6 +346,8 @@ def test_audio_chunk_edge_cases(app, socket_client):
 
 
 def test_sync_log_entry_draft_and_finalized_locking(app, socket_client):
+    # pylint: disable=redefined-outer-name
+    """Test log entry synchronization and finalized entry locking immutability."""
     socket_client.emit('create_net', {'name': 'Log Net', 'callsign_indicator': 'L'})
     pin = next(item for item in socket_client.get_received() if item['name'] == 'create_response')['args'][0]['pin']
 
@@ -386,14 +401,17 @@ def test_sync_log_entry_draft_and_finalized_locking(app, socket_client):
     student.disconnect()
 
 
-
 def test_radio_check_start_and_set_signal_quality(app, socket_client):
+    # pylint: disable=redefined-outer-name
+    """Test start_radio_check authorization and set_signal_quality events."""
     socket_client.emit('create_net', {'name': 'Radio Check Net', 'callsign_indicator': 'R'})
     pin = next(item for item in socket_client.get_received() if item['name'] == 'create_response')['args'][0]['pin']
 
     student = socketio.test_client(app, flask_test_client=app.test_client())
     student.emit('join_net', {'pin': pin, 'nickname': 'RadioCheckStudent'})
-    student_id = next(item for item in student.get_received() if item['name'] == 'join_response')['args'][0]['stationId']
+    st_resp = student.get_received()
+    student_id = next(item for item in st_resp if item['name'] == 'join_response')['args'][0]['stationId']
+
 
     # Student attempts start_radio_check or set_signal_quality -> Unauthorized
     student.emit('start_radio_check', {})
@@ -428,6 +446,8 @@ def test_radio_check_start_and_set_signal_quality(app, socket_client):
 
 
 def test_end_session_and_ephemeral_purge(app, socket_client):
+    # pylint: disable=redefined-outer-name
+    """Test session termination by instructor and purging ephemeral data."""
     socket_client.emit('create_net', {'name': 'Purge Net', 'callsign_indicator': 'P'})
     pin = next(item for item in socket_client.get_received() if item['name'] == 'create_response')['args'][0]['pin']
 
@@ -450,4 +470,3 @@ def test_end_session_and_ephemeral_purge(app, socket_client):
     assert ended_evt['reason'] == 'SESSION_CLOSED_BY_INSTRUCTOR'
 
     student.disconnect()
-

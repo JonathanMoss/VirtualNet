@@ -1,23 +1,27 @@
+"""WebSocket event handlers and radio net session management for VirtualNet."""
+from datetime import datetime
 import random
 import string
-import time
+
 import eventlet
-from datetime import datetime
 from flask import request
 from flask_socketio import emit, join_room, leave_room
+from pydantic import ValidationError
+
 from app import socketio
 from app.database import get_db
 from app.models import NetSession, Station, Transmission, LogEntry, InstructorInject
-from app.schemas import NetSessionCreate, StationCreate, LogEntryCreate
-from pydantic import ValidationError
+from app.schemas import NetSessionCreate, LogEntryCreate
 
 # Thread-safe in-memory mapping of socket session ID (sid) to station ID
 sid_to_station_id = {}
 station_id_to_sid = {}
 
 # Active radio checks state by net_id
-# Format: { net_id: { "in_progress": bool, "sequence": [callsigns], "active_index": int, "defaulted": [callsigns], "completed": [callsigns], "timer_greenlet": greenlet } }
+# Format: { net_id: { "in_progress": bool, "sequence": [callsigns], "active_index": int,
+#                     "defaulted": [callsigns], "completed": [callsigns], "timer_greenlet": greenlet } }
 active_radio_checks = {}
+
 
 def get_station_from_sid(db, sid):
     """Utility to look up the Station model from the active socket ID."""
@@ -53,36 +57,34 @@ def broadcast_roster(db, net_id):
 def start_radio_check_timer(net_id, active_callsign):
     """Starts a 5-second background timer for the active station's radio check response."""
     eventlet.sleep(5)
-    
+
     # Check if this timer is still relevant (net session active and active station hasn't changed)
     check_state = active_radio_checks.get(net_id)
     if not check_state or not check_state["in_progress"]:
         return
-        
+
     seq = check_state["sequence"]
     idx = check_state["active_index"]
-    
+
     if idx < len(seq) and seq[idx] == active_callsign:
         # Station timed out / defaulted!
         db = get_db()
         try:
             # Mark station as defaulted
             check_state["defaulted"].append(active_callsign)
-            
-            # Find station to mark as defaulted in database/status if needed
-            station = db.query(Station).filter_by(net_id=net_id, call_sign=active_callsign).first()
-            
+
             # Advance index
             check_state["active_index"] += 1
             advance_radio_check(db, net_id)
-            db.commit()
+        # pylint: disable=broad-exception-caught
         except Exception:
             db.rollback()
 
 
-
 def advance_radio_check(db, net_id):
+    # pylint: disable=unused-argument
     """Advances the radio check to the next station in sequence or concludes it."""
+
     check_state = active_radio_checks.get(net_id)
     if not check_state or not check_state["in_progress"]:
         return
@@ -109,13 +111,13 @@ def advance_radio_check(db, net_id):
             "defaultedCallSigns": check_state["defaulted"],
             "completedCallSigns": check_state["completed"]
         }, room=net_id)
-        
+
         # Clean up
         active_radio_checks.pop(net_id, None)
         return
 
     next_callsign = seq[idx]
-    
+
     # Broadcast current status to all stations
     socketio.emit('radio_check_status', {
         "inProgress": True,
@@ -134,7 +136,6 @@ def advance_radio_check(db, net_id):
 @socketio.on('connect')
 def handle_connect():
     """Client connected socket event."""
-    pass
 
 
 @socketio.on('disconnect')
@@ -146,7 +147,7 @@ def handle_disconnect():
         net_id = station.net_id
         station.status = "DISCONNECTED"
         station.transmission_status = "IDLE"
-        
+
         # Clean up global PTT lock if this station was speaking
         transmission = db.query(Transmission).filter_by(
             net_id=net_id,
@@ -156,7 +157,7 @@ def handle_disconnect():
         if transmission:
             transmission.end_time = datetime.utcnow()
             transmission.termination_reason = "DISCONNECTED"
-            
+
         db.commit()
 
         # Clean up memory mapping
@@ -204,6 +205,7 @@ def handle_create_net(data):
 @socketio.on('join_net')
 def handle_join_net(data):
     """Station (student or instructor) joins a net session."""
+    # pylint: disable=too-many-statements
     db = get_db()
     pin = data.get('pin', '').upper()
     nickname = data.get('nickname', '')
@@ -211,7 +213,6 @@ def handle_join_net(data):
 
     if nickname.upper() in ["INSTRUCTOR", "CONTROL"]:
         role = "CONTROL"
-
 
     session = db.query(NetSession).filter_by(pin=pin).first()
     if not session:
@@ -228,7 +229,7 @@ def handle_join_net(data):
         Station.nickname == nickname,
         Station.status != "DISCONNECTED"
     ).first()
-    
+
     if active_station:
         emit('join_response', {"success": False, "reason": f"Nickname '{nickname}' is already in use."})
         return
@@ -300,7 +301,7 @@ def handle_assign_callsign(data):
         return
 
     session = db.query(NetSession).filter_by(id=station.net_id).first()
-    
+
     # Clean up and prepend Callsign Indicator prefix if callsign is purely numerical
     cleaned_callsign = raw_callsign.strip()
     if cleaned_callsign.isdigit():
@@ -343,6 +344,7 @@ def handle_assign_callsign(data):
 @socketio.on('ptt_request')
 def handle_ptt_request(data):
     """Station requests frequency access to transmit voice."""
+    # pylint: disable=too-many-statements,too-many-branches,unused-argument
     db = get_db()
     station = get_station_from_sid(db, request.sid)
     if not station or station.status == "AWAITING_ASSIGNMENT":
@@ -385,7 +387,7 @@ def handle_ptt_request(data):
 
         emit('ptt_response', {"allowed": True, "transmissionId": tx.id})
         broadcast_roster(db, net_id)
-        
+
     else:
         # Channel is busy. Check if requesting station is CONTROL (NCS Override / Break-In)
         if station.role == "CONTROL":
@@ -393,7 +395,7 @@ def handle_ptt_request(data):
             cur_sender = db.query(Station).filter_by(net_id=net_id, call_sign=active_tx.sender_call_sign).first()
             if cur_sender:
                 cur_sender.transmission_status = "IDLE"
-                
+
                 # Emit override event to cut-off socket
                 cur_sid = station_id_to_sid.get(cur_sender.id)
                 if cur_sid:
@@ -439,7 +441,7 @@ def handle_ptt_release(data):
         tx.termination_reason = "PTT_RELEASED"
         station.transmission_status = "IDLE"
         db.commit()
-        
+
         broadcast_roster(db, net_id)
 
         # Advance collective check if this station was the active responder
@@ -460,7 +462,7 @@ def handle_audio_chunk(data):
     # Data is binary: [4 bytes: Transmission ID] + [Remaining: audio frame]
     if not isinstance(data, (bytes, bytearray)) or len(data) < 4:
         return
-        
+
     db = get_db()
     station = get_station_from_sid(db, request.sid)
     if not station or station.transmission_status != "TRANSMITTING":
@@ -490,17 +492,17 @@ def handle_sync_log_entry(data):
 
     # Look up existing entry in database
     existing = db.query(LogEntry).filter_by(id=entry_id).first()
-    
+
     if existing:
         # Check if the existing entry is finalized (contains initials and complete details)
         # Finalized entries are immutable.
         if existing.operator_initials and len(existing.operator_initials) >= 2:
             emit('sync_response', {
-                "success": False, 
+                "success": False,
                 "reason": "Log sheet entry is locked/finalized and cannot be modified."
             })
             return
-            
+
         # Update draft
         existing.dtg = validated.dtg
         existing.from_call_sign = validated.from_call_sign
@@ -530,6 +532,7 @@ def handle_sync_log_entry(data):
 @socketio.on('start_radio_check')
 def handle_start_radio_check(data):
     """CONTROL initiates a collective Radio Check."""
+    # pylint: disable=unused-argument
     db = get_db()
     instructor = get_station_from_sid(db, request.sid)
     if not instructor or instructor.role not in ["CONTROL", "INSTRUCTOR"]:
@@ -595,6 +598,7 @@ def handle_set_signal_quality(data):
 @socketio.on('end_session')
 def handle_end_session(data):
     """Instructor ends and terminates the net session. Purges ephemeral data."""
+    # pylint: disable=unused-argument
     db = get_db()
     instructor = get_station_from_sid(db, request.sid)
     if not instructor or instructor.role not in ["CONTROL", "INSTRUCTOR"]:
@@ -605,10 +609,10 @@ def handle_end_session(data):
     session = db.query(NetSession).filter_by(id=net_id).first()
     if session:
         session.status = "CLOSED"
-        
+
         # Broadcast termination message
         socketio.emit('session_ended', {"reason": "SESSION_CLOSED_BY_INSTRUCTOR"}, room=net_id)
-        
+
         # Clean up radio check timers
         check_state = active_radio_checks.get(net_id)
         if check_state and check_state.get("timer_greenlet"):
@@ -630,5 +634,5 @@ def handle_end_session(data):
         db.query(Transmission).filter_by(net_id=net_id).delete()
         db.query(Station).filter_by(net_id=net_id).delete()
         db.delete(session)
-        
+
         db.commit()
