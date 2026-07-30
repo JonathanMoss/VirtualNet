@@ -5,13 +5,22 @@ import { LogsheetManager } from './logsheet.js';
 import { AideMemoireManager } from './aide_memoire.js';
 import { WebAudioEngine } from './audio.js';
 
-// Global exception handler to catch third-party browser extension errors (e.g. cs.js disconnected port errors)
+// Global exception & unhandled rejection handler to catch third-party browser extension errors (e.g. content_chrome.js / cs.js disconnected port errors)
 window.addEventListener('error', (event) => {
   const source = event.filename || '';
-  if (source.includes('cs.js') || source.includes('chrome-extension') || (event.message && event.message.includes('disconnected port'))) {
-    console.warn('⚠️ Ignored third-party browser extension script error:', event.message);
+  const msg = event.message || '';
+  if (source.includes('cs.js') || source.includes('content_chrome') || source.includes('chrome-extension') || msg.includes('disconnected port') || msg.includes('Receiving end does not exist')) {
+    console.warn('⚠️ Ignored third-party browser extension script error:', msg);
     if (typeof event.preventDefault === 'function') event.preventDefault();
     return true;
+  }
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  const reason = event.reason ? String(event.reason) : '';
+  if (reason.includes('disconnected port') || reason.includes('Receiving end does not exist')) {
+    console.warn('⚠️ Ignored third-party browser extension promise rejection:', reason);
+    if (typeof event.preventDefault === 'function') event.preventDefault();
   }
 });
 
@@ -138,40 +147,87 @@ class VirtualNetApp {
       viewJoin.classList.remove('d-none');
     });
 
-    // Student Join Net form submit
-    document.getElementById('join-net-form').addEventListener('submit', (e) => {
-      e.preventDefault();
+    // Student Join Net trigger
+    const submitJoin = () => {
       const pin = document.getElementById('join-pin').value.trim();
       const nickname = document.getElementById('join-nickname').value.trim();
-      
+      if (!pin || !nickname) {
+        alert("Please enter both Net PIN and Nickname.");
+        return;
+      }
       this.myNickname = nickname;
       this.socketManager.joinNet(pin, nickname);
+    };
+
+    const btnJoin = document.getElementById('btn-join-net');
+    if (btnJoin) {
+      btnJoin.addEventListener('click', (e) => {
+        e.preventDefault();
+        submitJoin();
+      });
+    }
+
+    ['join-pin', 'join-nickname'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            submitJoin();
+          }
+        });
+      }
     });
 
-    // Instructor Create Net form submit
-    document.getElementById('create-net-form').addEventListener('submit', (e) => {
-      e.preventDefault();
+    // Instructor Create Net trigger
+    const submitCreate = () => {
       const name = document.getElementById('create-name').value.trim();
       const ci = document.getElementById('create-ci').value.trim();
       const instructorPin = document.getElementById('create-instructor-pin').value.trim();
-      
+      if (!name || !ci || !instructorPin) {
+        alert("Please fill in all Net Session fields.");
+        return;
+      }
       this.socketManager.createNet(name, ci, instructorPin);
+    };
+
+    const btnCreate = document.getElementById('btn-create-net');
+    if (btnCreate) {
+      btnCreate.addEventListener('click', (e) => {
+        e.preventDefault();
+        submitCreate();
+      });
+    }
+
+    ['create-name', 'create-ci', 'create-instructor-pin'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            submitCreate();
+          }
+        });
+      }
     });
 
     // Host Success dashboard transition click
-    document.getElementById('btn-go-instructor').addEventListener('click', (e) => {
-      e.preventDefault();
-      if (e.stopPropagation) e.stopPropagation();
-      try {
-        const pin = document.getElementById('generated-pin').textContent.trim();
-        this.myNickname = "Instructor";
-        this.myRole = "INSTRUCTOR";
-        this.netPin = pin;
-        this.socketManager.joinNet(pin, "Instructor", "CONTROL");
-      } catch (err) {
-        console.warn("Instructor dashboard transition error:", err);
-      }
-    });
+    const btnGoInst = document.getElementById('btn-go-instructor');
+    if (btnGoInst) {
+      btnGoInst.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (e.stopPropagation) e.stopPropagation();
+        try {
+          const pin = document.getElementById('generated-pin').textContent.trim();
+          this.myNickname = "Instructor";
+          this.myRole = "INSTRUCTOR";
+          this.netPin = pin;
+          this.socketManager.joinNet(pin, "Instructor", "CONTROL");
+        } catch (err) {
+          console.warn("Instructor dashboard transition error:", err);
+        }
+      });
+    }
   }
 
 
