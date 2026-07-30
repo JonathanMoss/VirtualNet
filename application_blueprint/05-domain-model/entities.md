@@ -83,7 +83,7 @@ A single log row entered on an operator's logsheet.
 
 ### Pydantic Schema: `LogEntrySchema`
 - `entry_id`: `uuid.UUID`
-- `dtg`: `str` (Constraint: matches DDHHMMZ MON YY format, e.g., `"281015Z JUL 26"`)
+- `dtg`: `str` (Constraint: matches DDHHMM[A-Z] MON YY format, e.g., `"302120A JUL 26"` or `"281015Z JUL 26"`)
 - `from_call_sign`: `str`
 - `to_call_sign`: `str`
 - `precedence`: `str` (Allowed: `"ROUTINE"`, `"PRIORITY"`, `"IMMEDIATE"`, `"FLASH"`)

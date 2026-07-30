@@ -24,10 +24,7 @@ sid_to_net_id = {}
 # Fast-path in-memory mapping of transmitting SIDs to net_id (Zero-DB audio streaming)
 transmitting_sids = {}
 
-# Active radio checks state by net_id
-# Format: { net_id: { "in_progress": bool, "sequence": [callsigns], "active_index": int,
-#                     "defaulted": [callsigns], "completed": [callsigns], "timer_greenlet": greenlet } }
-active_radio_checks = {}
+
 
 
 def get_station_from_sid(db, sid):
@@ -65,83 +62,7 @@ def broadcast_roster(db, net_id):
     socketio.emit('roster_update', {"stations": roster}, room=net_id)
 
 
-def start_radio_check_timer(net_id, active_callsign):
-    """Starts a 5-second background timer for the active station's radio check response."""
-    eventlet.sleep(5)
 
-    # Check if this timer is still relevant (net session active and active station hasn't changed)
-    check_state = active_radio_checks.get(net_id)
-    if not check_state or not check_state["in_progress"]:
-        return
-
-    seq = check_state["sequence"]
-    idx = check_state["active_index"]
-
-    if idx < len(seq) and seq[idx] == active_callsign:
-        # Station timed out / defaulted!
-        db = get_db()
-        try:
-            # Mark station as defaulted
-            check_state["defaulted"].append(active_callsign)
-
-            # Advance index
-            check_state["active_index"] += 1
-            advance_radio_check(db, net_id)
-            db.commit()
-        # pylint: disable=broad-exception-caught
-        except Exception:
-            db.rollback()
-
-
-def advance_radio_check(db, net_id):
-    # pylint: disable=unused-argument
-    """Advances the radio check to the next station in sequence or concludes it."""
-    check_state = active_radio_checks.get(net_id)
-    if not check_state or not check_state["in_progress"]:
-        return
-
-    seq = check_state["sequence"]
-    idx = check_state["active_index"]
-
-    # Cancel any running timer (only if it is not the current greenlet calling this)
-    current_greenlet = eventlet.getcurrent()
-    if check_state.get("timer_greenlet") and check_state["timer_greenlet"] != current_greenlet:
-        check_state["timer_greenlet"].kill()
-        check_state["timer_greenlet"] = None
-    elif check_state.get("timer_greenlet") == current_greenlet:
-        check_state["timer_greenlet"] = None
-
-    if idx >= len(seq):
-        # All stations have answered or defaulted! Conclude check.
-        check_state["in_progress"] = False
-        socketio.emit('radio_check_status', {
-            "inProgress": False,
-            "sequence": seq,
-            "activeIndex": idx,
-            "activeCallSign": None,
-            "defaultedCallSigns": check_state["defaulted"],
-            "completedCallSigns": check_state["completed"]
-        }, room=net_id)
-
-        # Clean up
-        active_radio_checks.pop(net_id, None)
-        return
-
-    next_callsign = seq[idx]
-
-    # Broadcast current status to all stations
-    socketio.emit('radio_check_status', {
-        "inProgress": True,
-        "sequence": seq,
-        "activeIndex": idx,
-        "activeCallSign": next_callsign,
-        "defaultedCallSigns": check_state["defaulted"],
-        "completedCallSigns": check_state["completed"],
-        "timerRemainingSeconds": 5
-    }, room=net_id)
-
-    # Spawn 5-second timeout timer in a background greenlet
-    check_state["timer_greenlet"] = eventlet.spawn(start_radio_check_timer, net_id, next_callsign)
 
 
 def grace_period_disconnect_timer(station_id, net_id):
@@ -518,15 +439,7 @@ def handle_ptt_request(data):
         # Register SID in zero-DB fast-path transmitting map
         transmitting_sids[request.sid] = net_id
 
-        # Cancel radio check timer if the speaker is the active turn
-        check_state = active_radio_checks.get(net_id)
-        if check_state and check_state["in_progress"]:
-            seq = check_state["sequence"]
-            idx = check_state["active_index"]
-            if idx < len(seq) and seq[idx] == station.call_sign:
-                if check_state.get("timer_greenlet"):
-                    check_state["timer_greenlet"].kill()
-                    check_state["timer_greenlet"] = None
+
 
         emit('ptt_response', {"allowed": True, "transmissionId": tx.id})
         broadcast_roster(db, net_id)
@@ -592,16 +505,7 @@ def handle_ptt_release(data):
 
         broadcast_roster(db, net_id)
 
-        # Advance collective check if this station was the active responder
-        check_state = active_radio_checks.get(net_id)
-        if check_state and check_state["in_progress"]:
-            seq = check_state["sequence"]
-            idx = check_state["active_index"]
-            if idx < len(seq) and seq[idx] == station.call_sign:
-                check_state["completed"].append(station.call_sign)
-                check_state["active_index"] += 1
-                advance_radio_check(db, net_id)
-                db.commit()
+
 
 
 @socketio.on('audio_chunk')
@@ -680,51 +584,7 @@ def handle_sync_log_entry(data):
     emit('sync_response', {"success": True, "entryId": entry_id})
 
 
-@socketio.on('start_radio_check')
-def handle_start_radio_check(data):
-    """CONTROL initiates a collective Radio Check."""
-    # pylint: disable=unused-argument
-    db = get_db()
-    instructor = get_station_from_sid(db, request.sid)
-    if not instructor or instructor.role not in ["CONTROL", "INSTRUCTOR"]:
-        emit('error', {"reason": "Unauthorized action."})
-        return
 
-    net_id = instructor.net_id
-
-    # Gather all active sub-stations (excluding instructor/control roles)
-    active_stations = db.query(Station).filter(
-        Station.net_id == net_id,
-        Station.status == "CONNECTED",
-        Station.role == "SUB_STATION"
-    ).all()
-
-    if not active_stations:
-        emit('error', {"reason": "No active sub-stations on the net to check."})
-        return
-
-    # Sort stations alphabetically/alphanumerically by call sign
-    stations_sorted = sorted(active_stations, key=lambda s: s.call_sign if s.call_sign else "")
-    callsign_sequence = [s.call_sign for s in stations_sorted]
-
-    # Clean up previous check if any
-    prev_check = active_radio_checks.get(net_id)
-    if prev_check and prev_check.get("timer_greenlet"):
-        prev_check["timer_greenlet"].kill()
-
-    # Set up active check state
-    active_radio_checks[net_id] = {
-        "in_progress": True,
-        "sequence": callsign_sequence,
-        "active_index": 0,
-        "defaulted": [],
-        "completed": [],
-        "timer_greenlet": None
-    }
-
-    # Start turn sequence
-    advance_radio_check(db, net_id)
-    db.commit()
 
 
 @socketio.on('set_signal_quality')
@@ -765,11 +625,7 @@ def handle_end_session(data):
         # Broadcast termination message
         socketio.emit('session_ended', {"reason": "SESSION_CLOSED_BY_INSTRUCTOR"}, room=net_id)
 
-        # Clean up radio check timers
-        check_state = active_radio_checks.get(net_id)
-        if check_state and check_state.get("timer_greenlet"):
-            check_state["timer_greenlet"].kill()
-            active_radio_checks.pop(net_id, None)
+
 
         # Force disconnect sockets mapping
         stations = db.query(Station).filter_by(net_id=net_id).all()

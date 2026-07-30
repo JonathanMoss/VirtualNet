@@ -420,39 +420,30 @@ def test_sync_log_entry_draft_and_finalized_locking(app, socket_client):
     student.disconnect()
 
 
-def test_radio_check_start_and_set_signal_quality(app, socket_client):
+def test_set_signal_quality(app, socket_client):
     # pylint: disable=redefined-outer-name
-    """Test start_radio_check authorization and set_signal_quality events."""
+    """Test set_signal_quality authorization and updates."""
     valid_pin = get_today_instructor_pin()
     socket_client.emit(
         'create_net',
-        {'name': 'Radio Check Net', 'callsign_indicator': 'R', 'instructor_pin': valid_pin}
+        {'name': 'Signal Quality Net', 'callsign_indicator': 'R', 'instructor_pin': valid_pin}
     )
 
     pin = next(item for item in socket_client.get_received() if item['name'] == 'create_response')['args'][0]['pin']
 
     student = socketio.test_client(app)
-    student.emit('join_net', {'pin': pin, 'nickname': 'RadioCheckStudent'})
+    student.emit('join_net', {'pin': pin, 'nickname': 'SigQualStudent'})
     st_resp = student.get_received()
     student_id = next(item for item in st_resp if item['name'] == 'join_response')['args'][0]['stationId']
 
-    # Student attempts start_radio_check or set_signal_quality -> Unauthorized
-    student.emit('start_radio_check', {})
-    err1 = next(item for item in student.get_received() if item['name'] == 'error')['args'][0]
-    assert err1['reason'] == 'Unauthorized action.'
-
+    # Student attempts set_signal_quality -> Unauthorized
     student.emit('set_signal_quality', {'stationId': student_id, 'signalQuality': 'POOR'})
     err2 = next(item for item in student.get_received() if item['name'] == 'error')['args'][0]
     assert err2['reason'] == 'Unauthorized action.'
 
     # Instructor joins
-    socket_client.emit('join_net', {'pin': pin, 'nickname': 'RadioCheckInst', 'role': 'INSTRUCTOR'})
+    socket_client.emit('join_net', {'pin': pin, 'nickname': 'SigQualInst', 'role': 'INSTRUCTOR'})
     socket_client.get_received()
-
-    # Instructor starts radio check before any active sub-stations are connected -> error
-    socket_client.emit('start_radio_check', {})
-    err_no_sub = next(item for item in socket_client.get_received() if item['name'] == 'error')['args'][0]
-    assert 'No active sub-stations' in err_no_sub['reason']
 
     # Assign callsign to student
     socket_client.emit('assign_callsign', {'stationId': student_id, 'callSign': '05'})

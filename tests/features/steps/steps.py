@@ -2,7 +2,6 @@
 # pylint: disable=not-callable,unused-argument,unused-variable,cyclic-import,R0401,duplicate-code,missing-function-docstring,line-too-long
 
 
-import eventlet
 from behave import given, when, then
 from app import socketio
 from app.models import NetSession, Station, Transmission
@@ -334,117 +333,7 @@ def step_then_ui_transitions_receiving_control(context, callsign_nickname):
     pass
 
 
-@given('a net session has connected stations: "CONTROL", "{cs_nick1}", "{cs_nick2}", and "{cs_nick3}"')
-def step_given_net_session_multiple_stations(context, cs_nick1, cs_nick2, cs_nick3):
-    step_given_net_session_hosted(context, "A3F9")
-    step_given_another_connected_control(context)
 
-    # Connect and assign each subordinate station
-    for cs_nick in [cs_nick1, cs_nick2, cs_nick3]:
-        step_given_student_connected_as(context, cs_nick)
-
-
-@given('the correct order of answering is "{cs_nick1}", "{cs_nick2}", "{cs_nick3}" based on callsign sequence')
-def step_given_order_of_answering(context, cs_nick1, cs_nick2, cs_nick3):
-    # This is a pre-condition statement verifying H10 < L12 < R11 order
-    pass
-
-
-@when('"CONTROL" transmits a RADIO CHECK collective call: "{msg}"')
-def step_when_control_starts_radio_check(context, msg):
-    inst = context.clients["CONTROL"]
-    inst.emit('start_radio_check', {})
-
-    # Flush all events
-    context.control_received = inst.get_received()
-
-
-@then('"{callsign_nickname}"\'s client UI should display a prompt: "Your turn to answer"')
-def step_then_active_responder_prompt(context, callsign_nickname):
-    callsign, nickname = callsign_nickname.replace(")", "").split(" (")
-    student = context.clients[nickname]
-
-    events = student.get_received()
-    status_events = [m for m in events if m['name'] == 'radio_check_status']
-    assert len(status_events) > 0
-    check_status = status_events[-1]['args'][0]
-    assert check_status['inProgress'] is True
-    assert check_status['activeCallSign'] == callsign
-
-
-@when('"{callsign_nickname}" presses PTT and transmits: "{msg}"')
-def step_when_responder_answers(context, callsign_nickname, msg):
-    callsign, nickname = callsign_nickname.replace(")", "").split(" (")
-    student = context.clients[nickname]
-
-    # Perform standard PTT sequence (request, transmit, release)
-    student.emit('ptt_request', {})
-    ptt_resp = next(m for m in student.get_received() if m['name'] == 'ptt_response')['args'][0]
-    assert ptt_resp['allowed'] is True
-    tx_id = ptt_resp['transmissionId']
-
-    # Release PTT to trigger turn advancement
-    student.emit('ptt_release', {"transmissionId": tx_id})
-    student.get_received()
-
-
-@then('"{callsign}"\'s client UI should show all responses are complete')
-def step_then_control_sees_complete(context, callsign):
-    # Callsign is CONTROL
-    inst = context.clients["CONTROL"]
-    events = inst.get_received()
-
-    # Find the last radio_check_status event
-    check_status_msgs = [m for m in events if m['name'] == 'radio_check_status']
-    assert len(check_status_msgs) > 0
-    last_status = check_status_msgs[-1]['args'][0]
-    assert last_status['inProgress'] is False
-
-
-@given('a collective check is in progress for "{cs_nick1}", "{cs_nick2}", and "{cs_nick3}"')
-def step_given_check_in_progress(context, cs_nick1, cs_nick2, cs_nick3):
-    step_given_net_session_multiple_stations(context, cs_nick1, cs_nick2, cs_nick3)
-    step_when_control_starts_radio_check(context, "")
-
-    # Flush student queues
-    for cs_nick in [cs_nick1, cs_nick2, cs_nick3]:
-        callsign, nickname = cs_nick.replace(")", "").split(" (")
-        context.clients[nickname].get_received()
-
-
-@given('"{callsign_nickname}" is the active turn but does not transmit')
-def step_given_active_turn_silent(context, callsign_nickname):
-    # Sarah (H10) is active index 0
-    pass
-
-
-@when('{seconds} seconds have elapsed without transmission from "{callsign_nickname}"')
-def step_when_seconds_elapsed(context, seconds, callsign_nickname):
-    # Wait for the eventlet timer to fire
-    # Since our timer is 5 seconds, sleeping 5.5 seconds will guarantee trigger!
-    eventlet.sleep(float(seconds) + 0.5)
-
-
-@then('the server should mark "{callsign_nickname}" as "Defaulted"')
-def step_then_server_marks_defaulted(context, callsign_nickname):
-    """Verify station status marked defaulted after timer expiration."""
-    # Verified via the next event packet
-
-
-
-@then('"{callsign_nickname}"\'s client UI should display a prompt: "Your turn to answer ({defaulted_cs} defaulted)"')
-def step_then_next_turn_prompt_defaulted(context, callsign_nickname, defaulted_cs):
-    callsign, nickname = callsign_nickname.replace(")", "").split(" (")
-    student = context.clients[nickname]
-
-    events = student.get_received()
-    status_events = [m for m in events if m['name'] == 'radio_check_status']
-    assert len(status_events) > 0
-    last_status = status_events[-1]['args'][0]
-
-    assert last_status['inProgress'] is True
-    assert last_status['activeCallSign'] == callsign
-    assert defaulted_cs in last_status['defaultedCallSigns']
 
 
 @given('a Net Session "{pin}" is active with connected students "{cs_nick1}" and "{cs_nick2}"')

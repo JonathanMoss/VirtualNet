@@ -55,24 +55,7 @@ Feature: VirtualNet Core Radio Net Operations
     And the server should stream audio from "CONTROL"
     And "R11 (John)"'s client UI should transition to "RECEIVING: CONTROL"
 
-  Scenario: Net Control conducts a collective Radio Check and stations answer in correct sequence
-    Given a net session has connected stations: "CONTROL", "R11 (John)", "H10 (Sarah)", and "L12 (Mike)"
-    And the correct order of answering is "H10 (Sarah)", "L12 (Mike)", "R11 (John)" based on callsign sequence
-    When "CONTROL" transmits a RADIO CHECK collective call: "Hello CHARLIE CHARLIE 1 this is CONTROL, RADIO CHECK, OVER"
-    Then "H10 (Sarah)"'s client UI should display a prompt: "Your turn to answer"
-    When "H10 (Sarah)" presses PTT and transmits: "H10, OK, OVER"
-    Then "L12 (Mike)"'s client UI should display a prompt: "Your turn to answer"
-    When "L12 (Mike)" presses PTT and transmits: "L12, DIFFICULT, OVER"
-    Then "R11 (John)"'s client UI should display a prompt: "Your turn to answer"
-    When "R11 (John)" presses PTT and transmits: "R11, OK, OVER"
-    Then "CONTROL"'s client UI should show all responses are complete
 
-  Scenario: Next station answers after a defaulting station times out
-    Given a collective check is in progress for "H10 (Sarah)", "L12 (Mike)", and "R11 (John)"
-    And "H10 (Sarah)" is the active turn but does not transmit
-    When 5 seconds have elapsed without transmission from "H10 (Sarah)"
-    Then the server should mark "H10 (Sarah)" as "Defaulted"
-    And "L12 (Mike)"'s client UI should display a prompt: "Your turn to answer (H10 defaulted)"
 
   Scenario: Instructor terminates the net session
     Given a Net Session "A3F9" is active with connected students "R11 (John)" and "H10 (Sarah)"
