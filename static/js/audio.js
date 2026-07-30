@@ -56,84 +56,21 @@ export class WebAudioEngine {
   }
 
   generateNoiseBuffer() {
-    const bufferSize = this.audioContext.sampleRate; // 1 second
-    this.whiteNoiseBuffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
-    const data = this.whiteNoiseBuffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = Math.random() * 2 - 1;
-    }
+    // Pure audio mode: No noise buffer needed
+    return;
   }
 
   makeDistortionCurve(amount = 20) {
-    const k = typeof amount === 'number' ? amount : 20;
-    const nSamples = 44100;
-    const curve = new Float32Array(nSamples);
-    const deg = Math.PI / 180;
-    for (let i = 0; i < nSamples; ++i) {
-      const x = (i * 2) / nSamples - 1;
-      curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
-    }
-    return curve;
+    return new Float32Array(0);
   }
 
   setupEffectsChain() {
-    // 1. Voice gain controls overall voice volume
+    // Pure audio mode: Direct 1:1 voice gain node to destination without filters, distortion, or noise
     this.voiceGainNode = this.audioContext.createGain();
     this.voiceGainNode.gain.setValueAtTime(1.0, this.audioContext.currentTime);
 
-    // 2. Tactical Highpass (cuts sub-bass mud < 300 Hz)
-    this.highpassFilterNode = this.audioContext.createBiquadFilter();
-    this.highpassFilterNode.type = 'highpass';
-    this.highpassFilterNode.frequency.setValueAtTime(300, this.audioContext.currentTime);
-    this.highpassFilterNode.Q.setValueAtTime(0.7, this.audioContext.currentTime);
-
-    // 3. Tactical Lowpass (cuts ultrasonic frequencies > 3400 Hz)
-    this.lowpassFilterNode = this.audioContext.createBiquadFilter();
-    this.lowpassFilterNode.type = 'lowpass';
-    this.lowpassFilterNode.frequency.setValueAtTime(3400, this.audioContext.currentTime);
-    this.lowpassFilterNode.Q.setValueAtTime(0.7, this.audioContext.currentTime);
-
-    // 4. WaveShaper distortion node for subtle radio clipping on weak signals
-    this.distortionNode = this.audioContext.createWaveShaper();
-    this.distortionNode.curve = this.makeDistortionCurve(0);
-    this.distortionNode.oversample = '4x';
-
-    // 5. Bandpass Gain node for processed radio audio
-    this.bandpassGainNode = this.audioContext.createGain();
-    this.bandpassGainNode.gain.setValueAtTime(1.0, this.audioContext.currentTime);
-
-    // 6. Static Noise Gain node for white noise overlay
-    this.noiseGainNode = this.audioContext.createGain();
-    this.noiseGainNode.gain.setValueAtTime(0.0, this.audioContext.currentTime);
-
-    // Dynamics Compressor to maintain clear voice amplitude
-    this.compressorNode = this.audioContext.createDynamicsCompressor();
-    this.compressorNode.threshold.setValueAtTime(-24, this.audioContext.currentTime);
-    this.compressorNode.knee.setValueAtTime(30, this.audioContext.currentTime);
-    this.compressorNode.ratio.setValueAtTime(4, this.audioContext.currentTime);
-    this.compressorNode.attack.setValueAtTime(0.003, this.audioContext.currentTime);
-    this.compressorNode.release.setValueAtTime(0.25, this.audioContext.currentTime);
-
-    // Play continuously looping static noise source
-    this.noiseSourceNode = this.audioContext.createBufferSource();
-    this.noiseSourceNode.buffer = this.whiteNoiseBuffer;
-    this.noiseSourceNode.loop = true;
-    this.noiseSourceNode.connect(this.noiseGainNode);
-
-    // Connect voice processing chain:
-    // Voice -> Highpass (300Hz) -> Lowpass (3400Hz) -> Distortion -> Bandpass Gain -> Compressor -> Destination
-    this.voiceGainNode.connect(this.highpassFilterNode);
-    this.highpassFilterNode.connect(this.lowpassFilterNode);
-    this.lowpassFilterNode.connect(this.distortionNode);
-    this.distortionNode.connect(this.bandpassGainNode);
-    this.bandpassGainNode.connect(this.compressorNode);
-    this.compressorNode.connect(this.audioContext.destination);
-
-    // Connect static noise directly to output destination
-    this.noiseGainNode.connect(this.audioContext.destination);
-
-    // Start static noise source running
-    this.noiseSourceNode.start(0);
+    // Direct pure audio connection to output destination
+    this.voiceGainNode.connect(this.audioContext.destination);
   }
 
   initCodec() {
@@ -197,128 +134,28 @@ export class WebAudioEngine {
   }
 
   updateSignalQualityEffects(quality) {
-    if (!this.audioContext) return;
-    
-    const now = this.audioContext.currentTime;
-    
-    if (this.dropoutInterval) {
-      clearInterval(this.dropoutInterval);
-      this.dropoutInterval = null;
-    }
-
-    const q = (quality || 'OK').toUpperCase();
-
-    if (q === 'OK') {
-      // Standard Tactical VHF/UHF Radio Bandpass (300 Hz - 3400 Hz), 0 static noise
-      this.highpassFilterNode.frequency.setTargetAtTime(300, now, 0.05);
-      this.lowpassFilterNode.frequency.setTargetAtTime(3400, now, 0.05);
-      this.distortionNode.curve = this.makeDistortionCurve(0);
-      this.bandpassGainNode.gain.setTargetAtTime(1.0, now, 0.05);
-      this.noiseGainNode.gain.setTargetAtTime(0.0, now, 0.05);
-
-    } else if (q === 'POOR' || q === 'DIFFICULT') {
-      // Tightened bandpass (450 Hz - 2800 Hz), mild radio clipping, subtle static hiss
-      this.highpassFilterNode.frequency.setTargetAtTime(450, now, 0.05);
-      this.lowpassFilterNode.frequency.setTargetAtTime(2800, now, 0.05);
-      this.distortionNode.curve = this.makeDistortionCurve(15);
-      this.bandpassGainNode.gain.setTargetAtTime(0.85, now, 0.05);
-      this.noiseGainNode.gain.setTargetAtTime(0.045, now, 0.05);
-
-    } else if (q === 'WEAK' || q === 'UNWORKABLE') {
-      // Heavily constricted bandpass (600 Hz - 1800 Hz), noticeable radio clipping, heavy static hiss
-      this.highpassFilterNode.frequency.setTargetAtTime(600, now, 0.05);
-      this.lowpassFilterNode.frequency.setTargetAtTime(1800, now, 0.05);
-      this.distortionNode.curve = this.makeDistortionCurve(45);
-      this.bandpassGainNode.gain.setTargetAtTime(0.70, now, 0.05);
-      this.noiseGainNode.gain.setTargetAtTime(0.12, now, 0.05);
-    }
+    // Pure audio mode: No simulated signal quality degradation or static noise
+    return;
   }
 
   playPTTStartChirp() {
-    if (!this.audioContext) return;
-    const now = this.audioContext.currentTime;
-    
-    // Quick synthesizer chirp click (1200Hz -> 600Hz envelope over 40ms)
-    const osc = this.audioContext.createOscillator();
-    const gain = this.audioContext.createGain();
-    
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(1200, now);
-    osc.frequency.exponentialRampToValueAtTime(600, now + 0.04);
-    
-    gain.gain.setValueAtTime(0.15, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
-    
-    osc.connect(gain);
-    gain.connect(this.audioContext.destination);
-    
-    osc.start(now);
-    osc.stop(now + 0.04);
+    // Pure audio mode: No PTT chirp sound effect
+    return;
   }
 
   startTransmitterSidetone() {
-    if (!this.audioContext) return;
-    this.stopTransmitterSidetone();
-
-    const now = this.audioContext.currentTime;
-
-    // Subtle transmitter carrier sidetone (750 Hz sine wave at -36 dB / gain 0.015)
-    this.sidetoneOsc = this.audioContext.createOscillator();
-    this.sidetoneOsc.type = 'sine';
-    this.sidetoneOsc.frequency.setValueAtTime(750, now);
-
-    this.sidetoneGain = this.audioContext.createGain();
-    this.sidetoneGain.gain.setValueAtTime(0.001, now);
-    // Smooth 20ms attack envelope to prevent click artifacts
-    this.sidetoneGain.gain.linearRampToValueAtTime(0.015, now + 0.02);
-
-    this.sidetoneOsc.connect(this.sidetoneGain);
-    this.sidetoneGain.connect(this.audioContext.destination);
-
-    this.sidetoneOsc.start(now);
+    // Pure audio mode: No transmitter sidetone
+    return;
   }
 
   stopTransmitterSidetone() {
-    if (this.sidetoneGain && this.audioContext) {
-      const now = this.audioContext.currentTime;
-      this.sidetoneGain.gain.cancelScheduledValues(now);
-      this.sidetoneGain.gain.setValueAtTime(this.sidetoneGain.gain.value, now);
-      // Smooth 30ms decay envelope
-      this.sidetoneGain.gain.linearRampToValueAtTime(0.0001, now + 0.03);
-    }
-    if (this.sidetoneOsc && this.audioContext) {
-      try {
-        this.sidetoneOsc.stop(this.audioContext.currentTime + 0.03);
-      } catch (e) {
-        // Ignored if already stopped
-      }
-    }
-    this.sidetoneOsc = null;
-    this.sidetoneGain = null;
+    // Pure audio mode: No transmitter sidetone
+    return;
   }
 
   playPTTEndSquelchTail() {
-    if (!this.audioContext || !this.whiteNoiseBuffer) return;
-    const now = this.audioContext.currentTime;
-    
-    // Play a brief 150ms burst of low-pass filtered noise to simulate squelch release
-    const noise = this.audioContext.createBufferSource();
-    noise.buffer = this.whiteNoiseBuffer;
-    
-    const filter = this.audioContext.createBiquadFilter();
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(800, now);
-    
-    const gain = this.audioContext.createGain();
-    gain.gain.setValueAtTime(0.35, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-    
-    noise.connect(filter);
-    filter.connect(gain);
-    gain.connect(this.audioContext.destination);
-    
-    noise.start(now);
-    noise.stop(now + 0.18);
+    // Pure audio mode: No squelch tail noise
+    return;
   }
 
   async startRecording(txId) {
