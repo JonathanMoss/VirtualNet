@@ -12,6 +12,12 @@ def index():
     return current_app.send_static_file('templates/index.html')
 
 
+@bp.route('/favicon.ico')
+def favicon():
+    """Serves a blank 204 response for favicon requests."""
+    return '', 204
+
+
 @bp.route('/api/session/<pin>/logs')
 def get_session_logs(pin):
     """API endpoint to get all log entries for a given session PIN (for instructor review)."""

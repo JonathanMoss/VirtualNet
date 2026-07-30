@@ -211,12 +211,15 @@ class VirtualNetApp {
       }
     });
 
-    // Host Success dashboard transition click
+    // Host Success dashboard transition click & pointerdown
     const btnGoInst = document.getElementById('btn-go-instructor');
     if (btnGoInst) {
-      btnGoInst.addEventListener('click', (e) => {
-        e.preventDefault();
-        if (e.stopPropagation) e.stopPropagation();
+      const handleInstructorTransition = (e) => {
+        if (e) {
+          e.preventDefault();
+          if (e.stopPropagation) e.stopPropagation();
+          if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+        }
         try {
           const pin = document.getElementById('generated-pin').textContent.trim();
           this.myNickname = "Instructor";
@@ -226,7 +229,10 @@ class VirtualNetApp {
         } catch (err) {
           console.warn("Instructor dashboard transition error:", err);
         }
-      });
+      };
+
+      btnGoInst.addEventListener('pointerdown', handleInstructorTransition);
+      btnGoInst.addEventListener('click', handleInstructorTransition);
     }
   }
 
