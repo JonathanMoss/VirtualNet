@@ -138,10 +138,6 @@ export class WebAudioEngine {
     return Promise.reject(new Error('Media capture is not supported by this browser.')); 
   }
 
-  updateSignalQualityEffects(quality) {
-    // Pure audio mode: No simulated signal quality degradation or static noise
-    return;
-  }
 
   playPTTStartChirp() {
     // Pure audio mode: No PTT chirp sound effect

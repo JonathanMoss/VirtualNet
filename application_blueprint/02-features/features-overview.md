@@ -42,8 +42,6 @@ Simulates the physical behavior of a half-duplex radio transceiver.
     - The client blocks transmission and provides visual feedback (e.g., "Channel Busy") and an auditory warning tone.
 - **PTT Start/End Tones**:
   - Plays a short "click/beep" sound when PTT is pressed and released, replicating real radio squelch tails and transmission start/stop cues.
-- **Audio Quality Simulation**:
-  - The client or server can apply audio DSP effects (such as bandpass filtering, white noise mix, and static hiss) based on the current station signal quality setting.
 
 ---
 
@@ -92,8 +90,6 @@ To assist students in formatting voice reports, taking logs, and encrypting coor
 - **Roster & Admissions**:
   - Lists all connected nicknames, their assigned call signs, and their current voice transmission state.
   - Text inputs next to pending joiners to type and assign their call signs.
-- **Dynamic Signal Quality Simulation**:
-  - Instructors can alter the audio link quality for individual student stations using a dropdown menu (OK, DIFFICULT, UNWORKABLE).
 - **Net Discipline Override (Break-In)**:
   - The Net Control Station (or Instructor) can override a sub-station's transmission in an emergency, cutting off their audio stream to reclaim the channel.
 - **Mute / Kick Station**:

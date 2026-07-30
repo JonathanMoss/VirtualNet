@@ -66,8 +66,7 @@ A control center for the session:
     - Inputting a callsign and submitting emits an `assign_callsign` event, shifting the student to the active net.
 - **Active Roster Management Grid**:
   - Table showing all active students:
-    - Columns: Callsign, Nickname, Link Quality (Dropdown selector: `OK`, `DIFFICULT`, `UNWORKABLE`), State (Muted/Idle/Talking), Action Buttons (`[Mute]`, `[Kick]`).
-    - Changing the Link Quality dropdown emits a `set_signal_quality` event to dynamic client sockets.
+    - Columns: Callsign, Nickname, Role, State (Idle/Talking), Action Buttons (`[Kick]`).
 - **Session Control**:
   - `[End Net Session]` Button: Styled with `.btn .btn-danger`. When clicked, terminates all connections and resets the server session.
 

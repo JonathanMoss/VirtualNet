@@ -70,17 +70,6 @@ Pushed by the server to the specific student client once the instructor assigns 
 }
 ```
 
-### Event: `set_signal_quality` (Instructor -> Server)
-Sent by the instructor to dynamically adjust the audio link quality for a specific station.
-
-**Payload**:
-```json
-{
-  "stationId": "d3b07384-d113-4ec2-a5d6-8e50b73c4d72",
-  "signalQuality": "DIFFICULT"
-}
-```
-
 ---
 
 ## 3. Roster Management
@@ -97,16 +86,14 @@ Sent by the server to all connected clients when the net roster changes. Only cl
       "callSign": "CONTROL",
       "nickname": "Instructor Bill",
       "role": "CONTROL",
-      "status": "IDLE",
-      "signalQuality": "OK"
+      "status": "IDLE"
     },
     {
       "stationId": "d3b07384-d113-4ec2-a5d6-8e50b73c4d72",
       "callSign": "R11",
       "nickname": "John",
       "role": "SUB_STATION",
-      "status": "TRANSMITTING",
-      "signalQuality": "DIFFICULT"
+      "status": "TRANSMITTING"
     }
   ]
 }

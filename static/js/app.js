@@ -493,13 +493,6 @@ class VirtualNetApp {
             <td>${s.nickname}</td>
             <td>${s.role}</td>
             <td>
-              <select class="form-select form-select-sm select-quality" data-id="${s.stationId}">
-                <option value="OK" ${s.signalQuality === 'OK' ? 'selected' : ''}>OK</option>
-                <option value="DIFFICULT" ${s.signalQuality === 'DIFFICULT' ? 'selected' : ''}>DIFFICULT</option>
-                <option value="UNWORKABLE" ${s.signalQuality === 'UNWORKABLE' ? 'selected' : ''}>UNWORKABLE</option>
-              </select>
-            </td>
-            <td>
               <span class="badge ${s.transmissionStatus === 'TRANSMITTING' ? 'bg-danger' : 'bg-secondary'}">
                 ${s.transmissionStatus === 'TRANSMITTING' ? 'TALKING' : s.status}
               </span>
@@ -509,21 +502,10 @@ class VirtualNetApp {
             </td>
           `;
 
-          // Handle link quality changes
-          tr.querySelector('.select-quality').addEventListener('change', (e) => {
-            const sid = e.target.getAttribute('data-id');
-            this.socketManager.setSignalQuality(sid, e.target.value);
-          });
-
           instructorRoster.appendChild(tr);
         }
       }
 
-      // Track link quality for myself to drive Web Audio static synthesis
-      if (s.stationId === this.myStationId) {
-        this.audioEngine.updateSignalQualityEffects(s.signalQuality);
-        this.updateSignalBarsUI(s.signalQuality);
-      }
     });
 
     if (pendingQueueCount === 0 && admissionsQueue) {
@@ -598,37 +580,7 @@ class VirtualNetApp {
     }
   }
 
-  updateSignalBarsUI(quality) {
-    const bars = document.getElementById('signal-bars');
-    const label = document.getElementById('signal-quality-text');
-    
-    bars.innerHTML = '';
-    if (quality === 'OK') {
-      bars.innerHTML = `
-        <div class="bar" style="width:6px; height:12px; background-color: var(--color-phosphor-green);"></div>
-        <div class="bar" style="width:6px; height:18px; background-color: var(--color-phosphor-green);"></div>
-        <div class="bar" style="width:6px; height:24px; background-color: var(--color-phosphor-green);"></div>
-      `;
-      label.textContent = "Signal OK - Voice Link Stable";
-      label.style.color = "var(--color-phosphor-green)";
-    } else if (quality === 'DIFFICULT') {
-      bars.innerHTML = `
-        <div class="bar" style="width:6px; height:12px; background-color: var(--color-tactical-amber);"></div>
-        <div class="bar" style="width:6px; height:18px; background-color: var(--color-tactical-amber);"></div>
-        <div class="bar" style="width:6px; height:24px; background-color: var(--border-color-tactical);"></div>
-      `;
-      label.textContent = "Weak Signal - Static Active";
-      label.style.color = "var(--color-tactical-amber)";
-    } else if (quality === 'UNWORKABLE') {
-      bars.innerHTML = `
-        <div class="bar" style="width:6px; height:12px; background-color: var(--color-hot-red);"></div>
-        <div class="bar" style="width:6px; height:18px; background-color: var(--border-color-tactical);"></div>
-        <div class="bar" style="width:6px; height:24px; background-color: var(--border-color-tactical);"></div>
-      `;
-      label.textContent = "No Signal - Radio Link Failure";
-      label.style.color = "var(--color-hot-red)";
-    }
-  }
+
 
   handleRadioCheckStatus(data) {
     const badge = document.getElementById('check-status-badge');
