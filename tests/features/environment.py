@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 # pylint: disable=wrong-import-position
 from app import create_app
 from app.database import Base, engine, db_session
-from app.sockets import sid_to_station_id, station_id_to_sid, transmitting_sids, active_radio_checks
+from app.sockets import sid_to_station_id, station_id_to_sid, transmitting_sids
 
 
 def before_all(context):
@@ -37,11 +37,10 @@ def before_scenario(context, scenario):
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
 
-    # Clean memory mappings and active check sequences
+    # Clean memory mappings
     sid_to_station_id.clear()
     station_id_to_sid.clear()
     transmitting_sids.clear()
-    active_radio_checks.clear()
 
     # Track open client sockets to close them after the scenario
     context.clients = {}

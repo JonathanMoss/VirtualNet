@@ -4,9 +4,9 @@ from typing import Optional
 from datetime import datetime
 from pydantic import BaseModel, Field, field_validator, ConfigDict
 
-# Regular expression for DTG validation (e.g. 281015Z JUL 26)
+# Regular expression for DTG validation (e.g. 281015Z JUL 26 or 302120A JUL 26)
 DTG_REGEX = re.compile(
-    r"^(0[1-9]|[12][0-9]|3[01])(0[0-9]|1[0-9]|2[0-3])[0-5][0-9]Z "
+    r"^(0[1-9]|[12][0-9]|3[01])(0[0-9]|1[0-9]|2[0-3])[0-5][0-9][A-Z] "
     r"(JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC) \d{2}$"
 )
 

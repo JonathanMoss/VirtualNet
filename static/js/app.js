@@ -1,7 +1,7 @@
 // Main Application Coordinator Module - VirtualNet
 
 import { SocketManager } from './socket.js';
-import { LogsheetManager } from './logsheet.js';
+import { LogsheetManager, formatDTG } from './logsheet.js';
 import { AideMemoireManager } from './aide_memoire.js';
 import { WebAudioEngine } from './audio.js';
 
@@ -450,13 +450,7 @@ class VirtualNetApp {
           });
         }
 
-        const checkBtn = document.getElementById('btn-trigger-radio-check');
-        if (checkBtn && !checkBtn.dataset.bound) {
-          checkBtn.dataset.bound = "true";
-          checkBtn.addEventListener('click', () => {
-            this.socketManager.startRadioCheck();
-          });
-        }
+
       } else if (data.status === 'CONNECTED' && data.callSign) {
         // Student re-joining with assigned callsign!
         document.getElementById('callsign-lock-overlay').classList.add('d-none');
@@ -751,33 +745,7 @@ class VirtualNetApp {
 
 
 
-  handleRadioCheckStatus(data) {
-    const badge = document.getElementById('check-status-badge');
-    const responder = document.getElementById('check-active-responder');
-    const timer = document.getElementById('check-timer');
-    
-    if (data.inProgress) {
-      badge.textContent = "ACTIVE";
-      badge.className = "badge bg-danger";
-      responder.textContent = data.activeCallSign;
-      timer.textContent = `${data.timerRemainingSeconds}s`;
 
-      // Visual cues for students (if it's my turn to answer)
-      if (this.myCallSign === data.activeCallSign) {
-        // Show a flashing prompt or modify state details
-        document.getElementById('ptt-instruction').textContent = "⚠️ YOUR TURN TO ANSWER Collective Check! Hold PTT.";
-        document.getElementById('ptt-instruction').style.color = "var(--color-tactical-amber)";
-      } else {
-        document.getElementById('ptt-instruction').style.color = "var(--color-muted-gray)";
-      }
-    } else {
-      badge.textContent = "IDLE";
-      badge.className = "badge bg-secondary";
-      responder.textContent = "None";
-      timer.textContent = "-";
-      document.getElementById('ptt-instruction').style.color = "var(--color-muted-gray)";
-    }
-  }
 
   updateAllocationModal(stations) {
     const tbody = document.getElementById('allocation-table-tbody');
@@ -822,16 +790,7 @@ class VirtualNetApp {
   }
 
   updateDTGClock() {
-    const d = new Date();
-    const day = String(d.getUTCDate()).padStart(2, '0');
-    const hr = String(d.getUTCHours()).padStart(2, '0');
-    const min = String(d.getUTCMinutes()).padStart(2, '0');
-    
-    const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
-    const mon = months[d.getUTCMonth()];
-    const yr = String(d.getUTCFullYear()).substring(2);
-    
-    document.getElementById('system-clock').textContent = `${day}${hr}${min}Z ${mon} ${yr}`;
+    document.getElementById('system-clock').textContent = formatDTG(new Date());
   }
 
   resetToLanding() {

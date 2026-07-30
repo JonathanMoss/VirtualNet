@@ -69,9 +69,7 @@ export class SocketManager {
       this.app.audioEngine.receiveAudioChunk(data);
     });
 
-    this.socket.on('radio_check_status', (data) => {
-      this.app.handleRadioCheckStatus(data);
-    });
+
 
     this.socket.on('sync_response', (data) => {
       if (!data.success) {
@@ -136,9 +134,7 @@ export class SocketManager {
     });
   }
 
-  startRadioCheck() {
-    this.socket.emit('start_radio_check', {});
-  }
+
 
   setSignalQuality(stationId, signalQuality) {
     this.socket.emit('set_signal_quality', { stationId, signalQuality });

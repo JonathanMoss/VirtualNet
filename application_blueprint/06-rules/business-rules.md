@@ -108,9 +108,7 @@ The application client should model and validate the use of the following core p
 - **Receipts**:
   - `ROGER`: I have received your last transmission satisfactorily.
   - `WILCO`: I have received your last transmission, understand it, and will comply.
-- **Readability Reports**:
-  - Initiated by `RADIO CHECK OVER`.
-  - Replied to with `OK` (Satisfactory), `DIFFICULT` (Workable with difficulty), or `UNWORKABLE` (Unusable).
+
 - **Operational Injects**:
   - `CONTACT WAIT OUT`: Indicates immediate contact/exchange of fire has occurred. Locks the channel for other standard stations.
   - `SIGHTING [Encoded Location]`: Enemy sighted, no exchange of fire.

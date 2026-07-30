@@ -1,5 +1,4 @@
 """Unit tests for models, validation schemas, database access, and HTTP routes."""
-import eventlet
 from pydantic import ValidationError
 import pytest
 from conftest import get_today_instructor_pin
@@ -80,25 +79,37 @@ def test_station_create_validation():
 
 def test_log_entry_validation():
     """Test LogEntryCreate schema validation rules."""
-    # Valid entry
-    payload = {
+    # Valid GMT entry (Z)
+    payload_z = {
         "dtg": "281015Z JUL 26",
         "from_call_sign": "R11",
         "to_call_sign": "CONTROL",
         "precedence": "ROUTINE",
-        "event_text": "RADIO CHECK OK OVER",
+        "event_text": "REPORT RECEIVED OVER",
         "operator_initials": "JM"
     }
-    model = LogEntryCreate(**payload)
-    assert model.dtg == "281015Z JUL 26"
+    model_z = LogEntryCreate(**payload_z)
+    assert model_z.dtg == "281015Z JUL 26"
+
+    # Valid BST entry (A)
+    payload_a = {
+        "dtg": "302120A JUL 26",
+        "from_call_sign": "R11",
+        "to_call_sign": "CONTROL",
+        "precedence": "ROUTINE",
+        "event_text": "REPORT RECEIVED OVER",
+        "operator_initials": "JM"
+    }
+    model_a = LogEntryCreate(**payload_a)
+    assert model_a.dtg == "302120A JUL 26"
 
     # Invalid DTG
-    bad_payload = {**payload, "dtg": "281015 JUL 26"}
+    bad_payload = {**payload_z, "dtg": "281015 JUL 26"}
     with pytest.raises(ValidationError):
         LogEntryCreate(**bad_payload)
 
     # Invalid precedence
-    bad_precedence = {**payload, "precedence": "URGENT"}
+    bad_precedence = {**payload_z, "precedence": "URGENT"}
     with pytest.raises(ValidationError):
         LogEntryCreate(**bad_precedence)
 
@@ -259,49 +270,3 @@ def test_socketio_station_join_and_callsign_assignment(app, db):
 
     inst.disconnect()
     stud.disconnect()
-
-
-def test_radio_check_timer_and_defaulting(app, db):
-    # pylint: disable=redefined-outer-name
-    """Test radio check sequence timing and automatic defaulting timeouts."""
-    session = NetSession(name="Timer Session", pin="TIM1", callsign_indicator="R")
-    db.add(session)
-    db.commit()
-
-    inst = socketio.test_client(app)
-    inst.emit('join_net', {"pin": "TIM1", "nickname": "Control", "role": "CONTROL"})
-    inst.get_received()
-
-    st1 = socketio.test_client(app)
-    st1.emit('join_net', {"pin": "TIM1", "nickname": "Alpha", "role": "SUB_STATION"})
-    s1_msg = next(m for m in st1.get_received() if m['name'] == 'join_response')
-    s1_id = s1_msg['args'][0]['stationId']
-
-    st2 = socketio.test_client(app)
-    st2.emit('join_net', {"pin": "TIM1", "nickname": "Bravo", "role": "SUB_STATION"})
-    s2_msg = next(m for m in st2.get_received() if m['name'] == 'join_response')
-    s2_id = s2_msg['args'][0]['stationId']
-
-    inst.emit('assign_callsign', {"stationId": s1_id, "callSign": "01", "role": "SUB_STATION"})
-    inst.emit('assign_callsign', {"stationId": s2_id, "callSign": "02", "role": "SUB_STATION"})
-    inst.get_received()
-    st1.get_received()
-    st2.get_received()
-
-    inst.emit('start_radio_check', {})
-    inst.get_received()
-
-    # Allow greenlet timer to execute
-    eventlet.sleep(5.2)
-
-    # Verify status update broadcast
-    events = inst.get_received()
-    rc_events = [m for m in events if m['name'] == 'radio_check_status']
-    assert len(rc_events) > 0
-    latest_status = rc_events[-1]['args'][0]
-    assert "R01" in latest_status['defaultedCallSigns']
-
-
-    inst.disconnect()
-    st1.disconnect()
-    st2.disconnect()
