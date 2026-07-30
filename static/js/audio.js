@@ -208,7 +208,7 @@ export class WebAudioEngine {
               this.recordedChunks.push(e.data);
             }
           };
-          this.mediaRecorder.start();
+          this.mediaRecorder.start(100);
         } catch (err) {
           console.warn("MediaRecorder setup failed:", err);
           this.mediaRecorder = null;
@@ -253,13 +253,14 @@ export class WebAudioEngine {
   stopRecording() {
     this.stopTransmitterSidetone();
 
+    const txId = this.currentTxId;
+
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-      const txId = this.currentTxId;
       const mimeType = this.mediaRecorder.mimeType || 'audio/webm';
-      const chunks = [...this.recordedChunks];
+      const chunks = this.recordedChunks;
 
       this.mediaRecorder.onstop = async () => {
-        if (chunks.length > 0 && txId) {
+        if (chunks && chunks.length > 0 && txId) {
           try {
             const blob = new Blob(chunks, { type: mimeType });
             const arrayBuffer = await blob.arrayBuffer();
@@ -269,6 +270,7 @@ export class WebAudioEngine {
             console.error("Failed to send recorded audio blob:", err);
           }
         }
+        this.recordedChunks = [];
       };
       this.mediaRecorder.stop();
       this.mediaRecorder = null;
