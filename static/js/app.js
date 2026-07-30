@@ -149,9 +149,12 @@ class VirtualNetApp {
     });
 
     // Host Success dashboard transition click
-    document.getElementById('btn-go-instructor').addEventListener('click', () => {
-      const pin = document.getElementById('generated-pin').textContent;
+    document.getElementById('btn-go-instructor').addEventListener('click', (e) => {
+      e.preventDefault();
+      const pin = document.getElementById('generated-pin').textContent.trim();
       this.myNickname = "Instructor";
+      this.myRole = "INSTRUCTOR";
+      this.netPin = pin;
       this.socketManager.joinNet(pin, "Instructor", "CONTROL");
     });
   }
