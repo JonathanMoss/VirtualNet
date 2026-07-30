@@ -158,14 +158,10 @@ export class WebAudioEngine {
     return;
   }
 
-  async startRecording(txId) {
-    if (!this.audioContext) await this.init();
-    
-    if (this.audioContext.state === 'suspended') {
-      await this.audioContext.resume();
+  async ensureMicStream() {
+    if (this.micStream && this.micStream.active && (this.workletNode || this.scriptNode)) {
+      return;
     }
-
-    console.log("🎙️ [AUDIO-TX] PTT Pressed -> Starting microphone PCM capture for TX ID:", txId);
 
     try {
       const supportError = WebAudioEngine.getMediaCaptureSupportReason();
@@ -179,16 +175,13 @@ export class WebAudioEngine {
           noiseSuppression: false,
           autoGainControl: false,
           channelCount: 1,
-          sampleRate: this.audioContext.sampleRate
+          sampleRate: this.audioContext ? this.audioContext.sampleRate : undefined
         }
       });
       
       const source = this.audioContext.createMediaStreamSource(this.micStream);
-      this.currentTxId = txId;
-      this.packetSequence = 0;
       this.capturedPcmFloats = [];
 
-      // Capture raw PCM audio buffers locally while PTT is held down
       if (this.audioContext.audioWorklet && typeof AudioWorkletNode !== 'undefined') {
         await this.audioContext.audioWorklet.addModule(new URL('./audio-worklet-processor.js', import.meta.url));
         this.workletNode = new AudioWorkletNode(this.audioContext, 'pcm-processor', {
@@ -197,15 +190,19 @@ export class WebAudioEngine {
           channelCount: 1
         });
         this.workletNode.port.onmessage = (event) => {
-          const floatData = new Float32Array(event.data);
-          this.capturedPcmFloats.push(new Float32Array(floatData));
+          if (this.isRecording) {
+            const floatData = new Float32Array(event.data);
+            this.capturedPcmFloats.push(new Float32Array(floatData));
+          }
         };
         source.connect(this.workletNode);
       } else {
         this.scriptNode = this.audioContext.createScriptProcessor(1024, 1, 1);
         this.scriptNode.onaudioprocess = (e) => {
-          const inputData = e.inputBuffer.getChannelData(0);
-          this.capturedPcmFloats.push(new Float32Array(inputData));
+          if (this.isRecording) {
+            const inputData = e.inputBuffer.getChannelData(0);
+            this.capturedPcmFloats.push(new Float32Array(inputData));
+          }
         };
         source.connect(this.scriptNode);
         const dummyGain = this.audioContext.createGain();
@@ -213,29 +210,37 @@ export class WebAudioEngine {
         this.scriptNode.connect(dummyGain);
         dummyGain.connect(this.audioContext.destination);
       }
-      
+      console.log("🎤 [AUDIO] Microphone stream pre-warmed and active in background.");
     } catch (e) {
-      console.error("Failed to start microphone recording:", e);
+      console.warn("Failed to pre-warm microphone stream:", e);
       throw e;
     }
   }
 
-  stopRecording() {
-    const txId = this.currentTxId;
+  async startRecording(txId) {
+    if (!this.audioContext) await this.init();
+    
+    if (this.audioContext.state === 'suspended') {
+      await this.audioContext.resume();
+    }
 
-    if (this.scriptNode) {
-      this.scriptNode.disconnect();
-      this.scriptNode = null;
-    }
-    if (this.workletNode) {
-      this.workletNode.port.close();
-      this.workletNode.disconnect();
-      this.workletNode = null;
-    }
-    if (this.micStream) {
-      this.micStream.getTracks().forEach(track => track.stop());
-      this.micStream = null;
-    }
+    await this.ensureMicStream();
+
+    this.currentTxId = txId;
+    this.packetSequence = 0;
+    this.capturedPcmFloats = [];
+
+    // Pre-pad 100ms of lead-in silence so the first spoken syllable is never clipped
+    const silenceSamples = Math.round((this.audioContext ? this.audioContext.sampleRate : 48000) * 0.10);
+    this.capturedPcmFloats.push(new Float32Array(silenceSamples));
+
+    this.isRecording = true;
+    console.log("🎙️ [AUDIO-TX] PTT Keyed -> Recording active with warm mic stream & 100ms lead silence for TX ID:", txId);
+  }
+
+  stopRecording() {
+    this.isRecording = false;
+    const txId = this.currentTxId;
 
     // Transmit complete recorded voice message as ONE uncompressed 32-bit Float PCM packet upon PTT release
     if (this.capturedPcmFloats && this.capturedPcmFloats.length > 0 && txId) {

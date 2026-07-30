@@ -330,6 +330,10 @@ class VirtualNetApp {
       document.getElementById('header-callsign').textContent = `Callsign: ${this.myCallSign}`;
       if (WebAudioEngine.isMediaCaptureSupported()) {
         document.getElementById('ptt-btn').disabled = false;
+        // Pre-warm microphone stream in background so PTT keydown capture is instantaneous
+        this.audioEngine.ensureMicStream().catch(err => {
+          console.warn("Background microphone pre-warm warning:", err);
+        });
       }
 
       // Update Net Mode UI State
@@ -347,19 +351,25 @@ class VirtualNetApp {
       this.isTransmitting = true;
       this.currentTransmissionId = data.transmissionId;
       
-      // Update UI state to Transmitting
-      this.updatePTTCardState('TRANSMITTING');
+      // Step 1: Immediately show KEYING state (Amber)
+      this.updatePTTCardState('KEYING');
       
-      // Start recording/streaming voice
-      this.audioEngine.startRecording(data.transmissionId).then(() => {
-        // Synthesizer clicked beep
-        this.audioEngine.playPTTStartChirp();
-      }).catch((e) => {
+      // Step 2: Start recording (mic is pre-warmed, 0ms lag)
+      this.audioEngine.startRecording(data.transmissionId).catch((e) => {
         console.error('PTT start recording failed:', e);
         this.setAudioUnavailable(e.message || 'Unable to access microphone.');
         this.triggerPTTOn(); // revert if mic permissions fail
         this.updatePTTCardState('IDLE');
+        return;
       });
+
+      // Step 3: Enforce 300ms PTT Pre-Delay transition to TRANSMITTING - SPEAK NOW (Red)
+      setTimeout(() => {
+        if (this.isTransmitting) {
+          this.updatePTTCardState('TRANSMITTING');
+          this.audioEngine.playPTTStartChirp();
+        }
+      }, 300);
     } else {
       // Access denied (Channel busy)
       this.audioEngine.playPTTEndSquelchTail(); // Play block buzz/crackle sound
@@ -534,11 +544,18 @@ class VirtualNetApp {
       pttBtn.classList.remove('active', 'btn-danger');
       this.audioEngine.clearPlaybackQueue();
       
+    } else if (state === 'KEYING') {
+      container.classList.add('ptt-card-transmitting');
+      stateText.innerHTML = `<span class="badge bg-warning text-dark me-2">KEYING</span>STANDBY...`;
+      stateText.style.color = "var(--color-tactical-amber)";
+      instruction.textContent = "Keying channel... Wait 1 second before speaking";
+      pttBtn.classList.add('active');
+
     } else if (state === 'TRANSMITTING') {
       container.classList.add('ptt-card-transmitting');
-      stateText.innerHTML = `<span class="pulse-indicator"></span>TRANSMITTING`;
+      stateText.innerHTML = `<span class="pulse-indicator"></span>TRANSMITTING — SPEAK NOW`;
       stateText.style.color = "var(--color-hot-red)";
-      instruction.textContent = "Microphone streaming active... Release key to end";
+      instruction.textContent = "Microphone active... Speak now. Release key when finished speaking";
       pttBtn.classList.add('active');
       
     } else if (state === 'RECEIVING') {
