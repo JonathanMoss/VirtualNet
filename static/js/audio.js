@@ -41,9 +41,14 @@ export class WebAudioEngine {
 
 
   async init() {
-    // Lazy-initialize AudioContext on user interaction with the lowest latency hint.
+    // Lazy-initialize AudioContext at 48000Hz hardware standard to prevent mobile Android sample rate mismatch & crackling.
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    this.audioContext = new AudioContextClass({ latencyHint: 'interactive' });
+    try {
+      this.audioContext = new AudioContextClass({ sampleRate: 48000, latencyHint: 'interactive' });
+    } catch (e) {
+      console.warn("AudioContext custom sampleRate initialization fallback:", e);
+      this.audioContext = new AudioContextClass({ latencyHint: 'interactive' });
+    }
     
     // Pre-generate a 1-second looping white noise buffer for static simulation
     this.generateNoiseBuffer();
@@ -382,14 +387,9 @@ export class WebAudioEngine {
       return;
     }
 
-    // Unpack 32-bit Float PCM payload (0 quantization loss)
-    let float32;
-    if (payload.byteOffset % 4 === 0) {
-      float32 = new Float32Array(payload.buffer, payload.byteOffset, Math.floor(payload.length / 4));
-    } else {
-      const alignedBuffer = payload.buffer.slice(payload.byteOffset, payload.byteOffset + payload.byteLength);
-      float32 = new Float32Array(alignedBuffer, 0, Math.floor(alignedBuffer.byteLength / 4));
-    }
+    // Unpack 32-bit Float PCM payload with guaranteed 4-byte alignment for Android ARM CPUs
+    const pcmBuffer = payload.buffer.slice(payload.byteOffset, payload.byteOffset + payload.byteLength);
+    let float32 = new Float32Array(pcmBuffer, 0, Math.floor(pcmBuffer.byteLength / 4));
 
     // Resample Float PCM from sender's sample rate to receiver's AudioContext sample rate
     float32 = this.resampleFloat32(float32, srcSampleRate, this.audioContext.sampleRate);
