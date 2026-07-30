@@ -160,6 +160,10 @@ export class WebAudioEngine {
   }
 
   async ensureMicStream() {
+    if (!this.audioContext) {
+      await this.init();
+    }
+
     if (this.micStream && this.micStream.active && (this.workletNode || this.scriptNode)) {
       return;
     }
@@ -342,11 +346,15 @@ export class WebAudioEngine {
   }
 
   async receiveAudioChunk(binaryData) {
-    if (!this.audioContext) return;
+    if (!this.audioContext) {
+      await this.init();
+    }
     
-    if (this.audioContext.state === 'suspended') {
+    if (this.audioContext && this.audioContext.state === 'suspended') {
       await this.audioContext.resume();
     }
+
+    if (!this.audioContext) return;
 
     let packet = binaryData;
     if (packet instanceof ArrayBuffer) {

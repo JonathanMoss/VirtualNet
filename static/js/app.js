@@ -162,12 +162,20 @@ class VirtualNetApp {
       supportWarning.classList.remove('d-none');
     }
 
-    // Trigger audio initialization on click
+    // Trigger audio initialization on click or user gesture
     const startAudioContext = async () => {
       if (!this.audioEngine.audioContext) {
         await this.audioEngine.init();
       }
+      if (this.audioEngine.audioContext && this.audioEngine.audioContext.state === 'suspended') {
+        await this.audioEngine.audioContext.resume();
+      }
     };
+
+    // Global user-gesture handler to eagerly unlock/resume Web Audio context on first user click/touch
+    window.addEventListener('click', startAudioContext, { once: true });
+    window.addEventListener('keydown', startAudioContext, { once: true });
+    window.addEventListener('touchstart', startAudioContext, { once: true });
 
     // Keyboard Spacebar PTT events
     document.addEventListener('keydown', (e) => {
