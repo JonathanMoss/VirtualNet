@@ -11,6 +11,7 @@ from app.database import init_db, db_session
 
 # Check for Redis URL for SocketIO message queue / PubSub multi-worker routing
 REDIS_URL = os.environ.get('REDIS_URL')
+ENABLE_REDIS_QUEUE = os.environ.get('ENABLE_REDIS_QUEUE', 'false').lower() in ('true', '1', 'yes')
 IS_TESTING = os.environ.get('FLASK_ENV') in ('testing', 'test') or os.environ.get('TESTING') == '1'
 
 # Create SocketIO instance at module level (to be imported by sockets.py)
@@ -46,7 +47,7 @@ def create_app(testing=False):
         app,
         cors_allowed_origins="*",
         async_mode='eventlet',
-        message_queue=REDIS_URL if (REDIS_URL and not (testing or IS_TESTING)) else None,
+        message_queue=REDIS_URL if (REDIS_URL and ENABLE_REDIS_QUEUE and not (testing or IS_TESTING)) else None,
         logger=False,
         engineio_logger=False,
         pingInterval=2,
