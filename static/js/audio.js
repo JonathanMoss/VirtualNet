@@ -455,12 +455,34 @@ export class WebAudioEngine {
     }
   }
 
+  resampleFloat32(inputData, fromSampleRate, toSampleRate) {
+    if (!inputData || !inputData.length) {
+      return new Float32Array(0);
+    }
+    if (!fromSampleRate || !toSampleRate || Math.abs(fromSampleRate - toSampleRate) < 5) {
+      return inputData;
+    }
+    const ratio = fromSampleRate / toSampleRate;
+    const newLength = Math.round(inputData.length / ratio);
+    const outputData = new Float32Array(newLength);
+    
+    for (let i = 0; i < newLength; i++) {
+      const originIndex = i * ratio;
+      const index1 = Math.floor(originIndex);
+      const index2 = Math.min(index1 + 1, inputData.length - 1);
+      const interpolation = originIndex - index1;
+      outputData[i] = inputData[index1] * (1 - interpolation) + inputData[index2] * interpolation;
+    }
+    return outputData;
+  }
+
   sendAudioPacket(txId, payloadBytes) {
-    // Generate binary buffer: [4 bytes tx hash] + [4 bytes sequence] + payload
+    // Generate binary buffer: [4 bytes tx hash] + [4 bytes sequence] + [4 bytes sample rate] + payload
     const txHash = this.hashCode(txId);
     const sequence = this.packetSequence++ >>> 0;
+    const sampleRate = (this.audioContext ? this.audioContext.sampleRate : 48000) >>> 0;
 
-    const buffer = new Uint8Array(8 + payloadBytes.length);
+    const buffer = new Uint8Array(12 + payloadBytes.length);
     buffer[0] = (txHash >> 24) & 0xFF;
     buffer[1] = (txHash >> 16) & 0xFF;
     buffer[2] = (txHash >> 8) & 0xFF;
@@ -469,7 +491,11 @@ export class WebAudioEngine {
     buffer[5] = (sequence >> 16) & 0xFF;
     buffer[6] = (sequence >> 8) & 0xFF;
     buffer[7] = sequence & 0xFF;
-    buffer.set(payloadBytes, 8);
+    buffer[8] = (sampleRate >> 24) & 0xFF;
+    buffer[9] = (sampleRate >> 16) & 0xFF;
+    buffer[10] = (sampleRate >> 8) & 0xFF;
+    buffer[11] = sampleRate & 0xFF;
+    buffer.set(payloadBytes, 12);
 
     this.app.socketManager.sendAudioChunk(buffer);
   }
@@ -541,7 +567,21 @@ export class WebAudioEngine {
     }
 
     const seq = (packet[4] << 24) | (packet[5] << 16) | (packet[6] << 8) | packet[7];
-    const payload = packet.subarray(8);
+    let srcSampleRate = 48000;
+    let payload;
+
+    if (packet.length >= 12) {
+      const extractedRate = ((packet[8] << 24) | (packet[9] << 16) | (packet[10] << 8) | packet[11]) >>> 0;
+      if (extractedRate >= 8000 && extractedRate <= 192000) {
+        srcSampleRate = extractedRate;
+        payload = packet.subarray(12);
+      } else {
+        payload = packet.subarray(8);
+      }
+    } else {
+      payload = packet.subarray(8);
+    }
+
     const arrivedAt = performance.now();
 
     const useOpus = typeof AudioDecoder !== 'undefined' && this.decoder;
@@ -566,6 +606,9 @@ export class WebAudioEngine {
       float32[i] = pcm16[i] / 32768.0;
     }
 
+    // Resample raw PCM from sender's sample rate to receiver's audioContext.sampleRate
+    float32 = this.resampleFloat32(float32, srcSampleRate, this.audioContext.sampleRate);
+
     if (this.expectedReceiveSequence === 0) {
       this.expectedReceiveSequence = seq;
     }
@@ -586,15 +629,19 @@ export class WebAudioEngine {
   }
 
   handleDecodedAudio(audioData) {
-    const channels = audioData.numberOfChannels;
     const frames = audioData.numberOfFrames;
+    const srcSampleRate = audioData.sampleRate || 48000;
     const float32 = new Float32Array(frames);
     
     // Copy channel 0 floats
     audioData.copyTo(float32, { planeIndex: 0 });
     audioData.close();
 
-    this.schedulePlaybackBuffer(float32);
+    // Resample WebCodecs Opus decoded audio to receiver's AudioContext sample rate
+    const targetSampleRate = this.audioContext ? this.audioContext.sampleRate : 48000;
+    const resampledFloat32 = this.resampleFloat32(float32, srcSampleRate, targetSampleRate);
+
+    this.schedulePlaybackBuffer(resampledFloat32);
   }
 
   schedulePlaybackBuffer(floatArray) {
