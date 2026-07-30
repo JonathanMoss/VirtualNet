@@ -165,6 +165,8 @@ export class WebAudioEngine {
       await this.audioContext.resume();
     }
 
+    console.log("🎙️ [AUDIO-TX] PTT Pressed -> Starting microphone PCM capture for TX ID:", txId);
+
     try {
       const supportError = WebAudioEngine.getMediaCaptureSupportReason();
       if (supportError) {
@@ -256,8 +258,11 @@ export class WebAudioEngine {
           pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
         }
 
+        console.log(`🚀 [AUDIO-TX] PTT Released -> Assembled ${pcm16.byteLength} bytes of PCM audio (${combinedPcm.length} samples) for TX ID: ${txId}`);
         this.sendAudioPacket(txId, new Uint8Array(pcm16.buffer));
       }
+    } else {
+      console.warn("⚠️ [AUDIO-TX] PTT Released, but no PCM audio floats were captured or TX ID missing.");
     }
 
     this.currentTxId = null;
@@ -323,6 +328,7 @@ export class WebAudioEngine {
     buffer[11] = sampleRate & 0xFF;
     buffer.set(payloadBytes, 12);
 
+    console.log(`📡 [AUDIO-TX-SOCKET] Emitting binary 'audio_chunk' packet (${buffer.byteLength} bytes) to server...`);
     this.app.socketManager.sendAudioChunk(buffer);
   }
 
@@ -350,7 +356,10 @@ export class WebAudioEngine {
       packet = new Uint8Array(packet);
     }
 
+    console.log(`🔊 [AUDIO-RX] Received binary 'audio_chunk' packet (${packet.length} bytes) from server`);
+
     if (packet.length <= 8) {
+      console.warn("⚠️ [AUDIO-RX] Packet too short, ignoring.");
       return;
     }
 
@@ -369,7 +378,10 @@ export class WebAudioEngine {
       payload = packet.subarray(8);
     }
 
-    if (!payload || payload.length === 0) return;
+    if (!payload || payload.length === 0) {
+      console.warn("⚠️ [AUDIO-RX] Payload empty, ignoring.");
+      return;
+    }
 
     // Convert Int16 PCM payload to Float32Array
     const pcm16 = new Int16Array(payload.buffer, payload.byteOffset, Math.floor(payload.length / 2));
@@ -382,6 +394,8 @@ export class WebAudioEngine {
     float32 = this.resampleFloat32(float32, srcSampleRate, this.audioContext.sampleRate);
 
     if (float32.length === 0) return;
+
+    console.log(`▶️ [AUDIO-RX] Playing continuous voice buffer (${float32.length} samples | Sender Rate: ${srcSampleRate}Hz | Receiver Rate: ${this.audioContext.sampleRate}Hz)`);
 
     // Play pristine continuous audio buffer
     const audioBuf = this.audioContext.createBuffer(1, float32.length, this.audioContext.sampleRate);

@@ -19,6 +19,7 @@ from app.schemas import NetSessionCreate, LogEntryCreate
 # Thread-safe in-memory mapping of socket session ID (sid) to station ID
 sid_to_station_id = {}
 station_id_to_sid = {}
+sid_to_net_id = {}
 
 # Fast-path in-memory mapping of transmitting SIDs to net_id (Zero-DB audio streaming)
 transmitting_sids = {}
@@ -171,6 +172,7 @@ def handle_disconnect():
         station_id = station.id
         sid_to_station_id.pop(request.sid, None)
         station_id_to_sid.pop(station_id, None)
+        sid_to_net_id.pop(request.sid, None)
 
         # Broadcast roster update
         broadcast_roster(db, net_id)
@@ -295,6 +297,7 @@ def handle_join_net(data):
     # Link socket mapping
     sid_to_station_id[request.sid] = station.id
     station_id_to_sid[station.id] = request.sid
+    sid_to_net_id[request.sid] = session.id
 
     # Join the SocketIO room for this session
     join_room(session.id)
@@ -501,14 +504,17 @@ def handle_ptt_release(data):
 @socketio.on('audio_chunk')
 def handle_audio_chunk(data):
     """Broadcasts a binary audio chunk from speaker to all other stations."""
-    # Data is binary: [4 bytes: Transmission ID] + [Remaining: audio frame]
     if not isinstance(data, (bytes, bytearray)) or len(data) < 4:
+        print(f"⚠️ [SERVER-AUDIO] Ignored invalid audio packet from sid={request.sid}")
         return
 
-    # Fast-path O(1) memory lookup - ZERO database queries per frame
-    net_id = transmitting_sids.get(request.sid)
+    # Fast-path O(1) memory lookup with room fallback
+    net_id = transmitting_sids.get(request.sid) or sid_to_net_id.get(request.sid)
     if not net_id:
+        print(f"⚠️ [SERVER-AUDIO] Dropped audio chunk ({len(data)} B) sid={request.sid} - No net_id found")
         return
+
+    print(f"📡 [SERVER-AUDIO] Broadcasting audio chunk ({len(data)} bytes) from sid={request.sid} to net_id={net_id}")
 
     # Broadcast binary chunk to the room, excluding the sender
     emit('audio_chunk', data, room=net_id, include_self=False, binary=True)
