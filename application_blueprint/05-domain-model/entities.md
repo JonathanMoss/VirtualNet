@@ -40,7 +40,6 @@ Represents an active connection in a NetSession. Holds no personal information.
 - `ip_address`: `str` (IPv4 validation)
 - `connection_status`: `str` (Allowed: `"AWAITING_ASSIGNMENT"`, `"CONNECTED"`, `"MUTED"`, `"DISCONNECTED"`)
 - `transmission_status`: `str` (Allowed: `"IDLE"`, `"TRANSMITTING"`, `"BLOCKED"`)
-- `signal_quality`: `str` (Allowed values: `"OK"`, `"DIFFICULT"`, `"UNWORKABLE"`, default `"OK"`)
 - `connected_at`: `datetime.datetime`
 
 ### Database Columns: `stations` Table
@@ -51,7 +50,6 @@ Represents an active connection in a NetSession. Holds no personal information.
 - `role`: `String(15)`, Not Null (default `"SUB_STATION"`)
 - `ip_address`: `String(45)`
 - `status`: `String(20)`, Not Null (default `"AWAITING_ASSIGNMENT"`)
-- `signal_quality`: `String(15)`, Not Null (default `"OK"`)
 - `connected_at`: `DateTime`, Not Null
 
 ---

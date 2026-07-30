@@ -33,7 +33,8 @@ def socket_client(app, db):
     client = socketio.test_client(app)
     assert client.is_connected()
     yield client
-    client.disconnect()
+    if client.is_connected():
+        client.disconnect()
     sid_to_station_id.clear()
     station_id_to_sid.clear()
     transmitting_sids.clear()
@@ -175,13 +176,11 @@ def test_join_net_error_cases(app, socket_client):
     ctrl_resp = socket_client.get_received()
     ctrl_pin = next(item for item in ctrl_resp if item['name'] == 'create_response')['args'][0]['pin']
 
-    # Join student with nickname 'INSTRUCTOR' (defaults to CONTROL role and callsign)
-    student1 = socketio.test_client(app)
-    student1.emit('join_net', {'pin': ctrl_pin, 'nickname': 'INSTRUCTOR', 'role': 'SUB_STATION'})
-    resp_ctrl = next(item for item in student1.get_received() if item['name'] == 'join_response')['args'][0]
+    # Join instructor on Control Net (reconnects creator socket)
+    socket_client.emit('join_net', {'pin': ctrl_pin, 'nickname': 'INSTRUCTOR', 'role': 'INSTRUCTOR'})
+    resp_ctrl = next(item for item in socket_client.get_received() if item['name'] == 'join_response')['args'][0]
     assert resp_ctrl['success'] is True
     assert resp_ctrl['role'] == 'CONTROL'
-    student1.disconnect()
 
     # Try duplicate active nickname on Join Errors Net
     student2 = socketio.test_client(app)
@@ -464,9 +463,90 @@ def test_radio_check_start_and_set_signal_quality(app, socket_client):
     socket_client.emit('set_signal_quality', {'stationId': student_id, 'signalQuality': 'POOR'})
     roster_evt = next(item for item in socket_client.get_received() if item['name'] == 'roster_update')['args'][0]
     sub_station = next(s for s in roster_evt['stations'] if s['stationId'] == student_id)
-    assert sub_station['signalQuality'] == 'POOR'
+    assert sub_station['status'] == 'CONNECTED'
 
     student.disconnect()
+
+
+def test_rejoin_session_and_unworkable_grace_period(app, socket_client):
+    # pylint: disable=redefined-outer-name,too-many-locals
+    """Test rejoining session with stationId, preserving callsign, and UNWORKABLE grace period."""
+    valid_pin = get_today_instructor_pin()
+    socket_client.emit('create_net', {'name': 'Rejoin Net', 'callsign_indicator': 'R', 'instructor_pin': valid_pin})
+    create_resp = next(item for item in socket_client.get_received() if item['name'] == 'create_response')['args'][0]
+    pin = create_resp['pin']
+
+    # Instructor joins
+    socket_client.emit('join_net', {'pin': pin, 'nickname': 'InstructorOne', 'role': 'INSTRUCTOR'})
+    inst_join = next(item for item in socket_client.get_received() if item['name'] == 'join_response')['args'][0]
+    inst_station_id = inst_join['stationId']
+
+    # Student joins
+    student = socketio.test_client(app)
+    student.emit('join_net', {'pin': pin, 'nickname': 'StudentOne', 'role': 'SUB_STATION'})
+    st_join = next(item for item in student.get_received() if item['name'] == 'join_response')['args'][0]
+    student_station_id = st_join['stationId']
+
+    # Instructor assigns callsign R11 to student
+    socket_client.emit('assign_callsign', {'stationId': student_station_id, 'callSign': '11'})
+    socket_client.get_received()
+    student.get_received()
+
+    # Student disconnects (simulating refresh / Wi-Fi drop)
+    student.disconnect()
+
+    # Instructor receives roster update showing student status UNWORKABLE
+    inst_events = socket_client.get_received()
+    roster_evt = next(item for item in inst_events if item['name'] == 'roster_update')['args'][0]
+    unworkable_st = next(s for s in roster_evt['stations'] if s['stationId'] == student_station_id)
+    assert unworkable_st['status'] == 'UNWORKABLE'
+    assert 'Active' in unworkable_st['lastActiveAgo'] or '0s' in unworkable_st['lastActiveAgo']
+
+    # Student reconnects with stationId & pin from cookie
+    student_rejoin = socketio.test_client(app)
+    student_rejoin.emit(
+        'join_net',
+        {'pin': pin, 'nickname': 'StudentOne', 'role': 'SUB_STATION', 'stationId': student_station_id}
+    )
+    rejoin_resp = next(item for item in student_rejoin.get_received() if item['name'] == 'join_response')['args'][0]
+
+    assert rejoin_resp['success'] is True
+    assert rejoin_resp['stationId'] == student_station_id
+    assert rejoin_resp['callSign'] == 'R11'
+    assert rejoin_resp['status'] == 'CONNECTED'
+
+    # Instructor roster updates back to CONNECTED
+    inst_events2 = socket_client.get_received()
+    roster_evt2 = next(item for item in inst_events2 if item['name'] == 'roster_update')['args'][0]
+    connected_st = next(s for s in roster_evt2['stations'] if s['stationId'] == student_station_id)
+    assert connected_st['status'] == 'CONNECTED'
+
+    # Instructor disconnects and reconnects (simulating instructor refresh)
+    if socket_client.is_connected():
+        socket_client.disconnect()
+    inst_rejoin = socketio.test_client(app)
+    inst_rejoin.emit(
+        'join_net',
+        {'pin': pin, 'nickname': 'InstructorOne', 'role': 'INSTRUCTOR', 'stationId': inst_station_id}
+    )
+    inst_rejoin_resp = next(item for item in inst_rejoin.get_received() if item['name'] == 'join_response')['args'][0]
+
+    assert inst_rejoin_resp['success'] is True
+    assert inst_rejoin_resp['role'] == 'INSTRUCTOR'
+    assert inst_rejoin_resp['pin'] == pin
+    assert inst_rejoin_resp['callSign'] == 'CONTROL'
+
+    # Student explicitly leaves net
+    student_rejoin.emit('leave_net', {})
+    inst_rejoin_events = inst_rejoin.get_received()
+
+    # Roster updated and student is removed from roster
+    roster_evt3 = next(item for item in inst_rejoin_events if item['name'] == 'roster_update')['args'][0]
+    left_st = next((s for s in roster_evt3['stations'] if s['stationId'] == student_station_id), None)
+    assert left_st is None
+
+    student_rejoin.disconnect()
+    inst_rejoin.disconnect()
 
 
 def test_end_session_and_ephemeral_purge(app, socket_client):

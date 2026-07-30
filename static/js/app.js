@@ -5,6 +5,25 @@ import { LogsheetManager } from './logsheet.js';
 import { AideMemoireManager } from './aide_memoire.js';
 import { WebAudioEngine } from './audio.js';
 
+// Global exception & unhandled rejection handler to catch third-party browser extension errors (e.g. content_chrome.js / cs.js disconnected port errors)
+window.addEventListener('error', (event) => {
+  const source = event.filename || '';
+  const msg = event.message || '';
+  if (source.includes('cs.js') || source.includes('content_chrome') || source.includes('chrome-extension') || msg.includes('disconnected port') || msg.includes('Receiving end does not exist')) {
+    console.warn('⚠️ Ignored third-party browser extension script error:', msg);
+    if (typeof event.preventDefault === 'function') event.preventDefault();
+    return true;
+  }
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  const reason = event.reason ? String(event.reason) : '';
+  if (reason.includes('disconnected port') || reason.includes('Receiving end does not exist')) {
+    console.warn('⚠️ Ignored third-party browser extension promise rejection:', reason);
+    if (typeof event.preventDefault === 'function') event.preventDefault();
+  }
+});
+
 class VirtualNetApp {
   constructor() {
     this.socketManager = new SocketManager(this);
@@ -50,13 +69,23 @@ class VirtualNetApp {
     // 6. Connect Socket
     this.socketManager.connect();
 
-    // 7. Check for saved session persistence and auto-reconnect
+    // 7. Setup Leave Net button
+    document.getElementById('btn-leave-net').addEventListener('click', () => {
+      if (confirm("Are you sure you want to leave this Net session?")) {
+        this.socketManager.leaveNet();
+        this.clearSavedSession();
+        this.resetToLanding();
+      }
+    });
+
+    // 8. Check for saved session persistence and auto-reconnect
     const saved = this.loadSavedSession();
     if (saved && saved.pin && saved.nickname) {
       console.log("Restoring active session from storage/cookie:", saved);
       this.myNickname = saved.nickname;
       this.myRole = saved.role || 'SUB_STATION';
-      this.socketManager.joinNet(saved.pin, saved.nickname, saved.role);
+      this.myStationId = saved.stationId || null;
+      this.socketManager.joinNet(saved.pin, saved.nickname, saved.role, saved.stationId);
     }
   }
 
@@ -118,32 +147,93 @@ class VirtualNetApp {
       viewJoin.classList.remove('d-none');
     });
 
-    // Student Join Net form submit
-    document.getElementById('join-net-form').addEventListener('submit', (e) => {
-      e.preventDefault();
+    // Student Join Net trigger
+    const submitJoin = () => {
       const pin = document.getElementById('join-pin').value.trim();
       const nickname = document.getElementById('join-nickname').value.trim();
-      
+      if (!pin || !nickname) {
+        alert("Please enter both Net PIN and Nickname.");
+        return;
+      }
       this.myNickname = nickname;
       this.socketManager.joinNet(pin, nickname);
+    };
+
+    const btnJoin = document.getElementById('btn-join-net');
+    if (btnJoin) {
+      btnJoin.addEventListener('click', (e) => {
+        e.preventDefault();
+        submitJoin();
+      });
+    }
+
+    ['join-pin', 'join-nickname'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            submitJoin();
+          }
+        });
+      }
     });
 
-    // Instructor Create Net form submit
-    document.getElementById('create-net-form').addEventListener('submit', (e) => {
-      e.preventDefault();
+    // Instructor Create Net trigger
+    const submitCreate = () => {
       const name = document.getElementById('create-name').value.trim();
       const ci = document.getElementById('create-ci').value.trim();
       const instructorPin = document.getElementById('create-instructor-pin').value.trim();
-      
+      if (!name || !ci || !instructorPin) {
+        alert("Please fill in all Net Session fields.");
+        return;
+      }
       this.socketManager.createNet(name, ci, instructorPin);
+    };
+
+    const btnCreate = document.getElementById('btn-create-net');
+    if (btnCreate) {
+      btnCreate.addEventListener('click', (e) => {
+        e.preventDefault();
+        submitCreate();
+      });
+    }
+
+    ['create-name', 'create-ci', 'create-instructor-pin'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            submitCreate();
+          }
+        });
+      }
     });
 
-    // Host Success dashboard transition click
-    document.getElementById('btn-go-instructor').addEventListener('click', () => {
-      const pin = document.getElementById('generated-pin').textContent;
-      this.myNickname = "Instructor";
-      this.socketManager.joinNet(pin, "Instructor", "CONTROL");
-    });
+    // Host Success dashboard transition click & pointerdown
+    const btnGoInst = document.getElementById('btn-go-instructor');
+    if (btnGoInst) {
+      const handleInstructorTransition = (e) => {
+        if (e) {
+          e.preventDefault();
+          if (e.stopPropagation) e.stopPropagation();
+          if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+        }
+        try {
+          const pin = document.getElementById('generated-pin').textContent.trim();
+          this.myNickname = "Instructor";
+          this.myRole = "INSTRUCTOR";
+          this.netPin = pin;
+          this.socketManager.joinNet(pin, "Instructor", "CONTROL");
+        } catch (err) {
+          console.warn("Instructor dashboard transition error:", err);
+        }
+      };
+
+      btnGoInst.addEventListener('pointerdown', handleInstructorTransition);
+      btnGoInst.addEventListener('click', handleInstructorTransition);
+    }
   }
 
 
@@ -162,12 +252,20 @@ class VirtualNetApp {
       supportWarning.classList.remove('d-none');
     }
 
-    // Trigger audio initialization on click
+    // Trigger audio initialization on click or user gesture
     const startAudioContext = async () => {
       if (!this.audioEngine.audioContext) {
         await this.audioEngine.init();
       }
+      if (this.audioEngine.audioContext && this.audioEngine.audioContext.state === 'suspended') {
+        await this.audioEngine.audioContext.resume();
+      }
     };
+
+    // Global user-gesture handler to eagerly unlock/resume Web Audio context on first user click/touch
+    window.addEventListener('click', startAudioContext, { once: true });
+    window.addEventListener('keydown', startAudioContext, { once: true });
+    window.addEventListener('touchstart', startAudioContext, { once: true });
 
     // Keyboard Spacebar PTT events
     document.addEventListener('keydown', (e) => {
@@ -185,17 +283,24 @@ class VirtualNetApp {
       }
     });
 
-    // UI Click PTT events
-    pttBtn.addEventListener('mousedown', async () => {
-      if (!mediaCaptureSupported) return;
+    // UI Hold-to-Talk Mouse & Touch PTT events
+    pttBtn.addEventListener('mousedown', async (e) => {
+      if (e.button !== 0 || !mediaCaptureSupported) return;
       await startAudioContext();
       this.triggerPTTOff();
     });
 
-    pttBtn.addEventListener('mouseup', () => {
-      if (this.isTransmitting || !mediaCaptureSupported) return;
-      this.triggerPTTOn();
-    });
+    const handleMouseRelease = (e) => {
+      if (e && e.button !== undefined && e.button !== 0) return;
+      if (!mediaCaptureSupported) return;
+      if (this.isTransmitting || this.isKeying) {
+        this.triggerPTTOn();
+      }
+    };
+
+    pttBtn.addEventListener('mouseup', handleMouseRelease);
+    pttBtn.addEventListener('mouseleave', handleMouseRelease);
+    window.addEventListener('mouseup', handleMouseRelease);
 
     // Mobile touch controls (prevents zooming/scrolling on hot key)
     pttBtn.addEventListener('touchstart', async (e) => {
@@ -208,7 +313,17 @@ class VirtualNetApp {
     pttBtn.addEventListener('touchend', (e) => {
       e.preventDefault();
       if (!mediaCaptureSupported) return;
-      this.triggerPTTOn();
+      if (this.isTransmitting || this.isKeying) {
+        this.triggerPTTOn();
+      }
+    });
+
+    pttBtn.addEventListener('touchcancel', (e) => {
+      e.preventDefault();
+      if (!mediaCaptureSupported) return;
+      if (this.isTransmitting || this.isKeying) {
+        this.triggerPTTOn();
+      }
     });
   }
 
@@ -218,18 +333,20 @@ class VirtualNetApp {
   }
 
   triggerPTTOff() {
-    if (this.isTransmitting) return;
+    if (this.isTransmitting || this.isKeying) return;
+    this.isKeying = true;
     this.socketManager.requestPTT();
   }
 
   triggerPTTOn() {
-    if (!this.isTransmitting) return;
-    this.isTransmitting = false;
-    this.audioEngine.stopRecording();
-    this.socketManager.releasePTT(this.currentTransmissionId);
-    
-    // Play end clicks tail
-    this.audioEngine.playPTTEndSquelchTail();
+    if (!this.isTransmitting && !this.isKeying) return;
+    if (this.isTransmitting) {
+      this.isTransmitting = false;
+      this.audioEngine.stopRecording();
+      this.socketManager.releasePTT(this.currentTransmissionId);
+      this.audioEngine.playPTTEndSquelchTail();
+    }
+    this.isKeying = false;
     this.updatePTTCardState('IDLE');
   }
 
@@ -247,8 +364,35 @@ class VirtualNetApp {
 
   handleCreateResponse(data) {
     if (data.success) {
+      this.myStationId = data.stationId;
+      this.myNickname = "Instructor";
+      this.myRole = data.role || "CONTROL";
+      this.myCallSign = data.callSign || "CONTROL";
+      this.netId = data.netId;
+      this.netName = data.netName;
+      this.netPin = data.pin;
+
+      // Save session cookie
+      this.saveSession(data.pin, "Instructor", this.myRole, data.stationId);
+
+      // Transition to Dashboard directly
       document.getElementById('generated-pin').textContent = data.pin;
-      document.getElementById('create-success-box').classList.remove('d-none');
+      document.getElementById('landing-section').classList.add('d-none');
+      document.getElementById('dashboard-section').classList.remove('d-none');
+      document.getElementById('instructor-section').classList.remove('d-none');
+      document.getElementById('callsign-lock-overlay').classList.add('d-none');
+
+      document.getElementById('header-net-pin').textContent = `PIN: ${data.pin}`;
+      document.getElementById('header-net-name').textContent = `Net: ${data.netName}`;
+      document.getElementById('header-net-name').classList.remove('d-none');
+      document.getElementById('header-callsign').textContent = `Callsign: CONTROL`;
+      document.getElementById('instructor-pin-badge').textContent = `PIN: ${data.pin}`;
+
+      if (WebAudioEngine.isMediaCaptureSupported()) {
+        document.getElementById('ptt-btn').disabled = false;
+      }
+
+      this.logsheetManager.initialize();
     } else {
       alert(`Failed to create net session: ${data.reason}`);
     }
@@ -258,16 +402,22 @@ class VirtualNetApp {
     if (data.success) {
       this.myStationId = data.stationId;
       this.myRole = data.role;
-      
-      const currentPin = (document.getElementById('join-pin').value.trim() || document.getElementById('generated-pin').textContent.trim() || this.netPin || '').toUpperCase();
-      this.netPin = currentPin;
+      this.myCallSign = data.callSign;
+      this.netId = data.netId;
+      this.netName = data.netName;
+      this.netPin = data.pin;
 
-      if (currentPin) {
-        this.saveSession(currentPin, this.myNickname, this.myRole, this.myStationId);
-        const headerPinBadge = document.getElementById('header-net-pin');
-        if (headerPinBadge) {
-          headerPinBadge.textContent = `PIN: ${currentPin}`;
-        }
+      this.saveSession(data.pin, this.myNickname, this.myRole, this.myStationId);
+      
+      const headerPinBadge = document.getElementById('header-net-pin');
+      if (headerPinBadge) {
+        headerPinBadge.textContent = `PIN: ${data.pin}`;
+      }
+
+      const headerName = document.getElementById('header-net-name');
+      if (headerName) {
+        headerName.textContent = `Net: ${data.netName}`;
+        headerName.classList.remove('d-none');
       }
 
       // Shift landing screens
@@ -287,31 +437,51 @@ class VirtualNetApp {
         
         // Show Instructor Dashboard controls
         document.getElementById('instructor-section').classList.remove('d-none');
-        
-        // Populate Instructor Details
-        document.getElementById('instructor-pin-badge').textContent = `PIN: ${currentPin || 'HOST'}`;
-
+        document.getElementById('instructor-pin-badge').textContent = `PIN: ${data.pin}`;
         
         // Setup Instructor Session controls
-        document.getElementById('btn-end-session').addEventListener('click', () => {
-          if (confirm("Are you sure you want to end this Net Session? All students will be kicked.")) {
-            this.socketManager.endSession();
-          }
-        });
+        const endBtn = document.getElementById('btn-end-session');
+        if (endBtn && !endBtn.dataset.bound) {
+          endBtn.dataset.bound = "true";
+          endBtn.addEventListener('click', () => {
+            if (confirm("Are you sure you want to end this Net Session? All students will be kicked.")) {
+              this.socketManager.endSession();
+            }
+          });
+        }
 
-        document.getElementById('select-net-state').addEventListener('change', (e) => {
-          this.socketManager.setNetState(e.target.value);
-        });
-
-        document.getElementById('btn-trigger-radio-check').addEventListener('click', () => {
-          this.socketManager.startRadioCheck();
-        });
+        const checkBtn = document.getElementById('btn-trigger-radio-check');
+        if (checkBtn && !checkBtn.dataset.bound) {
+          checkBtn.dataset.bound = "true";
+          checkBtn.addEventListener('click', () => {
+            this.socketManager.startRadioCheck();
+          });
+        }
+      } else if (data.status === 'CONNECTED' && data.callSign) {
+        // Student re-joining with assigned callsign!
+        document.getElementById('callsign-lock-overlay').classList.add('d-none');
+        document.getElementById('header-callsign').textContent = `Callsign: ${this.myCallSign}`;
+        if (WebAudioEngine.isMediaCaptureSupported()) {
+          document.getElementById('ptt-btn').disabled = false;
+          this.audioEngine.ensureMicStream().catch(err => {
+            console.warn("Background microphone pre-warm warning:", err);
+          });
+        }
       } else {
         // Initial student join. UI locked awaiting callsign
         document.getElementById('callsign-lock-overlay').classList.remove('d-none');
       }
+
+      this.logsheetManager.initialize();
     } else {
-      alert(`Join Failed: ${data.reason}`);
+      console.warn("Join/Rejoin failed:", data.reason);
+      this.clearSavedSession();
+      if (document.getElementById('dashboard-section').classList.contains('d-none')) {
+        alert(`Join Failed: ${data.reason}`);
+      } else {
+        alert(`Session Ended: ${data.reason}`);
+        this.resetToLanding();
+      }
     }
   }
 
@@ -330,12 +500,11 @@ class VirtualNetApp {
       document.getElementById('header-callsign').textContent = `Callsign: ${this.myCallSign}`;
       if (WebAudioEngine.isMediaCaptureSupported()) {
         document.getElementById('ptt-btn').disabled = false;
+        // Pre-warm microphone stream in background so PTT keydown capture is instantaneous
+        this.audioEngine.ensureMicStream().catch(err => {
+          console.warn("Background microphone pre-warm warning:", err);
+        });
       }
-
-      // Update Net Mode UI State
-      const badge = document.getElementById('net-mode-badge');
-      badge.textContent = `${this.netState} NET`;
-      badge.className = this.netState === 'DIRECTED' ? 'badge border border-danger text-danger text-uppercase' : 'badge border border-success text-success text-uppercase';
 
       // Initialize logs management
       this.logsheetManager.initialize();
@@ -344,24 +513,38 @@ class VirtualNetApp {
 
   handlePTTResponse(data) {
     if (data.allowed) {
+      if (!this.isKeying && !this.isTransmitting) {
+        // User already released mouse/key before server response arrived
+        this.socketManager.releasePTT(data.transmissionId);
+        this.isKeying = false;
+        return;
+      }
+
       this.isTransmitting = true;
       this.currentTransmissionId = data.transmissionId;
       
-      // Update UI state to Transmitting
-      this.updatePTTCardState('TRANSMITTING');
+      // Step 1: Immediately show KEYING state (Amber)
+      this.updatePTTCardState('KEYING');
       
-      // Start recording/streaming voice
-      this.audioEngine.startRecording(data.transmissionId).then(() => {
-        // Synthesizer clicked beep
-        this.audioEngine.playPTTStartChirp();
-      }).catch((e) => {
+      // Step 2: Start recording (mic is pre-warmed, 0ms lag)
+      this.audioEngine.startRecording(data.transmissionId).catch((e) => {
         console.error('PTT start recording failed:', e);
         this.setAudioUnavailable(e.message || 'Unable to access microphone.');
         this.triggerPTTOn(); // revert if mic permissions fail
         this.updatePTTCardState('IDLE');
+        return;
       });
+
+      // Step 3: Enforce 300ms PTT Pre-Delay transition to TRANSMITTING - SPEAK NOW (Red)
+      setTimeout(() => {
+        if (this.isTransmitting) {
+          this.updatePTTCardState('TRANSMITTING');
+          this.audioEngine.playPTTStartChirp();
+        }
+      }, 300);
     } else {
       // Access denied (Channel busy)
+      this.isKeying = false;
       this.audioEngine.playPTTEndSquelchTail(); // Play block buzz/crackle sound
       this.updatePTTCardState('BLOCKED', data.reason);
       setTimeout(() => this.updatePTTCardState('IDLE'), 2000);
@@ -457,23 +640,30 @@ class VirtualNetApp {
           });
 
           admissionsQueue.appendChild(tr);
-        } else if (s.status === 'CONNECTED' || s.status === 'MUTED') {
-          // Connected active dashboard roster
+        } else if (s.status === 'CONNECTED' || s.status === 'MUTED' || s.status === 'UNWORKABLE') {
+          // Connected or Temp Inactive (Unworkable) active dashboard roster
           const tr = document.createElement('tr');
+          let statusBadgeClass = 'bg-secondary';
+          let statusText = s.status;
+
+          if (s.transmissionStatus === 'TRANSMITTING') {
+            statusBadgeClass = 'bg-danger';
+            statusText = 'TALKING';
+          } else if (s.status === 'UNWORKABLE') {
+            statusBadgeClass = 'bg-warning text-dark';
+            statusText = `UNWORKABLE (${s.lastActiveAgo || 'Inactive'})`;
+          } else if (s.status === 'CONNECTED') {
+            statusBadgeClass = 'bg-success';
+            statusText = `ACTIVE (${s.lastActiveAgo || 'Active'})`;
+          }
+
           tr.innerHTML = `
             <td><b>${s.callSign || 'PENDING'}</b></td>
             <td>${s.nickname}</td>
             <td>${s.role}</td>
             <td>
-              <select class="form-select form-select-sm select-quality" data-id="${s.stationId}">
-                <option value="OK" ${s.signalQuality === 'OK' ? 'selected' : ''}>OK</option>
-                <option value="DIFFICULT" ${s.signalQuality === 'DIFFICULT' ? 'selected' : ''}>DIFFICULT</option>
-                <option value="UNWORKABLE" ${s.signalQuality === 'UNWORKABLE' ? 'selected' : ''}>UNWORKABLE</option>
-              </select>
-            </td>
-            <td>
-              <span class="badge ${s.transmissionStatus === 'TRANSMITTING' ? 'bg-danger' : 'bg-secondary'}">
-                ${s.transmissionStatus === 'TRANSMITTING' ? 'TALKING' : s.status}
+              <span class="badge ${statusBadgeClass}">
+                ${statusText}
               </span>
             </td>
             <td>
@@ -481,21 +671,10 @@ class VirtualNetApp {
             </td>
           `;
 
-          // Handle link quality changes
-          tr.querySelector('.select-quality').addEventListener('change', (e) => {
-            const sid = e.target.getAttribute('data-id');
-            this.socketManager.setSignalQuality(sid, e.target.value);
-          });
-
           instructorRoster.appendChild(tr);
         }
       }
 
-      // Track link quality for myself to drive Web Audio static synthesis
-      if (s.stationId === this.myStationId) {
-        this.audioEngine.updateSignalQualityEffects(s.signalQuality);
-        this.updateSignalBarsUI(s.signalQuality);
-      }
     });
 
     if (pendingQueueCount === 0 && admissionsQueue) {
@@ -534,11 +713,18 @@ class VirtualNetApp {
       pttBtn.classList.remove('active', 'btn-danger');
       this.audioEngine.clearPlaybackQueue();
       
+    } else if (state === 'KEYING') {
+      container.classList.add('ptt-card-transmitting');
+      stateText.innerHTML = `<span class="badge bg-warning text-dark me-2">KEYING</span>STANDBY...`;
+      stateText.style.color = "var(--color-tactical-amber)";
+      instruction.textContent = "Keying channel... Wait 1 second before speaking";
+      pttBtn.classList.add('active');
+
     } else if (state === 'TRANSMITTING') {
       container.classList.add('ptt-card-transmitting');
-      stateText.innerHTML = `<span class="pulse-indicator"></span>TRANSMITTING`;
+      stateText.innerHTML = `<span class="pulse-indicator"></span>TRANSMITTING — SPEAK NOW`;
       stateText.style.color = "var(--color-hot-red)";
-      instruction.textContent = "Microphone streaming active... Release key to end";
+      instruction.textContent = "Microphone active... Speak now. Release key when finished speaking";
       pttBtn.classList.add('active');
       
     } else if (state === 'RECEIVING') {
@@ -563,37 +749,7 @@ class VirtualNetApp {
     }
   }
 
-  updateSignalBarsUI(quality) {
-    const bars = document.getElementById('signal-bars');
-    const label = document.getElementById('signal-quality-text');
-    
-    bars.innerHTML = '';
-    if (quality === 'OK') {
-      bars.innerHTML = `
-        <div class="bar" style="width:6px; height:12px; background-color: var(--color-phosphor-green);"></div>
-        <div class="bar" style="width:6px; height:18px; background-color: var(--color-phosphor-green);"></div>
-        <div class="bar" style="width:6px; height:24px; background-color: var(--color-phosphor-green);"></div>
-      `;
-      label.textContent = "Signal OK - Voice Link Stable";
-      label.style.color = "var(--color-phosphor-green)";
-    } else if (quality === 'DIFFICULT') {
-      bars.innerHTML = `
-        <div class="bar" style="width:6px; height:12px; background-color: var(--color-tactical-amber);"></div>
-        <div class="bar" style="width:6px; height:18px; background-color: var(--color-tactical-amber);"></div>
-        <div class="bar" style="width:6px; height:24px; background-color: var(--border-color-tactical);"></div>
-      `;
-      label.textContent = "Weak Signal - Static Active";
-      label.style.color = "var(--color-tactical-amber)";
-    } else if (quality === 'UNWORKABLE') {
-      bars.innerHTML = `
-        <div class="bar" style="width:6px; height:12px; background-color: var(--color-hot-red);"></div>
-        <div class="bar" style="width:6px; height:18px; background-color: var(--border-color-tactical);"></div>
-        <div class="bar" style="width:6px; height:24px; background-color: var(--border-color-tactical);"></div>
-      `;
-      label.textContent = "No Signal - Radio Link Failure";
-      label.style.color = "var(--color-hot-red)";
-    }
-  }
+
 
   handleRadioCheckStatus(data) {
     const badge = document.getElementById('check-status-badge');
