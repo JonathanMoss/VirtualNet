@@ -176,12 +176,11 @@ export class WebAudioEngine {
 
       this.micStream = await this.getUserMedia({
         audio: {
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
           channelCount: 1,
-          sampleRate: this.audioContext.sampleRate,
-          sampleSize: 16
+          sampleRate: this.audioContext.sampleRate
         }
       });
       
@@ -190,6 +189,7 @@ export class WebAudioEngine {
       this.packetSequence = 0;
       this.expectedReceiveSequence = 0;
       this.receiveQueue = [];
+      this.captureBuffer = new Float32Array(0);
 
       // Setup WebCodecs encoder if available for lower bandwidth and better quality.
       this.useOpus = typeof AudioEncoder !== 'undefined';
@@ -207,8 +207,8 @@ export class WebAudioEngine {
           codec: 'opus',
           sampleRate: this.audioContext.sampleRate,
           numberOfChannels: 1,
-          bitrate: 32000,
-          bitrateMode: 'constant'
+          bitrate: 64000,
+          bitrateMode: 'variable'
         });
       }
 
@@ -226,7 +226,7 @@ export class WebAudioEngine {
         };
         source.connect(this.workletNode);
       } else {
-        this.scriptNode = this.audioContext.createScriptProcessor(64, 1, 1);
+        this.scriptNode = this.audioContext.createScriptProcessor(512, 1, 1);
         let timestampUs = 0;
         this.scriptNode.onaudioprocess = (e) => {
           const inputData = e.inputBuffer.getChannelData(0);
@@ -267,28 +267,45 @@ export class WebAudioEngine {
       this.encoder = null;
     }
     this.currentTxId = null;
+    this.captureBuffer = new Float32Array(0);
   }
 
   processCapturedAudio(inputData, timestampUs = 0) {
-    const timestamp = timestampUs || Math.round(this.audioContext.currentTime * 1000000);
-    if (this.useOpus && this.encoder) {
-      const audioFrame = new AudioData({
-        format: 'f32-planar',
-        sampleRate: this.audioContext.sampleRate,
-        numberOfFrames: inputData.length,
-        numberOfChannels: 1,
-        timestamp,
-        data: inputData
-      });
-      this.encoder.encode(audioFrame);
-      audioFrame.close();
-    } else if (this.currentTxId) {
-      const pcm16 = new Int16Array(inputData.length);
-      for (let i = 0; i < inputData.length; i++) {
-        const s = Math.max(-1, Math.min(1, inputData[i]));
-        pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    if (!inputData || !inputData.length) return;
+
+    // Accumulate incoming samples into capture buffer
+    const newBuf = new Float32Array(this.captureBuffer.length + inputData.length);
+    newBuf.set(this.captureBuffer);
+    newBuf.set(inputData, this.captureBuffer.length);
+    this.captureBuffer = newBuf;
+
+    // Chunk into exact 20ms frames (e.g. 960 samples at 48kHz)
+    const frameSize = Math.round(this.audioContext.sampleRate * 0.02);
+
+    while (this.captureBuffer.length >= frameSize) {
+      const frame = this.captureBuffer.subarray(0, frameSize);
+      this.captureBuffer = this.captureBuffer.subarray(frameSize);
+
+      const timestamp = timestampUs || Math.round(this.audioContext.currentTime * 1000000);
+      if (this.useOpus && this.encoder) {
+        const audioFrame = new AudioData({
+          format: 'f32-planar',
+          sampleRate: this.audioContext.sampleRate,
+          numberOfFrames: frame.length,
+          numberOfChannels: 1,
+          timestamp,
+          data: frame
+        });
+        this.encoder.encode(audioFrame);
+        audioFrame.close();
+      } else if (this.currentTxId) {
+        const pcm16 = new Int16Array(frame.length);
+        for (let i = 0; i < frame.length; i++) {
+          const s = Math.max(-1, Math.min(1, frame[i]));
+          pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+        }
+        this.sendAudioPacket(this.currentTxId, new Uint8Array(pcm16.buffer));
       }
-      this.sendAudioPacket(this.currentTxId, new Uint8Array(pcm16.buffer));
     }
   }
 
@@ -302,13 +319,25 @@ export class WebAudioEngine {
     const ratio = fromSampleRate / toSampleRate;
     const newLength = Math.round(inputData.length / ratio);
     const outputData = new Float32Array(newLength);
+    const len = inputData.length;
     
     for (let i = 0; i < newLength; i++) {
       const originIndex = i * ratio;
-      const index1 = Math.floor(originIndex);
-      const index2 = Math.min(index1 + 1, inputData.length - 1);
-      const interpolation = originIndex - index1;
-      outputData[i] = inputData[index1] * (1 - interpolation) + inputData[index2] * interpolation;
+      const idx = Math.floor(originIndex);
+      const t = originIndex - idx;
+      
+      const p0 = inputData[Math.max(0, idx - 1)];
+      const p1 = inputData[Math.min(len - 1, idx)];
+      const p2 = inputData[Math.min(len - 1, idx + 1)];
+      const p3 = inputData[Math.min(len - 1, idx + 2)];
+      
+      // Cubic Hermite interpolation for smooth anti-aliased resampling
+      const a = -0.5 * p0 + 1.5 * p1 - 1.5 * p2 + 0.5 * p3;
+      const b = p0 - 2.5 * p1 + 2 * p2 - 0.5 * p3;
+      const c = -0.5 * p0 + 0.5 * p2;
+      const d = p1;
+      
+      outputData[i] = a * t * t * t + b * t * t + c * t + d;
     }
     return outputData;
   }
@@ -491,10 +520,10 @@ export class WebAudioEngine {
     // Route playback node through our signal quality effects chain!
     source.connect(this.voiceGainNode);
 
-    // Schedule playback with minimal buffer lead time for lower latency.
+    // Schedule playback with smooth jitter buffer lead time to prevent pops/underflows.
     const now = this.audioContext.currentTime;
-    const minLeadTime = 0.015;
-    const maxLeadTime = 0.08;
+    const minLeadTime = 0.045;
+    const maxLeadTime = 0.140;
 
     if (this.nextStartTime < now + minLeadTime) {
       this.nextStartTime = now + minLeadTime;
