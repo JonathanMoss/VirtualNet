@@ -190,6 +190,29 @@ export class WebAudioEngine {
       this.expectedReceiveSequence = 0;
       this.receiveQueue = [];
       this.captureBuffer = new Float32Array(0);
+      this.recordedChunks = [];
+
+      // Primary High-Fidelity Recording Engine: MediaRecorder
+      if (typeof MediaRecorder !== 'undefined') {
+        try {
+          const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+            ? 'audio/webm;codecs=opus'
+            : MediaRecorder.isTypeSupported('audio/webm')
+            ? 'audio/webm'
+            : MediaRecorder.isTypeSupported('audio/mp4')
+            ? 'audio/mp4'
+            : '';
+          this.mediaRecorder = new MediaRecorder(this.micStream, mimeType ? { mimeType } : {});
+          this.mediaRecorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) {
+              this.recordedChunks.push(e.data);
+            }
+          };
+          this.mediaRecorder.start();
+        } catch (err) {
+          console.warn("MediaRecorder setup failed:", err);
+        }
+      }
 
       // Setup WebCodecs encoder if available for lower bandwidth and better quality.
       this.useOpus = typeof AudioEncoder !== 'undefined';
@@ -249,6 +272,24 @@ export class WebAudioEngine {
 
   stopRecording() {
     this.stopTransmitterSidetone();
+
+    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+      const txId = this.currentTxId;
+      this.mediaRecorder.onstop = async () => {
+        if (this.recordedChunks.length > 0 && txId) {
+          try {
+            const blob = new Blob(this.recordedChunks, { type: this.mediaRecorder.mimeType || 'audio/webm' });
+            const arrayBuffer = await blob.arrayBuffer();
+            this.sendAudioPacket(txId, new Uint8Array(arrayBuffer));
+          } catch (err) {
+            console.error("Failed to send recorded audio blob:", err);
+          }
+        }
+      };
+      this.mediaRecorder.stop();
+      this.mediaRecorder = null;
+    }
+
     if (this.scriptNode) {
       this.scriptNode.disconnect();
       this.scriptNode = null;
@@ -413,11 +454,18 @@ export class WebAudioEngine {
     return hash;
   }
 
-  receiveAudioChunk(binaryData) {
+  playFullDecodedBuffer(audioBuf) {
+    const source = this.audioContext.createBufferSource();
+    source.buffer = audioBuf;
+    source.connect(this.voiceGainNode);
+    source.start(0);
+  }
+
+  async receiveAudioChunk(binaryData) {
     if (!this.audioContext) return;
     
     if (this.audioContext.state === 'suspended') {
-      this.audioContext.resume();
+      await this.audioContext.resume();
     }
 
     let packet = binaryData;
@@ -446,6 +494,25 @@ export class WebAudioEngine {
       }
     } else {
       payload = packet.subarray(8);
+    }
+
+    // Detect complete recorded audio clip (WebM EBML, Ogg, MP4, or WAV header)
+    const isMediaBlob = payload.length > 4 && (
+      (payload[0] === 0x1A && payload[1] === 0x45 && payload[2] === 0xDF && payload[3] === 0xA3) ||
+      (payload[0] === 0x4F && payload[1] === 0x67 && payload[2] === 0x67 && payload[3] === 0x53) ||
+      (payload[0] === 0x52 && payload[1] === 0x49 && payload[2] === 0x46 && payload[3] === 0x46) ||
+      (payload[4] === 0x66 && payload[5] === 0x74 && payload[6] === 0x79 && payload[7] === 0x70)
+    );
+
+    if (isMediaBlob) {
+      try {
+        const rawBuffer = payload.buffer.slice(payload.byteOffset, payload.byteOffset + payload.byteLength);
+        const decodedBuf = await this.audioContext.decodeAudioData(rawBuffer);
+        this.playFullDecodedBuffer(decodedBuf);
+        return;
+      } catch (e) {
+        console.warn("decodeAudioData failed for media blob, falling back to real-time packet decoder", e);
+      }
     }
 
     const arrivedAt = performance.now();
