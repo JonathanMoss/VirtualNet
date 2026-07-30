@@ -185,17 +185,24 @@ class VirtualNetApp {
       }
     });
 
-    // UI Click PTT events
-    pttBtn.addEventListener('mousedown', async () => {
-      if (!mediaCaptureSupported) return;
+    // UI Hold-to-Talk Mouse & Touch PTT events
+    pttBtn.addEventListener('mousedown', async (e) => {
+      if (e.button !== 0 || !mediaCaptureSupported) return;
       await startAudioContext();
       this.triggerPTTOff();
     });
 
-    pttBtn.addEventListener('mouseup', () => {
-      if (this.isTransmitting || !mediaCaptureSupported) return;
-      this.triggerPTTOn();
-    });
+    const handleMouseRelease = (e) => {
+      if (e && e.button !== undefined && e.button !== 0) return;
+      if (!mediaCaptureSupported) return;
+      if (this.isTransmitting || this.isKeying) {
+        this.triggerPTTOn();
+      }
+    };
+
+    pttBtn.addEventListener('mouseup', handleMouseRelease);
+    pttBtn.addEventListener('mouseleave', handleMouseRelease);
+    window.addEventListener('mouseup', handleMouseRelease);
 
     // Mobile touch controls (prevents zooming/scrolling on hot key)
     pttBtn.addEventListener('touchstart', async (e) => {
@@ -208,7 +215,17 @@ class VirtualNetApp {
     pttBtn.addEventListener('touchend', (e) => {
       e.preventDefault();
       if (!mediaCaptureSupported) return;
-      this.triggerPTTOn();
+      if (this.isTransmitting || this.isKeying) {
+        this.triggerPTTOn();
+      }
+    });
+
+    pttBtn.addEventListener('touchcancel', (e) => {
+      e.preventDefault();
+      if (!mediaCaptureSupported) return;
+      if (this.isTransmitting || this.isKeying) {
+        this.triggerPTTOn();
+      }
     });
   }
 
@@ -218,18 +235,20 @@ class VirtualNetApp {
   }
 
   triggerPTTOff() {
-    if (this.isTransmitting) return;
+    if (this.isTransmitting || this.isKeying) return;
+    this.isKeying = true;
     this.socketManager.requestPTT();
   }
 
   triggerPTTOn() {
-    if (!this.isTransmitting) return;
-    this.isTransmitting = false;
-    this.audioEngine.stopRecording();
-    this.socketManager.releasePTT(this.currentTransmissionId);
-    
-    // Play end clicks tail
-    this.audioEngine.playPTTEndSquelchTail();
+    if (!this.isTransmitting && !this.isKeying) return;
+    if (this.isTransmitting) {
+      this.isTransmitting = false;
+      this.audioEngine.stopRecording();
+      this.socketManager.releasePTT(this.currentTransmissionId);
+      this.audioEngine.playPTTEndSquelchTail();
+    }
+    this.isKeying = false;
     this.updatePTTCardState('IDLE');
   }
 
@@ -299,10 +318,6 @@ class VirtualNetApp {
           }
         });
 
-        document.getElementById('select-net-state').addEventListener('change', (e) => {
-          this.socketManager.setNetState(e.target.value);
-        });
-
         document.getElementById('btn-trigger-radio-check').addEventListener('click', () => {
           this.socketManager.startRadioCheck();
         });
@@ -336,11 +351,6 @@ class VirtualNetApp {
         });
       }
 
-      // Update Net Mode UI State
-      const badge = document.getElementById('net-mode-badge');
-      badge.textContent = `${this.netState} NET`;
-      badge.className = this.netState === 'DIRECTED' ? 'badge border border-danger text-danger text-uppercase' : 'badge border border-success text-success text-uppercase';
-
       // Initialize logs management
       this.logsheetManager.initialize();
     }
@@ -348,6 +358,13 @@ class VirtualNetApp {
 
   handlePTTResponse(data) {
     if (data.allowed) {
+      if (!this.isKeying && !this.isTransmitting) {
+        // User already released mouse/key before server response arrived
+        this.socketManager.releasePTT(data.transmissionId);
+        this.isKeying = false;
+        return;
+      }
+
       this.isTransmitting = true;
       this.currentTransmissionId = data.transmissionId;
       
@@ -372,6 +389,7 @@ class VirtualNetApp {
       }, 300);
     } else {
       // Access denied (Channel busy)
+      this.isKeying = false;
       this.audioEngine.playPTTEndSquelchTail(); // Play block buzz/crackle sound
       this.updatePTTCardState('BLOCKED', data.reason);
       setTimeout(() => this.updatePTTCardState('IDLE'), 2000);

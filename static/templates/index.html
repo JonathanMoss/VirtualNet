@@ -88,7 +88,6 @@
           📟 VIRTUALNET
         </a>
         <div class="d-flex align-items-center gap-3">
-          <span class="badge border border-success text-success text-uppercase" id="net-mode-badge">DIRECTED NET</span>
           <span class="badge border border-warning text-warning text-uppercase" id="header-net-pin">PIN: ----</span>
           <span class="text-white d-none d-sm-inline" id="header-net-name">Net: -</span>
           <span class="text-warning font-weight-bold" id="header-callsign">Callsign: AWAITING</span>
@@ -258,14 +257,7 @@
                 <div class="col-md-3 mb-3 d-flex flex-column justify-content-between">
                   <div>
                     <h6 class="text-warning">⚙️ Session Control</h6>
-                    <p class="small text-muted mb-2">Configure exercise state, or terminate active connection instances immediately.</p>
-                    <div class="mb-3">
-                      <label for="select-net-state" class="form-label text-muted small m-0 mb-1">Net Directive State</label>
-                      <select class="form-select form-select-sm" id="select-net-state">
-                        <option value="DIRECTED">DIRECTED NET</option>
-                        <option value="FREE">FREE NET</option>
-                      </select>
-                    </div>
+                    <p class="small text-muted mb-2">Terminate active exercise session immediately when complete.</p>
                   </div>
                   <div>
                     <button id="btn-end-session" class="btn btn-sm btn-danger w-100 text-uppercase font-weight-bold">❌ End Net Session</button>
