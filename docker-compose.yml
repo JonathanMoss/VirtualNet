@@ -4,11 +4,17 @@ services:
     ports:
       - "6379:6379"
     restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 2s
+      retries: 5
 
   web-app:
     build: .
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     ports:
       - "5002:5000"
     volumes:
@@ -36,7 +42,8 @@ services:
   test:
     build: .
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     volumes:
       - .:/app
       - ./data:/app/data

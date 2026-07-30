@@ -1,5 +1,10 @@
 """Application factory and initialization module for VirtualNet."""
 import os
+
+# pylint: disable=wrong-import-position,wrong-import-order
+import eventlet
+eventlet.monkey_patch()
+
 from flask import Flask
 from flask_socketio import SocketIO
 from app.database import init_db, db_session
