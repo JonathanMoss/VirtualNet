@@ -253,13 +253,15 @@ export class WebAudioEngine {
   stopRecording() {
     this.stopTransmitterSidetone();
 
-    const txId = this.currentTxId;
-
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+      const txId = this.currentTxId;
+      const mimeType = this.mediaRecorder.mimeType || 'audio/webm';
+      const chunks = [...this.recordedChunks];
+
       this.mediaRecorder.onstop = async () => {
-        if (this.recordedChunks.length > 0 && txId) {
+        if (chunks.length > 0 && txId) {
           try {
-            const blob = new Blob(this.recordedChunks, { type: this.mediaRecorder.mimeType || 'audio/webm' });
+            const blob = new Blob(chunks, { type: mimeType });
             const arrayBuffer = await blob.arrayBuffer();
             // Send complete recorded audio payload in ONE packet upon PTT release
             this.sendAudioPacket(txId, new Uint8Array(arrayBuffer));
