@@ -9,21 +9,11 @@ REDIS_URL = os.environ.get('REDIS_URL')
 IS_TESTING = os.environ.get('FLASK_ENV') in ('testing', 'test') or os.environ.get('TESTING') == '1'
 
 # Create SocketIO instance at module level (to be imported by sockets.py)
-# Note: message_queue is disabled when TESTING is set to support SocketIOTestClient
-socketio = SocketIO(
-    cors_allowed_origins="*",
-    async_mode='eventlet',
-    message_queue=REDIS_URL if (REDIS_URL and not IS_TESTING) else None,
-    logger=False,
-    engineio_logger=False,
-    engineio_options={
-        'transports': ['websocket', 'polling'],
-        'allow_upgrades': True,
-        'pingInterval': 2,
-        'pingTimeout': 10,
-        'max_http_buffer_size': 2000000
-    }
-)
+socketio = SocketIO()
+
+# Import sockets module at top level so event handlers register on socketio.handlers before init_app
+# pylint: disable=wrong-import-position,unused-import
+from . import sockets
 
 
 def create_app(testing=False):
@@ -46,15 +36,17 @@ def create_app(testing=False):
     def shutdown_session(_exception=None):
         db_session.remove()
 
-    # Initialize SocketIO app context
-    app.extensions['socketio'] = socketio
-    if not hasattr(socketio, 'server') or socketio.server is None:
-        socketio.init_app(app)
-    else:
-        socketio.app = app
-
-    # Import sockets inside create_app to register event handlers
-    # pylint: disable=import-outside-toplevel,unused-import
-    from . import sockets
+    # Initialize SocketIO app context with full server configuration
+    socketio.init_app(
+        app,
+        cors_allowed_origins="*",
+        async_mode='eventlet',
+        message_queue=REDIS_URL if (REDIS_URL and not (testing or IS_TESTING)) else None,
+        logger=False,
+        engineio_logger=False,
+        pingInterval=2,
+        pingTimeout=10,
+        max_http_buffer_size=2000000
+    )
 
     return app
