@@ -189,10 +189,10 @@ export class WebAudioEngine {
       this.packetSequence = 0;
       this.expectedReceiveSequence = 0;
       this.receiveQueue = [];
-      this.captureBuffer = new Float32Array(0);
       this.recordedChunks = [];
+      this.capturedPcmFloats = [];
 
-      // Primary High-Fidelity Recording Engine: MediaRecorder
+      // Primary High-Fidelity Recording Engine: MediaRecorder (stores clip locally until PTT release)
       if (typeof MediaRecorder !== 'undefined') {
         try {
           const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
@@ -211,56 +211,36 @@ export class WebAudioEngine {
           this.mediaRecorder.start();
         } catch (err) {
           console.warn("MediaRecorder setup failed:", err);
+          this.mediaRecorder = null;
         }
       }
 
-      // Setup WebCodecs encoder if available for lower bandwidth and better quality.
-      this.useOpus = typeof AudioEncoder !== 'undefined';
-      if (this.useOpus) {
-        this.encoder = new AudioEncoder({
-          output: (chunk) => {
-            const audioData = new Uint8Array(chunk.byteLength);
-            chunk.copyTo(audioData);
-            this.sendAudioPacket(txId, audioData);
-          },
-          error: (e) => console.error("AudioEncoder error:", e)
-        });
-        
-        this.encoder.configure({
-          codec: 'opus',
-          sampleRate: this.audioContext.sampleRate,
-          numberOfChannels: 1,
-          bitrate: 64000,
-          bitrateMode: 'variable'
-        });
-      }
-
-      // Prefer AudioWorklet where available for lower latency capture.
-      if (this.audioContext.audioWorklet && typeof AudioWorkletNode !== 'undefined') {
-        await this.audioContext.audioWorklet.addModule(new URL('./audio-worklet-processor.js', import.meta.url));
-        this.workletNode = new AudioWorkletNode(this.audioContext, 'pcm-processor', {
-          numberOfInputs: 1,
-          numberOfOutputs: 0,
-          channelCount: 1
-        });
-        this.workletNode.port.onmessage = (event) => {
-          const floatData = new Float32Array(event.data);
-          this.processCapturedAudio(floatData);
-        };
-        source.connect(this.workletNode);
-      } else {
-        this.scriptNode = this.audioContext.createScriptProcessor(512, 1, 1);
-        let timestampUs = 0;
-        this.scriptNode.onaudioprocess = (e) => {
-          const inputData = e.inputBuffer.getChannelData(0);
-          this.processCapturedAudio(inputData, timestampUs);
-          timestampUs += (inputData.length / this.audioContext.sampleRate) * 1000000;
-        };
-        source.connect(this.scriptNode);
-        const dummyGain = this.audioContext.createGain();
-        dummyGain.gain.setValueAtTime(0, this.audioContext.currentTime);
-        this.scriptNode.connect(dummyGain);
-        dummyGain.connect(this.audioContext.destination);
+      // Fallback PCM accumulator node if MediaRecorder is unsupported
+      if (!this.mediaRecorder) {
+        if (this.audioContext.audioWorklet && typeof AudioWorkletNode !== 'undefined') {
+          await this.audioContext.audioWorklet.addModule(new URL('./audio-worklet-processor.js', import.meta.url));
+          this.workletNode = new AudioWorkletNode(this.audioContext, 'pcm-processor', {
+            numberOfInputs: 1,
+            numberOfOutputs: 0,
+            channelCount: 1
+          });
+          this.workletNode.port.onmessage = (event) => {
+            const floatData = new Float32Array(event.data);
+            this.capturedPcmFloats.push(floatData);
+          };
+          source.connect(this.workletNode);
+        } else {
+          this.scriptNode = this.audioContext.createScriptProcessor(1024, 1, 1);
+          this.scriptNode.onaudioprocess = (e) => {
+            const inputData = e.inputBuffer.getChannelData(0);
+            this.capturedPcmFloats.push(new Float32Array(inputData));
+          };
+          source.connect(this.scriptNode);
+          const dummyGain = this.audioContext.createGain();
+          dummyGain.gain.setValueAtTime(0, this.audioContext.currentTime);
+          this.scriptNode.connect(dummyGain);
+          dummyGain.connect(this.audioContext.destination);
+        }
       }
       
     } catch (e) {
@@ -273,13 +253,15 @@ export class WebAudioEngine {
   stopRecording() {
     this.stopTransmitterSidetone();
 
+    const txId = this.currentTxId;
+
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-      const txId = this.currentTxId;
       this.mediaRecorder.onstop = async () => {
         if (this.recordedChunks.length > 0 && txId) {
           try {
             const blob = new Blob(this.recordedChunks, { type: this.mediaRecorder.mimeType || 'audio/webm' });
             const arrayBuffer = await blob.arrayBuffer();
+            // Send complete recorded audio payload in ONE packet upon PTT release
             this.sendAudioPacket(txId, new Uint8Array(arrayBuffer));
           } catch (err) {
             console.error("Failed to send recorded audio blob:", err);
@@ -288,6 +270,24 @@ export class WebAudioEngine {
       };
       this.mediaRecorder.stop();
       this.mediaRecorder = null;
+    } else if (this.capturedPcmFloats && this.capturedPcmFloats.length > 0 && txId) {
+      // Fallback: send single concatenated PCM payload upon PTT release
+      let totalLength = 0;
+      for (const arr of this.capturedPcmFloats) {
+        totalLength += arr.length;
+      }
+      const combinedPcm = new Float32Array(totalLength);
+      let offset = 0;
+      for (const arr of this.capturedPcmFloats) {
+        combinedPcm.set(arr, offset);
+        offset += arr.length;
+      }
+      const pcm16 = new Int16Array(combinedPcm.length);
+      for (let i = 0; i < combinedPcm.length; i++) {
+        const s = Math.max(-1, Math.min(1, combinedPcm[i]));
+        pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      }
+      this.sendAudioPacket(txId, new Uint8Array(pcm16.buffer));
     }
 
     if (this.scriptNode) {
@@ -303,12 +303,8 @@ export class WebAudioEngine {
       this.micStream.getTracks().forEach(track => track.stop());
       this.micStream = null;
     }
-    if (this.encoder) {
-      this.encoder.close();
-      this.encoder = null;
-    }
     this.currentTxId = null;
-    this.captureBuffer = new Float32Array(0);
+    this.capturedPcmFloats = [];
   }
 
   processCapturedAudio(inputData, timestampUs = 0) {
