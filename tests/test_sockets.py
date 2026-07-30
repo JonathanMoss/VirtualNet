@@ -176,13 +176,11 @@ def test_join_net_error_cases(app, socket_client):
     ctrl_resp = socket_client.get_received()
     ctrl_pin = next(item for item in ctrl_resp if item['name'] == 'create_response')['args'][0]['pin']
 
-    # Join student with nickname 'INSTRUCTOR' (defaults to CONTROL role and callsign)
-    student1 = socketio.test_client(app)
-    student1.emit('join_net', {'pin': ctrl_pin, 'nickname': 'INSTRUCTOR', 'role': 'SUB_STATION'})
-    resp_ctrl = next(item for item in student1.get_received() if item['name'] == 'join_response')['args'][0]
+    # Join instructor on Control Net (reconnects creator socket)
+    socket_client.emit('join_net', {'pin': ctrl_pin, 'nickname': 'INSTRUCTOR', 'role': 'INSTRUCTOR'})
+    resp_ctrl = next(item for item in socket_client.get_received() if item['name'] == 'join_response')['args'][0]
     assert resp_ctrl['success'] is True
     assert resp_ctrl['role'] == 'CONTROL'
-    student1.disconnect()
 
     # Try duplicate active nickname on Join Errors Net
     student2 = socketio.test_client(app)
@@ -536,7 +534,7 @@ def test_rejoin_session_and_unworkable_grace_period(app, socket_client):
     assert inst_rejoin_resp['success'] is True
     assert inst_rejoin_resp['role'] == 'INSTRUCTOR'
     assert inst_rejoin_resp['pin'] == pin
-    assert inst_rejoin_resp['callSign'] == 'INSTRUCTOR'
+    assert inst_rejoin_resp['callSign'] == 'CONTROL'
 
     # Student explicitly leaves net
     student_rejoin.emit('leave_net', {})

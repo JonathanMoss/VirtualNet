@@ -241,15 +241,15 @@ PINS_FILE = Path(__file__).resolve().parent / "instructor_pins.json"
 
 
 def verify_instructor_pin(pin: str) -> bool:
-    """Validate 6-digit instructor PIN against today's day-of-month PIN table."""
+    """Validate 6-digit instructor PIN against today's day-of-month PIN table (UTC or local time)."""
     if not PINS_FILE.exists():
         return False
     try:
         with open(PINS_FILE, 'r', encoding='utf-8') as f:
             pins_data = json.load(f)
-        day_str = str(datetime.utcnow().day)
-        expected_pin = pins_data.get(day_str)
-        return expected_pin is not None and pin == expected_pin
+        exp_utc = pins_data.get(str(datetime.utcnow().day))
+        exp_loc = pins_data.get(str(datetime.now().day))
+        return (exp_utc is not None and pin == exp_utc) or (exp_loc is not None and pin == exp_loc)
     except (OSError, KeyError, json.JSONDecodeError):
         return False
 
@@ -283,14 +283,42 @@ def handle_create_net(data):
         callsign_indicator=validated.callsign_indicator
     )
     db.add(session)
+    db.flush()
+
+    # Automatically create & connect Instructor Station record
+    station = Station(
+        net_id=session.id,
+        nickname="Instructor",
+        role="CONTROL",
+        call_sign="CONTROL",
+        status="CONNECTED",
+        ip_address=request.remote_addr,
+        last_seen=datetime.utcnow()
+    )
+    db.add(station)
     db.commit()
+
+    # Link socket mapping for instructor
+    sid_to_station_id[request.sid] = station.id
+    station_id_to_sid[station.id] = request.sid
+    sid_to_net_id[request.sid] = session.id
+
+    # Join SocketIO room for this session
+    join_room(session.id)
 
     emit('create_response', {
         "success": True,
         "pin": pin,
         "netId": session.id,
-        "netName": session.name
+        "netName": session.name,
+        "stationId": station.id,
+        "role": "CONTROL",
+        "callSign": "CONTROL",
+        "status": "CONNECTED"
     })
+
+    # Broadcast initial roster update
+    broadcast_roster(db, session.id)
 
 
 
@@ -324,6 +352,12 @@ def handle_join_net(data):
     if provided_station_id:
         station = db.query(Station).filter_by(id=provided_station_id, net_id=session.id).first()
 
+    if not station and role in ["CONTROL", "INSTRUCTOR"]:
+        station = db.query(Station).filter(
+            Station.net_id == session.id,
+            Station.role.in_(["CONTROL", "INSTRUCTOR"])
+        ).first()
+
     if not station:
         station = db.query(Station).filter(
             Station.net_id == session.id,
@@ -333,15 +367,16 @@ def handle_join_net(data):
     # If active on another window/tab, block duplicate
     if station and station.status not in ["LEFT", "DISCONNECTED"]:
         existing_sid = station_id_to_sid.get(station.id)
-        if existing_sid and existing_sid != request.sid and not provided_station_id:
+        if existing_sid and existing_sid != request.sid and provided_station_id != station.id:
             emit('join_response', {"success": False, "reason": f"Nickname '{nickname}' is already in use."})
             return
 
     if station:
         # Reconnect existing station!
         if role in ["CONTROL", "INSTRUCTOR"]:
+            station.nickname = nickname
             station.role = role
-            station.call_sign = "CONTROL" if role == "CONTROL" else "INSTRUCTOR"
+            station.call_sign = "CONTROL"
             station.status = "CONNECTED"
         else:
             station.status = "CONNECTED" if station.call_sign else "AWAITING_ASSIGNMENT"

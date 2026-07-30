@@ -364,8 +364,35 @@ class VirtualNetApp {
 
   handleCreateResponse(data) {
     if (data.success) {
+      this.myStationId = data.stationId;
+      this.myNickname = "Instructor";
+      this.myRole = data.role || "CONTROL";
+      this.myCallSign = data.callSign || "CONTROL";
+      this.netId = data.netId;
+      this.netName = data.netName;
+      this.netPin = data.pin;
+
+      // Save session cookie
+      this.saveSession(data.pin, "Instructor", this.myRole, data.stationId);
+
+      // Transition to Dashboard directly
       document.getElementById('generated-pin').textContent = data.pin;
-      document.getElementById('create-success-box').classList.remove('d-none');
+      document.getElementById('landing-section').classList.add('d-none');
+      document.getElementById('dashboard-section').classList.remove('d-none');
+      document.getElementById('instructor-section').classList.remove('d-none');
+      document.getElementById('callsign-lock-overlay').classList.add('d-none');
+
+      document.getElementById('header-net-pin').textContent = `PIN: ${data.pin}`;
+      document.getElementById('header-net-name').textContent = `Net: ${data.netName}`;
+      document.getElementById('header-net-name').classList.remove('d-none');
+      document.getElementById('header-callsign').textContent = `Callsign: CONTROL`;
+      document.getElementById('instructor-pin-badge').textContent = `PIN: ${data.pin}`;
+
+      if (WebAudioEngine.isMediaCaptureSupported()) {
+        document.getElementById('ptt-btn').disabled = false;
+      }
+
+      this.logsheetManager.initialize();
     } else {
       alert(`Failed to create net session: ${data.reason}`);
     }
