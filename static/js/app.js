@@ -5,6 +5,16 @@ import { LogsheetManager } from './logsheet.js';
 import { AideMemoireManager } from './aide_memoire.js';
 import { WebAudioEngine } from './audio.js';
 
+// Global exception handler to catch third-party browser extension errors (e.g. cs.js disconnected port errors)
+window.addEventListener('error', (event) => {
+  const source = event.filename || '';
+  if (source.includes('cs.js') || source.includes('chrome-extension') || (event.message && event.message.includes('disconnected port'))) {
+    console.warn('⚠️ Ignored third-party browser extension script error:', event.message);
+    if (typeof event.preventDefault === 'function') event.preventDefault();
+    return true;
+  }
+});
+
 class VirtualNetApp {
   constructor() {
     this.socketManager = new SocketManager(this);
@@ -151,11 +161,16 @@ class VirtualNetApp {
     // Host Success dashboard transition click
     document.getElementById('btn-go-instructor').addEventListener('click', (e) => {
       e.preventDefault();
-      const pin = document.getElementById('generated-pin').textContent.trim();
-      this.myNickname = "Instructor";
-      this.myRole = "INSTRUCTOR";
-      this.netPin = pin;
-      this.socketManager.joinNet(pin, "Instructor", "CONTROL");
+      if (e.stopPropagation) e.stopPropagation();
+      try {
+        const pin = document.getElementById('generated-pin').textContent.trim();
+        this.myNickname = "Instructor";
+        this.myRole = "INSTRUCTOR";
+        this.netPin = pin;
+        this.socketManager.joinNet(pin, "Instructor", "CONTROL");
+      } catch (err) {
+        console.warn("Instructor dashboard transition error:", err);
+      }
     });
   }
 
