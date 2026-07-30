@@ -175,9 +175,9 @@ export class WebAudioEngine {
 
       this.micStream = await this.getUserMedia({
         audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
           channelCount: 1,
           sampleRate: this.audioContext.sampleRate
         }
@@ -237,7 +237,7 @@ export class WebAudioEngine {
       this.micStream = null;
     }
 
-    // Transmit complete recorded voice message as ONE binary PCM packet upon PTT release
+    // Transmit complete recorded voice message as ONE uncompressed 32-bit Float PCM packet upon PTT release
     if (this.capturedPcmFloats && this.capturedPcmFloats.length > 0 && txId) {
       let totalLength = 0;
       for (const arr of this.capturedPcmFloats) {
@@ -252,14 +252,8 @@ export class WebAudioEngine {
           offset += arr.length;
         }
 
-        const pcm16 = new Int16Array(combinedPcm.length);
-        for (let i = 0; i < combinedPcm.length; i++) {
-          const s = Math.max(-1, Math.min(1, combinedPcm[i]));
-          pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-        }
-
-        console.log(`🚀 [AUDIO-TX] PTT Released -> Assembled ${pcm16.byteLength} bytes of PCM audio (${combinedPcm.length} samples) for TX ID: ${txId}`);
-        this.sendAudioPacket(txId, new Uint8Array(pcm16.buffer));
+        console.log(`🚀 [AUDIO-TX] PTT Released -> Assembled ${combinedPcm.byteLength} bytes of 32-bit Float PCM audio (${combinedPcm.length} samples) for TX ID: ${txId}`);
+        this.sendAudioPacket(txId, new Uint8Array(combinedPcm.buffer));
       }
     } else {
       console.warn("⚠️ [AUDIO-TX] PTT Released, but no PCM audio floats were captured or TX ID missing.");
@@ -383,14 +377,16 @@ export class WebAudioEngine {
       return;
     }
 
-    // Convert Int16 PCM payload to Float32Array
-    const pcm16 = new Int16Array(payload.buffer, payload.byteOffset, Math.floor(payload.length / 2));
-    let float32 = new Float32Array(pcm16.length);
-    for (let i = 0; i < pcm16.length; i++) {
-      float32[i] = pcm16[i] / 32768.0;
+    // Unpack 32-bit Float PCM payload (0 quantization loss)
+    let float32;
+    if (payload.byteOffset % 4 === 0) {
+      float32 = new Float32Array(payload.buffer, payload.byteOffset, Math.floor(payload.length / 4));
+    } else {
+      const alignedBuffer = payload.buffer.slice(payload.byteOffset, payload.byteOffset + payload.byteLength);
+      float32 = new Float32Array(alignedBuffer, 0, Math.floor(alignedBuffer.byteLength / 4));
     }
 
-    // Resample PCM from sender's sample rate to receiver's AudioContext sample rate
+    // Resample Float PCM from sender's sample rate to receiver's AudioContext sample rate
     float32 = this.resampleFloat32(float32, srcSampleRate, this.audioContext.sampleRate);
 
     if (float32.length === 0) return;
