@@ -42,6 +42,7 @@ class Station(Base):
     transmission_status = Column(String(20), default="IDLE", nullable=False)  # IDLE, TRANSMITTING, BLOCKED
     signal_quality = Column(String(15), default="OK", nullable=False)  # OK, DIFFICULT, UNWORKABLE
     connected_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    last_seen = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     net_session = relationship("NetSession", back_populates="stations")
     log_entries = relationship("LogEntry", back_populates="station", cascade="all, delete-orphan")

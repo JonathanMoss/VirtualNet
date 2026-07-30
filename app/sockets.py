@@ -42,11 +42,15 @@ def broadcast_roster(db, net_id):
     """Utility to broadcast the updated roster to all active clients in the session room."""
     stations = db.query(Station).filter(
         Station.net_id == net_id,
-        Station.status != "DISCONNECTED"
+        ~Station.status.in_(["LEFT", "DISCONNECTED"])
     ).all()
 
+    now = datetime.utcnow()
     roster = []
     for s in stations:
+        seconds_ago = int((now - (s.last_seen or s.connected_at)).total_seconds())
+        last_active_str = "Active now" if seconds_ago < 5 else f"{seconds_ago}s ago"
+
         roster.append({
             "stationId": s.id,
             "callSign": s.call_sign if s.call_sign else "",
@@ -54,7 +58,7 @@ def broadcast_roster(db, net_id):
             "role": s.role,
             "status": s.status,
             "transmissionStatus": s.transmission_status,
-            "signalQuality": s.signal_quality
+            "lastActiveAgo": last_active_str
         })
 
     # Broadcast to all clients in the net session room
@@ -140,6 +144,22 @@ def advance_radio_check(db, net_id):
     check_state["timer_greenlet"] = eventlet.spawn(start_radio_check_timer, net_id, next_callsign)
 
 
+def grace_period_disconnect_timer(station_id, net_id):
+    """Wait 30 seconds after socket disconnect; if station hasn't reconnected, mark LEFT."""
+    eventlet.sleep(30)
+    db = get_db()
+    try:
+        station = db.query(Station).filter_by(id=station_id).first()
+        if station and station.status == "UNWORKABLE":
+            station.status = "LEFT"
+            station.transmission_status = "IDLE"
+            db.commit()
+            broadcast_roster(db, net_id)
+    # pylint: disable=broad-exception-caught
+    except Exception:
+        db.rollback()
+
+
 @socketio.on('connect')
 def handle_connect():
     """Client connected socket event."""
@@ -147,14 +167,15 @@ def handle_connect():
 
 @socketio.on('disconnect')
 def handle_disconnect():
-    """Client disconnected socket event. Cleans up session records."""
+    """Client disconnected socket event. Sets status to UNWORKABLE during 30s grace period."""
     transmitting_sids.pop(request.sid, None)
     db = get_db()
     station = get_station_from_sid(db, request.sid)
     if station:
         net_id = station.net_id
-        station.status = "DISCONNECTED"
+        station.status = "UNWORKABLE"
         station.transmission_status = "IDLE"
+        station.last_seen = datetime.utcnow()
 
         # Clean up global PTT lock if this station was speaking
         transmission = db.query(Transmission).filter_by(
@@ -164,17 +185,54 @@ def handle_disconnect():
         ).first()
         if transmission:
             transmission.end_time = datetime.utcnow()
-            transmission.termination_reason = "DISCONNECTED"
+            transmission.termination_reason = "UNWORKABLE"
 
         db.commit()
 
         # Clean up memory mapping
         station_id = station.id
         sid_to_station_id.pop(request.sid, None)
-        station_id_to_sid.pop(station_id, None)
+        if station_id_to_sid.get(station_id) == request.sid:
+            station_id_to_sid.pop(station_id, None)
         sid_to_net_id.pop(request.sid, None)
 
-        # Broadcast roster update
+        # Broadcast roster update (displays UNWORKABLE to instructor)
+        broadcast_roster(db, net_id)
+
+        # Spawn 30-second grace period timer
+        eventlet.spawn(grace_period_disconnect_timer, station_id, net_id)
+
+
+@socketio.on('leave_net')
+def handle_leave_net(data):
+    """Station explicitly leaves the net session."""
+    # pylint: disable=unused-argument
+    transmitting_sids.pop(request.sid, None)
+    db = get_db()
+    station = get_station_from_sid(db, request.sid)
+    if station:
+        net_id = station.net_id
+        station.status = "LEFT"
+        station.transmission_status = "IDLE"
+        station.last_seen = datetime.utcnow()
+
+        transmission = db.query(Transmission).filter_by(
+            net_id=net_id,
+            sender_call_sign=station.call_sign,
+            end_time=None
+        ).first()
+        if transmission:
+            transmission.end_time = datetime.utcnow()
+            transmission.termination_reason = "LEFT"
+
+        db.commit()
+
+        station_id = station.id
+        sid_to_station_id.pop(request.sid, None)
+        if station_id_to_sid.get(station_id) == request.sid:
+            station_id_to_sid.pop(station_id, None)
+        sid_to_net_id.pop(request.sid, None)
+
         broadcast_roster(db, net_id)
 
 
@@ -259,39 +317,49 @@ def handle_join_net(data):
         emit('join_response', {"success": False, "reason": "This net session has been closed."})
         return
 
-    # Check if nickname is taken by an active connection
-    active_station = db.query(Station).filter(
-        Station.net_id == session.id,
-        Station.nickname == nickname,
-        Station.status != "DISCONNECTED"
-    ).first()
+    provided_station_id = data.get('stationId')
 
-    if active_station:
-        emit('join_response', {"success": False, "reason": f"Nickname '{nickname}' is already in use."})
-        return
+    # Look up existing station record
+    station = None
+    if provided_station_id:
+        station = db.query(Station).filter_by(id=provided_station_id, net_id=session.id).first()
 
-    # Reconnect or create new station record
-    station = db.query(Station).filter_by(net_id=session.id, nickname=nickname).first()
     if not station:
+        station = db.query(Station).filter(
+            Station.net_id == session.id,
+            Station.nickname == nickname
+        ).first()
+
+    # If active on another window/tab, block duplicate
+    if station and station.status not in ["LEFT", "DISCONNECTED"]:
+        existing_sid = station_id_to_sid.get(station.id)
+        if existing_sid and existing_sid != request.sid and not provided_station_id:
+            emit('join_response', {"success": False, "reason": f"Nickname '{nickname}' is already in use."})
+            return
+
+    if station:
+        # Reconnect existing station!
+        if role in ["CONTROL", "INSTRUCTOR"]:
+            station.role = role
+            station.call_sign = "CONTROL" if role == "CONTROL" else "INSTRUCTOR"
+            station.status = "CONNECTED"
+        else:
+            station.status = "CONNECTED" if station.call_sign else "AWAITING_ASSIGNMENT"
+    else:
+        # Create new station
+        is_control = role in ["CONTROL", "INSTRUCTOR"]
         station = Station(
             net_id=session.id,
             nickname=nickname,
             role=role,
-            status="AWAITING_ASSIGNMENT"
+            call_sign="CONTROL" if is_control else None,
+            status="CONNECTED" if is_control else "AWAITING_ASSIGNMENT"
         )
         db.add(station)
         db.flush()
 
-    # If joining as instructor/control, bypass assignment queue
-    if role in ["CONTROL", "INSTRUCTOR"]:
-        station.status = "CONNECTED"
-        station.call_sign = "CONTROL" if role == "CONTROL" else "INSTRUCTOR"
-        station.role = role
-
     station.ip_address = request.remote_addr
-    if station.status == "DISCONNECTED":
-        station.status = "CONNECTED" if station.call_sign else "AWAITING_ASSIGNMENT"
-
+    station.last_seen = datetime.utcnow()
     db.commit()
 
     # Link socket mapping
@@ -315,7 +383,7 @@ def handle_join_net(data):
         "pin": session.pin
     })
 
-    # Broadcast roster update (only active/assigned stations will be visible to students)
+    # Broadcast roster update
     broadcast_roster(db, session.id)
 
 

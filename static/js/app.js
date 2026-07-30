@@ -50,13 +50,23 @@ class VirtualNetApp {
     // 6. Connect Socket
     this.socketManager.connect();
 
-    // 7. Check for saved session persistence and auto-reconnect
+    // 7. Setup Leave Net button
+    document.getElementById('btn-leave-net').addEventListener('click', () => {
+      if (confirm("Are you sure you want to leave this Net session?")) {
+        this.socketManager.leaveNet();
+        this.clearSavedSession();
+        this.resetToLanding();
+      }
+    });
+
+    // 8. Check for saved session persistence and auto-reconnect
     const saved = this.loadSavedSession();
     if (saved && saved.pin && saved.nickname) {
       console.log("Restoring active session from storage/cookie:", saved);
       this.myNickname = saved.nickname;
       this.myRole = saved.role || 'SUB_STATION';
-      this.socketManager.joinNet(saved.pin, saved.nickname, saved.role);
+      this.myStationId = saved.stationId || null;
+      this.socketManager.joinNet(saved.pin, saved.nickname, saved.role, saved.stationId);
     }
   }
 
@@ -285,16 +295,22 @@ class VirtualNetApp {
     if (data.success) {
       this.myStationId = data.stationId;
       this.myRole = data.role;
-      
-      const currentPin = (document.getElementById('join-pin').value.trim() || document.getElementById('generated-pin').textContent.trim() || this.netPin || '').toUpperCase();
-      this.netPin = currentPin;
+      this.myCallSign = data.callSign;
+      this.netId = data.netId;
+      this.netName = data.netName;
+      this.netPin = data.pin;
 
-      if (currentPin) {
-        this.saveSession(currentPin, this.myNickname, this.myRole, this.myStationId);
-        const headerPinBadge = document.getElementById('header-net-pin');
-        if (headerPinBadge) {
-          headerPinBadge.textContent = `PIN: ${currentPin}`;
-        }
+      this.saveSession(data.pin, this.myNickname, this.myRole, this.myStationId);
+      
+      const headerPinBadge = document.getElementById('header-net-pin');
+      if (headerPinBadge) {
+        headerPinBadge.textContent = `PIN: ${data.pin}`;
+      }
+
+      const headerName = document.getElementById('header-net-name');
+      if (headerName) {
+        headerName.textContent = `Net: ${data.netName}`;
+        headerName.classList.remove('d-none');
       }
 
       // Shift landing screens
@@ -314,27 +330,51 @@ class VirtualNetApp {
         
         // Show Instructor Dashboard controls
         document.getElementById('instructor-section').classList.remove('d-none');
-        
-        // Populate Instructor Details
-        document.getElementById('instructor-pin-badge').textContent = `PIN: ${currentPin || 'HOST'}`;
-
+        document.getElementById('instructor-pin-badge').textContent = `PIN: ${data.pin}`;
         
         // Setup Instructor Session controls
-        document.getElementById('btn-end-session').addEventListener('click', () => {
-          if (confirm("Are you sure you want to end this Net Session? All students will be kicked.")) {
-            this.socketManager.endSession();
-          }
-        });
+        const endBtn = document.getElementById('btn-end-session');
+        if (endBtn && !endBtn.dataset.bound) {
+          endBtn.dataset.bound = "true";
+          endBtn.addEventListener('click', () => {
+            if (confirm("Are you sure you want to end this Net Session? All students will be kicked.")) {
+              this.socketManager.endSession();
+            }
+          });
+        }
 
-        document.getElementById('btn-trigger-radio-check').addEventListener('click', () => {
-          this.socketManager.startRadioCheck();
-        });
+        const checkBtn = document.getElementById('btn-trigger-radio-check');
+        if (checkBtn && !checkBtn.dataset.bound) {
+          checkBtn.dataset.bound = "true";
+          checkBtn.addEventListener('click', () => {
+            this.socketManager.startRadioCheck();
+          });
+        }
+      } else if (data.status === 'CONNECTED' && data.callSign) {
+        // Student re-joining with assigned callsign!
+        document.getElementById('callsign-lock-overlay').classList.add('d-none');
+        document.getElementById('header-callsign').textContent = `Callsign: ${this.myCallSign}`;
+        if (WebAudioEngine.isMediaCaptureSupported()) {
+          document.getElementById('ptt-btn').disabled = false;
+          this.audioEngine.ensureMicStream().catch(err => {
+            console.warn("Background microphone pre-warm warning:", err);
+          });
+        }
       } else {
         // Initial student join. UI locked awaiting callsign
         document.getElementById('callsign-lock-overlay').classList.remove('d-none');
       }
+
+      this.logsheetManager.initialize();
     } else {
-      alert(`Join Failed: ${data.reason}`);
+      console.warn("Join/Rejoin failed:", data.reason);
+      this.clearSavedSession();
+      if (document.getElementById('dashboard-section').classList.contains('d-none')) {
+        alert(`Join Failed: ${data.reason}`);
+      } else {
+        alert(`Session Ended: ${data.reason}`);
+        this.resetToLanding();
+      }
     }
   }
 
@@ -493,16 +533,30 @@ class VirtualNetApp {
           });
 
           admissionsQueue.appendChild(tr);
-        } else if (s.status === 'CONNECTED' || s.status === 'MUTED') {
-          // Connected active dashboard roster
+        } else if (s.status === 'CONNECTED' || s.status === 'MUTED' || s.status === 'UNWORKABLE') {
+          // Connected or Temp Inactive (Unworkable) active dashboard roster
           const tr = document.createElement('tr');
+          let statusBadgeClass = 'bg-secondary';
+          let statusText = s.status;
+
+          if (s.transmissionStatus === 'TRANSMITTING') {
+            statusBadgeClass = 'bg-danger';
+            statusText = 'TALKING';
+          } else if (s.status === 'UNWORKABLE') {
+            statusBadgeClass = 'bg-warning text-dark';
+            statusText = `UNWORKABLE (${s.lastActiveAgo || 'Inactive'})`;
+          } else if (s.status === 'CONNECTED') {
+            statusBadgeClass = 'bg-success';
+            statusText = `ACTIVE (${s.lastActiveAgo || 'Active'})`;
+          }
+
           tr.innerHTML = `
             <td><b>${s.callSign || 'PENDING'}</b></td>
             <td>${s.nickname}</td>
             <td>${s.role}</td>
             <td>
-              <span class="badge ${s.transmissionStatus === 'TRANSMITTING' ? 'bg-danger' : 'bg-secondary'}">
-                ${s.transmissionStatus === 'TRANSMITTING' ? 'TALKING' : s.status}
+              <span class="badge ${statusBadgeClass}">
+                ${statusText}
               </span>
             </td>
             <td>

@@ -89,8 +89,12 @@ export class SocketManager {
     });
   }
 
-  joinNet(pin, nickname, role = 'SUB_STATION') {
-    this.socket.emit('join_net', { pin, nickname, role });
+  joinNet(pin, nickname, role = 'SUB_STATION', stationId = null) {
+    this.socket.emit('join_net', { pin, nickname, role, stationId });
+  }
+
+  leaveNet() {
+    this.socket.emit('leave_net', {});
   }
 
   createNet(name, callsignIndicator, instructorPin) {
