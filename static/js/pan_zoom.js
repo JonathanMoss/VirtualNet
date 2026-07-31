@@ -50,9 +50,14 @@ export class PanZoomController {
 
     state.updateTransform = updateTransform;
 
+    const isNoPanTarget = (el) => {
+      if (!el) return false;
+      return el.id === 'BATCO_SLIDER' || (el.closest && el.closest('#BATCO_SLIDER')) || (el.classList && el.classList.contains('no-pan'));
+    };
+
     // Mouse Down (Start Drag)
     viewport.addEventListener('mousedown', (e) => {
-      if (e.button !== 0) return;
+      if (e.button !== 0 || isNoPanTarget(e.target)) return;
       e.preventDefault();
       state.isDragging = true;
       state.startX = e.clientX;
@@ -94,6 +99,7 @@ export class PanZoomController {
 
     // Double Click to Reset or Zoom In
     viewport.addEventListener('dblclick', (e) => {
+      if (isNoPanTarget(e.target)) return;
       e.preventDefault();
       if (state.scale > 1.1) {
         this.reset(imgId);
@@ -105,6 +111,10 @@ export class PanZoomController {
 
     // Touch Events for Mobile / Touchscreens
     viewport.addEventListener('touchstart', (e) => {
+      if (isNoPanTarget(e.target)) {
+        state.isDragging = false;
+        return;
+      }
       if (e.touches.length === 1) {
         state.isDragging = true;
         state.startX = e.touches[0].clientX;

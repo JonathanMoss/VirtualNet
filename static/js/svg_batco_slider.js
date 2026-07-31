@@ -11,6 +11,7 @@ export class BatcoSvgSliderManager {
     this.currentOffsetY = 0;
     this.minOffsetY = 0;
     this.maxOffsetY = 0;
+    this.rowStepHeight = 8.9; // Approximate row height in SVG units
     this.isLoaded = false;
   }
 
@@ -44,7 +45,9 @@ export class BatcoSvgSliderManager {
       // Allow DOM to settle before calculating bounding boxes
       requestAnimationFrame(() => {
         this.calculateBounds();
+        this.addHitArea();
         this.attachEvents();
+        this.attachButtonControls();
         this.isLoaded = true;
       });
     } catch (err) {
@@ -64,11 +67,30 @@ export class BatcoSvgSliderManager {
 
       // Bottom limit: slider bottom aligns with sheet bottom
       this.maxOffsetY = (sheetBox.y + sheetBox.height - sliderBox.height) - sliderBox.y;
+
+      // Estimate 1 row step based on total slider travel range (12 BATCO rows: A - L)
+      this.rowStepHeight = (this.maxOffsetY - this.minOffsetY) / 12;
     } catch (e) {
-      // Fallback numbers if getBBox fails before render
       this.minOffsetY = -8.18;
       this.maxOffsetY = 109.80;
+      this.rowStepHeight = 9.8;
     }
+  }
+
+  addHitArea() {
+    if (!this.sliderGroup) return;
+    try {
+      const sliderBox = this.sliderGroup.getBBox();
+      const hitRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      hitRect.setAttribute('x', sliderBox.x);
+      hitRect.setAttribute('y', sliderBox.y);
+      hitRect.setAttribute('width', sliderBox.width);
+      hitRect.setAttribute('height', sliderBox.height);
+      hitRect.setAttribute('fill', 'transparent');
+      hitRect.setAttribute('pointer-events', 'all');
+      hitRect.style.cursor = 'ns-resize';
+      this.sliderGroup.insertBefore(hitRect, this.sliderGroup.firstChild);
+    } catch (e) {}
   }
 
   getSvgPoint(clientX, clientY) {
@@ -86,8 +108,11 @@ export class BatcoSvgSliderManager {
     this.sliderGroup.style.cursor = 'ns-resize';
     this.sliderGroup.style.touchAction = 'none';
 
-    // Pointer down handler
+    // Pointer down handler (mouse & touch)
     const onPointerDown = (e) => {
+      // If Shift key is held down, allow panning the parent image instead
+      if (e.shiftKey) return;
+
       e.stopPropagation(); // Prevent pan-zoom viewport drag
       this.isDragging = true;
 
@@ -139,6 +164,36 @@ export class BatcoSvgSliderManager {
     };
 
     this.sliderGroup.addEventListener('pointerdown', onPointerDown, { passive: false });
+  }
+
+  attachButtonControls() {
+    const btnUp = document.getElementById('btn-slider-up');
+    const btnDown = document.getElementById('btn-slider-down');
+
+    if (btnUp) {
+      btnUp.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.stepRow(-1);
+      });
+    }
+
+    if (btnDown) {
+      btnDown.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.stepRow(1);
+      });
+    }
+  }
+
+  stepRow(direction) {
+    // direction: -1 for Up, 1 for Down
+    let targetOffsetY = this.currentOffsetY + (direction * this.rowStepHeight);
+    targetOffsetY = Math.max(this.minOffsetY, Math.min(this.maxOffsetY, targetOffsetY));
+    this.currentOffsetY = targetOffsetY;
+
+    if (this.sliderGroup) {
+      this.sliderGroup.setAttribute('transform', `translate(0, ${this.currentOffsetY})`);
+    }
   }
 
   reset() {

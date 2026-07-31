@@ -191,12 +191,18 @@
               <!-- BATCO SLIDER SVG TAB -->
               <div class="tab-pane fade show active h-100" id="tab-batco-slider" role="tabpanel">
                 <div class="d-flex flex-column h-100">
-                  <div class="mb-2 d-flex justify-content-between align-items-center bg-dark p-1 px-2 border border-secondary rounded">
-                    <span class="small font-weight-bold text-success">BATCO INTERACTIVE SLIDER (DRAG VERTICALLY)</span>
-                    <div class="btn-group btn-group-sm">
-                      <button class="btn btn-outline-secondary text-white btn-zoom-in" data-target="batco-svg-wrapper" title="Zoom In">🔍+</button>
-                      <button class="btn btn-outline-secondary text-white btn-zoom-out" data-target="batco-svg-wrapper" title="Zoom Out">🔍-</button>
-                      <button class="btn btn-outline-secondary text-white btn-zoom-reset" data-target="batco-svg-wrapper" title="Reset Zoom">↺ Reset</button>
+                  <div class="mb-2 d-flex justify-content-between align-items-center bg-dark p-1 px-2 border border-secondary rounded flex-wrap gap-1">
+                    <span class="small font-weight-bold text-success me-2">🎚️ BATCO SLIDER</span>
+                    <div class="d-flex gap-2 align-items-center flex-wrap">
+                      <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-success text-white px-2" id="btn-slider-up" title="Slide Up 1 Row">▲ Up</button>
+                        <button class="btn btn-outline-success text-white px-2" id="btn-slider-down" title="Slide Down 1 Row">▼ Down</button>
+                      </div>
+                      <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-secondary text-white btn-zoom-in" data-target="batco-svg-wrapper" title="Zoom In">🔍+</button>
+                        <button class="btn btn-outline-secondary text-white btn-zoom-out" data-target="batco-svg-wrapper" title="Zoom Out">🔍-</button>
+                        <button class="btn btn-outline-secondary text-white btn-zoom-reset" data-target="batco-svg-wrapper" title="Reset Zoom">↺ Reset</button>
+                      </div>
                     </div>
                   </div>
                   <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 p-2 bg-black border border-secondary text-center overflow-hidden position-relative" id="batco-svg-container">
