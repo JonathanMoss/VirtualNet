@@ -66,6 +66,7 @@ class VirtualNetApp {
     // 5. Setup NET Roster sidebar fold/unfold trigger
     this.setupRosterFoldToggle();
     this.setupSunrayFoldToggle();
+    this.setupPTTMinimiseToggle();
 
     // 6. Connect Socket
     this.socketManager.connect();
@@ -327,6 +328,49 @@ class VirtualNetApp {
       header.addEventListener('click', () => {
         toggleSunray();
       });
+    }
+  }
+
+  setupPTTMinimiseToggle() {
+    const container = document.getElementById('ptt-container');
+    const header = document.getElementById('ptt-card-header');
+    const toggleBtn = document.getElementById('btn-toggle-ptt-panel');
+    const toggleIcon = toggleBtn ? toggleBtn.querySelector('.toggle-icon-ptt') : null;
+
+    if (container && header) {
+      const toggleMinimise = () => {
+        container.classList.toggle('minimised');
+        const isMinimised = container.classList.contains('minimised');
+        if (toggleIcon) {
+          toggleIcon.textContent = isMinimised ? '▼ EXPAND' : '▲ MINIMISE';
+        }
+        try {
+          localStorage.setItem('virtualnet_ptt_minimised', isMinimised ? 'true' : 'false');
+        } catch (e) {
+          // Ignored
+        }
+      };
+
+      if (toggleBtn) {
+        toggleBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleMinimise();
+        });
+      }
+
+      header.addEventListener('click', () => {
+        toggleMinimise();
+      });
+
+      // Restore saved preference
+      try {
+        if (localStorage.getItem('virtualnet_ptt_minimised') === 'true') {
+          container.classList.add('minimised');
+          if (toggleIcon) toggleIcon.textContent = '▼ EXPAND';
+        }
+      } catch (e) {
+        // Ignored
+      }
     }
   }
 
@@ -884,53 +928,95 @@ class VirtualNetApp {
     const stateText = document.getElementById('ptt-state-text');
     const instruction = document.getElementById('ptt-instruction');
     const pttBtn = document.getElementById('ptt-btn');
+    const headerBadge = document.getElementById('ptt-header-status-badge');
     
-    // Reset all status border color overrides
-    container.className = "card mb-3 shadow-sm position-relative";
+    // Reset status border color overrides while preserving minimised state
+    const isMinimised = container ? container.classList.contains('minimised') : false;
+    if (container) {
+      container.className = isMinimised
+        ? "card mb-3 shadow-sm position-relative minimised"
+        : "card mb-3 shadow-sm position-relative";
+    }
     
     if (state === 'IDLE') {
-      container.classList.add('ptt-card-idle');
-      stateText.textContent = "STANDBY";
-      stateText.style.color = "var(--color-phosphor-green)";
-      instruction.textContent = "Hold SPACEBAR or push circular dial to speak";
-      pttBtn.classList.remove('active', 'btn-danger');
+      if (container) container.classList.add('ptt-card-idle');
+      if (stateText) {
+        stateText.textContent = "STANDBY";
+        stateText.style.color = "var(--color-phosphor-green)";
+      }
+      if (instruction) instruction.textContent = "Hold SPACEBAR or push circular dial to speak";
+      if (pttBtn) pttBtn.classList.remove('active', 'btn-danger');
+      if (headerBadge) {
+        headerBadge.textContent = "STANDBY";
+        headerBadge.className = "badge bg-secondary text-white ms-1";
+      }
       this.audioEngine.clearPlaybackQueue();
       const speakerBox = document.getElementById('active-speaker-box');
       if (speakerBox) speakerBox.classList.add('d-none');
       
     } else if (state === 'KEYING') {
-      container.classList.add('ptt-card-transmitting');
-      stateText.innerHTML = `<span class="badge bg-warning text-dark me-2">KEYING</span>STANDBY...`;
-      stateText.style.color = "var(--color-tactical-amber)";
-      instruction.textContent = "Keying channel... Wait 1 second before speaking";
-      pttBtn.classList.add('active');
+      if (container) container.classList.add('ptt-card-transmitting');
+      if (stateText) {
+        stateText.innerHTML = `<span class="badge bg-warning text-dark me-2">KEYING</span>STANDBY...`;
+        stateText.style.color = "var(--color-tactical-amber)";
+      }
+      if (instruction) instruction.textContent = "Keying channel... Wait 1 second before speaking";
+      if (pttBtn) pttBtn.classList.add('active');
+      if (headerBadge) {
+        headerBadge.textContent = "KEYING";
+        headerBadge.className = "badge bg-warning text-dark ms-1";
+      }
 
     } else if (state === 'TRANSMITTING') {
-      container.classList.add('ptt-card-transmitting');
-      stateText.innerHTML = `<span class="pulse-indicator"></span>TRANSMITTING — SPEAK NOW`;
-      stateText.style.color = "var(--color-hot-red)";
-      instruction.textContent = "Microphone active... Speak now. Release key when finished speaking";
-      pttBtn.classList.add('active');
+      if (container) container.classList.add('ptt-card-transmitting');
+      if (stateText) {
+        stateText.innerHTML = `<span class="pulse-indicator"></span>TRANSMITTING — SPEAK NOW`;
+        stateText.style.color = "var(--color-hot-red)";
+      }
+      if (instruction) instruction.textContent = "Microphone active... Speak now. Release key when finished speaking";
+      if (pttBtn) pttBtn.classList.add('active');
+      if (headerBadge) {
+        headerBadge.textContent = "TRANSMITTING";
+        headerBadge.className = "badge bg-danger text-white ms-1";
+      }
       
     } else if (state === 'RECEIVING') {
-      container.classList.add('ptt-card-receiving');
-      stateText.textContent = `RECEIVING: ${infoText.toUpperCase()}`;
-      stateText.style.color = "var(--color-tactical-amber)";
-      instruction.textContent = "Frequency locked... Voice transmission disabled";
-      pttBtn.classList.remove('active');
+      if (container) container.classList.add('ptt-card-receiving');
+      if (stateText) {
+        stateText.textContent = `RECEIVING: ${infoText.toUpperCase()}`;
+        stateText.style.color = "var(--color-tactical-amber)";
+      }
+      if (instruction) instruction.textContent = "Frequency locked... Voice transmission disabled";
+      if (pttBtn) pttBtn.classList.remove('active');
+      if (headerBadge) {
+        headerBadge.textContent = `RECEIVING ${infoText.toUpperCase()}`;
+        headerBadge.className = "badge bg-warning text-dark ms-1";
+      }
       
     } else if (state === 'OVERRIDDEN') {
-      container.classList.add('ptt-card-overridden');
-      stateText.textContent = "PTT OVERRIDDEN BY CONTROL";
-      stateText.style.color = "#ffffff";
-      instruction.textContent = "Channel locked. Control station break-in active.";
-      pttBtn.classList.remove('active');
+      if (container) container.classList.add('ptt-card-overridden');
+      if (stateText) {
+        stateText.textContent = "PTT OVERRIDDEN BY CONTROL";
+        stateText.style.color = "#ffffff";
+      }
+      if (instruction) instruction.textContent = "Channel locked. Control station break-in active.";
+      if (pttBtn) pttBtn.classList.remove('active');
+      if (headerBadge) {
+        headerBadge.textContent = "OVERRIDDEN";
+        headerBadge.className = "badge bg-danger text-white ms-1";
+      }
       
     } else if (state === 'BLOCKED') {
-      container.classList.add('ptt-card-idle');
-      stateText.textContent = "TRANSMISSION BLOCKED";
-      stateText.style.color = "var(--color-tactical-amber)";
-      instruction.textContent = infoText || "Channel busy... wait for frequency to clear";
+      if (container) container.classList.add('ptt-card-idle');
+      if (stateText) {
+        stateText.textContent = "TRANSMISSION BLOCKED";
+        stateText.style.color = "var(--color-tactical-amber)";
+      }
+      if (instruction) instruction.textContent = infoText || "Channel busy... wait for frequency to clear";
+      if (headerBadge) {
+        headerBadge.textContent = "BLOCKED";
+        headerBadge.className = "badge bg-danger text-white ms-1";
+      }
     }
   }
 

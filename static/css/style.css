@@ -198,6 +198,28 @@ h1, h2, h3, h4, h5, h6, .tactical-header {
   text-shadow: none;
 }
 
+/* Minimised PTT Transceiver Panel State */
+#ptt-container.minimised #ptt-card-body {
+  padding-top: 0.4rem !important;
+  padding-bottom: 0.4rem !important;
+}
+
+#ptt-container.minimised #ptt-instruction {
+  display: none !important;
+}
+
+#ptt-container.minimised .ptt-button {
+  width: 48px !important;
+  height: 48px !important;
+  font-size: 0.8rem !important;
+  border-width: 2px !important;
+}
+
+#ptt-container.minimised #ptt-state-text {
+  font-size: 1rem !important;
+}
+
+
 /* Pulsing Recording Indicator */
 .pulse-indicator {
   width: 10px;
