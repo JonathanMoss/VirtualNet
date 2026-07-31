@@ -9,9 +9,9 @@ export class BatcoSvgSliderManager {
     this.isDragging = false;
     this.startSvgY = 0;
     this.currentOffsetY = 0;
-    this.minOffsetY = 0;
-    this.maxOffsetY = 0;
-    this.rowStepHeight = 8.9; // Approximate row height in SVG units
+    this.minOffsetY = -8.177;
+    this.maxOffsetY = 109.799;
+    this.rowStepHeight = 9.83; // 1 row step in SVG units
     this.isLoaded = false;
   }
 
@@ -42,14 +42,13 @@ export class BatcoSvgSliderManager {
         return;
       }
 
-      // Allow DOM to settle before calculating bounding boxes
-      requestAnimationFrame(() => {
-        this.calculateBounds();
-        this.addHitArea();
-        this.attachEvents();
-        this.attachButtonControls();
-        this.isLoaded = true;
-      });
+      // Calculate bounds & attach controls
+      this.calculateBounds();
+      this.addHitArea();
+      this.attachEvents();
+      this.attachButtonControls();
+      this.attachTabListener();
+      this.isLoaded = true;
     } catch (err) {
       console.error('Error loading SVG BATCO Slider:', err);
     }
@@ -58,38 +57,49 @@ export class BatcoSvgSliderManager {
   calculateBounds() {
     if (!this.svg || !this.sheet || !this.sliderGroup) return;
 
+    // Exact mathematical SVG user unit bounds for BATCO.svg:
+    // Sheet top = 93.680435, Sheet bottom = 225.972105
+    // Slider initial y = 101.85787, height = 14.31488 (initial bottom = 116.17275)
+    const exactMin = 93.680435 - 101.85787;   // -8.177435
+    const exactMax = 225.972105 - 116.17275;  // 109.799355
+
     try {
       const sheetBox = this.sheet.getBBox();
       const sliderBox = this.sliderGroup.getBBox();
 
-      // Top limit: slider top aligns with sheet top
-      this.minOffsetY = sheetBox.y - sliderBox.y;
-
-      // Bottom limit: slider bottom aligns with sheet bottom
-      this.maxOffsetY = (sheetBox.y + sheetBox.height - sliderBox.height) - sliderBox.y;
-
-      // Estimate 1 row step based on total slider travel range (12 BATCO rows: A - L)
-      this.rowStepHeight = (this.maxOffsetY - this.minOffsetY) / 12;
+      if (sheetBox.height > 0 && sliderBox.height > 0) {
+        this.minOffsetY = sheetBox.y - sliderBox.y;
+        this.maxOffsetY = (sheetBox.y + sheetBox.height - sliderBox.height) - sliderBox.y;
+      } else {
+        this.minOffsetY = exactMin;
+        this.maxOffsetY = exactMax;
+      }
     } catch (e) {
-      this.minOffsetY = -8.18;
-      this.maxOffsetY = 109.80;
-      this.rowStepHeight = 9.8;
+      this.minOffsetY = exactMin;
+      this.maxOffsetY = exactMax;
     }
+
+    this.rowStepHeight = (this.maxOffsetY - this.minOffsetY) / 12;
   }
 
   addHitArea() {
     if (!this.sliderGroup) return;
     try {
-      const sliderBox = this.sliderGroup.getBBox();
-      const hitRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-      hitRect.setAttribute('x', sliderBox.x);
-      hitRect.setAttribute('y', sliderBox.y);
-      hitRect.setAttribute('width', sliderBox.width);
-      hitRect.setAttribute('height', sliderBox.height);
+      let hitRect = this.sliderGroup.querySelector('.slider-hit-area');
+      if (!hitRect) {
+        hitRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        hitRect.setAttribute('class', 'slider-hit-area');
+        this.sliderGroup.insertBefore(hitRect, this.sliderGroup.firstChild);
+      }
+
+      // Cover exact slider rectangle in SVG user units (40 to 176.5 x 101.8 to 116.3)
+      hitRect.setAttribute('x', '40');
+      hitRect.setAttribute('y', '101.8');
+      hitRect.setAttribute('width', '136.5');
+      hitRect.setAttribute('height', '14.5');
       hitRect.setAttribute('fill', 'transparent');
       hitRect.setAttribute('pointer-events', 'all');
       hitRect.style.cursor = 'ns-resize';
-      this.sliderGroup.insertBefore(hitRect, this.sliderGroup.firstChild);
     } catch (e) {}
   }
 
@@ -104,39 +114,49 @@ export class BatcoSvgSliderManager {
   attachEvents() {
     if (!this.sliderGroup) return;
 
-    // Styling slider group for clear drag interaction
     this.sliderGroup.style.cursor = 'ns-resize';
     this.sliderGroup.style.touchAction = 'none';
 
-    // Pointer down handler (mouse & touch)
-    const onPointerDown = (e) => {
-      // If Shift key is held down, allow panning the parent image instead
-      if (e.shiftKey) return;
-
-      e.stopPropagation(); // Prevent pan-zoom viewport drag
-      this.isDragging = true;
-
-      const svgPt = this.getSvgPoint(e.clientX, e.clientY);
-      this.startSvgY = svgPt.y - this.currentOffsetY;
-
-      if (this.sliderGroup.setPointerCapture && e.pointerId !== undefined) {
-        try {
-          this.sliderGroup.setPointerCapture(e.pointerId);
-        } catch (err) {}
+    const getClientXY = (e) => {
+      if (e.touches && e.touches.length > 0) {
+        return { clientX: e.touches[0].clientX, clientY: e.touches[0].clientY };
       }
-
-      window.addEventListener('pointermove', onPointerMove, { passive: false });
-      window.addEventListener('pointerup', onPointerUp, { passive: false });
-      window.addEventListener('pointercancel', onPointerUp, { passive: false });
+      if (e.changedTouches && e.changedTouches.length > 0) {
+        return { clientX: e.changedTouches[0].clientX, clientY: e.changedTouches[0].clientY };
+      }
+      return { clientX: e.clientX, clientY: e.clientY };
     };
 
-    // Pointer move handler
-    const onPointerMove = (e) => {
-      if (!this.isDragging) return;
-      e.preventDefault();
+    const onStart = (e) => {
+      // If Shift key is pressed, allow panning parent image
+      if (e.shiftKey) return;
+      if (e.button !== undefined && e.button !== 0) return;
+
+      if (e.cancelable) e.preventDefault();
       e.stopPropagation();
 
-      const svgPt = this.getSvgPoint(e.clientX, e.clientY);
+      this.isDragging = true;
+      const { clientX, clientY } = getClientXY(e);
+      const svgPt = this.getSvgPoint(clientX, clientY);
+      this.startSvgY = svgPt.y - this.currentOffsetY;
+
+      window.addEventListener('mousemove', onMove, { passive: false });
+      window.addEventListener('mouseup', onEnd, { passive: false });
+      window.addEventListener('touchmove', onMove, { passive: false });
+      window.addEventListener('touchend', onEnd, { passive: false });
+      window.addEventListener('touchcancel', onEnd, { passive: false });
+      window.addEventListener('pointermove', onMove, { passive: false });
+      window.addEventListener('pointerup', onEnd, { passive: false });
+      window.addEventListener('pointercancel', onEnd, { passive: false });
+    };
+
+    const onMove = (e) => {
+      if (!this.isDragging) return;
+      if (e.cancelable) e.preventDefault();
+      e.stopPropagation();
+
+      const { clientX, clientY } = getClientXY(e);
+      const svgPt = this.getSvgPoint(clientX, clientY);
       let targetOffsetY = svgPt.y - this.startSvgY;
 
       // Clamp strictly within sheet bounds
@@ -146,24 +166,24 @@ export class BatcoSvgSliderManager {
       this.sliderGroup.setAttribute('transform', `translate(0, ${this.currentOffsetY})`);
     };
 
-    // Pointer up handler
-    const onPointerUp = (e) => {
+    const onEnd = (e) => {
       if (!this.isDragging) return;
       this.isDragging = false;
       e.stopPropagation();
 
-      if (this.sliderGroup.releasePointerCapture && e.pointerId !== undefined) {
-        try {
-          this.sliderGroup.releasePointerCapture(e.pointerId);
-        } catch (err) {}
-      }
-
-      window.removeEventListener('pointermove', onPointerMove);
-      window.removeEventListener('pointerup', onPointerUp);
-      window.removeEventListener('pointercancel', onPointerUp);
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onEnd);
+      window.removeEventListener('touchmove', onMove);
+      window.removeEventListener('touchend', onEnd);
+      window.removeEventListener('touchcancel', onEnd);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onEnd);
+      window.removeEventListener('pointercancel', onEnd);
     };
 
-    this.sliderGroup.addEventListener('pointerdown', onPointerDown, { passive: false });
+    this.sliderGroup.addEventListener('mousedown', onStart, { passive: false });
+    this.sliderGroup.addEventListener('touchstart', onStart, { passive: false });
+    this.sliderGroup.addEventListener('pointerdown', onStart, { passive: false });
   }
 
   attachButtonControls() {
@@ -181,6 +201,16 @@ export class BatcoSvgSliderManager {
       btnDown.addEventListener('click', (e) => {
         e.preventDefault();
         this.stepRow(1);
+      });
+    }
+  }
+
+  attachTabListener() {
+    const tabLink = document.getElementById('tab-batco-slider-link');
+    if (tabLink) {
+      tabLink.addEventListener('shown.bs.tab', () => {
+        this.calculateBounds();
+        this.addHitArea();
       });
     }
   }

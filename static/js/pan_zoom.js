@@ -51,8 +51,14 @@ export class PanZoomController {
     state.updateTransform = updateTransform;
 
     const isNoPanTarget = (el) => {
-      if (!el) return false;
-      return el.id === 'BATCO_SLIDER' || (el.closest && el.closest('#BATCO_SLIDER')) || (el.classList && el.classList.contains('no-pan'));
+      let curr = el;
+      while (curr && curr !== document && curr !== viewport) {
+        if (curr.id === 'BATCO_SLIDER' || (curr.classList && curr.classList.contains('no-pan'))) {
+          return true;
+        }
+        curr = curr.parentNode || curr.parentElement;
+      }
+      return false;
     };
 
     // Mouse Down (Start Drag)
