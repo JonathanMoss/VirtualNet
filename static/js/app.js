@@ -65,6 +65,7 @@ class VirtualNetApp {
     
     // 5. Setup NET Roster sidebar fold/unfold trigger
     this.setupRosterFoldToggle();
+    this.setupSunrayFoldToggle();
 
     // 6. Connect Socket
     this.socketManager.connect();
@@ -291,14 +292,41 @@ class VirtualNetApp {
         }
       });
 
-      // Restore collapsed preference
+      // Restore collapsed preference or default to collapsed on small mobile screens (<768px)
       try {
-        if (localStorage.getItem('virtualnet_roster_collapsed') === 'true') {
+        const pref = localStorage.getItem('virtualnet_roster_collapsed');
+        if (pref === 'true' || (pref === null && window.innerWidth < 768)) {
           sidebar.classList.add('collapsed');
         }
       } catch (e) {
-        // Ignored
+        if (window.innerWidth < 768) {
+          sidebar.classList.add('collapsed');
+        }
       }
+    }
+  }
+
+  setupSunrayFoldToggle() {
+    const header = document.getElementById('sunray-card-header');
+    const toggleBtn = document.getElementById('btn-toggle-sunray-panel');
+    const body = document.getElementById('sunray-collapse-body');
+
+    if (header && body) {
+      const toggleSunray = () => {
+        header.classList.toggle('collapsed');
+        body.classList.toggle('d-none');
+      };
+
+      if (toggleBtn) {
+        toggleBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleSunray();
+        });
+      }
+
+      header.addEventListener('click', () => {
+        toggleSunray();
+      });
     }
   }
 
@@ -823,6 +851,16 @@ class VirtualNetApp {
         rosterHeader.classList.add('slow-flash-header');
       } else {
         rosterHeader.classList.remove('slow-flash-header');
+      }
+    }
+
+    const sunrayBadge = document.getElementById('sunray-queue-badge');
+    if (sunrayBadge) {
+      if (isSunrayView && pendingQueueCount > 0) {
+        sunrayBadge.textContent = `${pendingQueueCount} WAITING`;
+        sunrayBadge.classList.remove('d-none');
+      } else {
+        sunrayBadge.classList.add('d-none');
       }
     }
 
