@@ -169,7 +169,7 @@
             <div class="card-header py-2 bg-dark">
               <ul class="nav nav-tabs card-header-tabs" id="resource-tabs" role="tablist">
                 <li class="nav-item">
-                  <button class="nav-link active text-uppercase font-weight-bold text-success" id="tab-batco-link" data-bs-toggle="tab" data-bs-target="#tab-batco" type="button" role="tab">🔢 BATCO REFERENCE</button>
+                  <button class="nav-link active text-uppercase font-weight-bold text-success" id="tab-batco-link" data-bs-toggle="tab" data-bs-target="#tab-batco" type="button" role="tab">🔢 BATCO</button>
                 </li>
                 <li class="nav-item">
                   <button class="nav-link text-uppercase font-weight-bold text-success" id="tab-vocab-link" data-bs-toggle="tab" data-bs-target="#tab-vocab" type="button" role="tab">📖 VOCAB CARD</button>
@@ -184,39 +184,19 @@
               
               <!-- BATCO TAB -->
               <div class="tab-pane fade show active h-100" id="tab-batco" role="tabpanel">
-                <div class="d-flex flex-column align-items-center justify-content-center h-100 p-2 bg-black border border-secondary text-center">
-                  <h6 class="text-success mb-2 text-uppercase">🔢 BATCO TACTICAL SECURITY CODE SLIDE</h6>
-                  <div class="batco-grid-container w-100 overflow-auto bg-dark p-2 border border-success">
-                    <table class="table table-bordered table-dark table-sm m-0 text-center monospace small" id="main-batco-table">
-                      <thead>
-                        <tr class="text-success">
-                          <th>Row</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th>
-                        </tr>
-                      </thead>
-                      <tbody id="main-batco-tbody">
-                        <!-- Populated dynamically -->
-                      </tbody>
-                    </table>
-                  </div>
+                <div class="d-flex flex-column align-items-center justify-content-center h-100 p-2 bg-black border border-secondary text-center overflow-auto">
+                  <img src="/static/images/BATCO/BATCO.png" alt="BATCO Reference Card" class="img-fluid rounded border border-success" style="max-height: 100%; object-fit: contain;">
                 </div>
               </div>
 
               <!-- VOCAB CARD TAB -->
               <div class="tab-pane fade h-100" id="tab-vocab" role="tabpanel">
                 <div class="d-flex flex-column h-100">
-                  <div class="mb-2 d-flex gap-2">
+                  <div class="mb-2">
                     <select class="form-select form-select-sm bg-dark text-white border-secondary" id="main-vocab-select"></select>
-                    <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" id="main-vocab-search" placeholder="Search vocabulary terms...">
                   </div>
-                  <div class="border border-secondary bg-black flex-grow-1 overflow-auto">
-                    <table class="table table-dark table-striped table-hover m-0 small">
-                      <thead>
-                        <tr class="text-success"><th>Code / Term</th><th>Meaning / Procedure</th></tr>
-                      </thead>
-                      <tbody id="main-vocab-tbody">
-                        <!-- Populated dynamically -->
-                      </tbody>
-                    </table>
+                  <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 p-2 bg-black border border-secondary text-center overflow-auto">
+                    <img id="main-vocab-img" src="/static/images/VOCAB/001-OPS%201.png" alt="Vocab Card" class="img-fluid rounded border border-success" style="max-height: 100%; object-fit: contain;">
                   </div>
                 </div>
               </div>
@@ -226,18 +206,15 @@
                 <div class="d-flex flex-column h-100">
                   <div class="mb-2">
                     <select class="form-select form-select-sm bg-dark text-white border-secondary" id="main-slate-select">
-                      <option value="SITREP">SITREP (Situation Report)</option>
-                      <option value="MIST">MIST AT (Casualty Report)</option>
+                      <option value="CFF">CFF (Call for Fire)</option>
+                      <option value="CONTACT">CONTACT Report</option>
                       <option value="MEDEVAC">MEDEVAC 9-Line</option>
-                      <option value="CFF">Call for Fire (CFF) Slate</option>
-                      <option value="QAOS">QAOS (Quick Attack Orders)</option>
-                      <option value="JAMREP">JAMREP (Jamming Report)</option>
-                      <option value="EQUIPRECREQ">EQUIPRECREQ (Recovery Request)</option>
-                      <option value="EOINCREP">EOINCREP (Explosive Ordnance)</option>
+                      <option value="MISTAT">MISTAT (Casualty Report)</option>
+                      <option value="SITREP">SITREP (Situation Report)</option>
                     </select>
                   </div>
-                  <div class="border border-secondary bg-black p-3 flex-grow-1 overflow-auto monospace text-success" id="main-slate-content" style="white-space: pre-wrap; font-size: 0.85rem; line-height: 1.4;">
-                    <!-- Loaded dynamically -->
+                  <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 p-2 bg-black border border-secondary text-center overflow-auto">
+                    <img id="main-slate-img" src="/static/images/SLATE/CFF.png" alt="Slate Card" class="img-fluid rounded border border-success" style="max-height: 100%; object-fit: contain;">
                   </div>
                 </div>
               </div>
@@ -403,18 +380,8 @@
                   <!-- Cards list -->
                 </select>
               </div>
-              <div class="mb-2">
-                <input type="text" class="form-control form-control-sm" id="search-vocab" placeholder="Search values...">
-              </div>
-              <div class="border border-secondary bg-black" style="max-height: 180px; overflow-y: auto;">
-                <table class="table table-dark table-sm m-0 small" id="vocab-table">
-                  <thead>
-                    <tr><th>Code</th><th>Plain Text Equivalent</th></tr>
-                  </thead>
-                  <tbody id="vocab-tbody">
-                    <!-- Populated dynamically -->
-                  </tbody>
-                </table>
+              <div class="d-flex flex-column align-items-center justify-content-center p-2 bg-black border border-secondary text-center overflow-auto" style="max-height: 350px;">
+                <img id="vocab-card-img" src="/static/images/VOCAB/001-OPS%201.png" alt="Vocab Card" class="img-fluid rounded border border-success" style="max-height: 100%; object-fit: contain;">
               </div>
             </div>
           </div>
@@ -430,17 +397,14 @@
           <div id="collapseSlates" class="accordion-collapse collapse" data-bs-parent="#aideMemoireAccordion">
             <div class="accordion-body p-2 text-white small">
               <select class="form-select form-select-sm mb-2" id="select-slate-template">
-                <option value="SITREP">SITREP (Situation Report)</option>
-                <option value="MIST">MIST AT (Casualty Report)</option>
+                <option value="CFF">CFF (Call for Fire)</option>
+                <option value="CONTACT">CONTACT Report</option>
                 <option value="MEDEVAC">MEDEVAC 9-Line</option>
-                <option value="CFF">Call for Fire (CFF) Slate</option>
-                <option value="QAOS">QAOS (Quick Attack Orders)</option>
-                <option value="JAMREP">JAMREP (Jamming Report)</option>
-                <option value="EQUIPRECREQ">EQUIPRECREQ (Recovery Request)</option>
-                <option value="EOINCREP">EOINCREP (Explosive Ordnance)</option>
+                <option value="MISTAT">MISTAT (Casualty Report)</option>
+                <option value="SITREP">SITREP (Situation Report)</option>
               </select>
-              <div class="border border-secondary bg-black p-3 monospace" id="slate-card-content" style="font-size: 0.8rem; line-height: 1.4; white-space: pre-wrap; height: 250px; overflow-y: auto;">
-                <!-- Slate cards detail loaded from JS -->
+              <div class="d-flex flex-column align-items-center justify-content-center p-2 bg-black border border-secondary text-center overflow-auto" style="max-height: 350px;">
+                <img id="slate-card-img" src="/static/images/SLATE/CFF.png" alt="Slate Card" class="img-fluid rounded border border-success" style="max-height: 100%; object-fit: contain;">
               </div>
             </div>
           </div>

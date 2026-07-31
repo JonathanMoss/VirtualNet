@@ -40,39 +40,21 @@ export class AideMemoireManager {
       { name: "Row L (XII)", codes: ["O", "C", "S", "Y", "J", "N", "U", "B", "H", "D"] }
     ];
 
-    // Define Vocab card datasets (Card 001 - 012)
-    this.vocabCards = {
-      "Card 001 (OPS 1)": [
-        { code: "00", plain: "ADVANCE TO / ADVANCING" },
-        { code: "04", plain: "AMBUSH INITIATED / COMMANDED" },
-        { code: "08", plain: "ATTACK COMPLETED / OBJECTIVE SECURED" },
-        { code: "12", plain: "BOUNDARY / LIMIT OF EXPLOITATION" },
-        { code: "35", plain: "MISSION CONFIRMED / ASSIGNED" },
-        { code: "36", plain: "MOVE TO GRID REFERENCE (6 FIGURE)" },
-        { code: "40", plain: "RECONNAISSANCE PATROL EN ROUTE" },
-        { code: "55", plain: "SECURE HARBOUR ESTABLISHED" }
-      ],
-      "Card 002 (OPS 2)": [
-        { code: "10", plain: "ESTABLISH OBSERVATION POST (OP)" },
-        { code: "15", plain: "FRIENDLY POSITION ENGAGED" },
-        { code: "20", plain: "PATROL RETURNED TO BASE" },
-        { code: "25", plain: "WITHDRAWING FROM CURRENT LINE" },
-        { code: "30", plain: "RV CONFIRMED AT LOC" }
-      ],
-      "Card 003 (FIRE SUPPORT)": [
-        { code: "01", plain: "CALL FOR FIRE COMPLETED" },
-        { code: "02", plain: "SHELLING/MORTAR FIRE IN PROGRESS" },
-        { code: "03", plain: "SMOKE SCREEN TRIGGERED" },
-        { code: "05", plain: "EFFECTS OBTAINED: HARASSING" },
-        { code: "07", plain: "EFFECTS OBTAINED: NEUTRALIZED" }
-      ],
-      "Card 004 (MEDICAL / EVAC)": [
-        { code: "99", plain: "MEDEVAC REQUIRED IMMEDIATELY" },
-        { code: "98", plain: "CASUALTY CAT A (URGENT)" },
-        { code: "97", plain: "CASUALTY CAT B (PRIORITY)" },
-        { code: "96", plain: "CASUALTY CAT C (ROUTINE)" }
-      ]
-    };
+    // Define Vocab card filenames (Card 001 - 012)
+    this.vocabList = [
+      "001-OPS 1",
+      "002-OPS 2",
+      "003-OPS 3",
+      "004-FIRE SP",
+      "005-ATK",
+      "006-ENGRS",
+      "007-COMMS",
+      "008-AVN",
+      "009-LOG1",
+      "010-LOG2",
+      "011-LOG3",
+      "012-SPEC OPS"
+    ];
 
     // Tactical Slate Cards
     this.slates = {
@@ -189,7 +171,7 @@ S - SIGNALS & TIMINGS`,
   populateVocabSelect(selectElement) {
     if (!selectElement) return;
     selectElement.innerHTML = '';
-    Object.keys(this.vocabCards).forEach(cardKey => {
+    this.vocabList.forEach(cardKey => {
       const opt = document.createElement('option');
       opt.value = cardKey;
       opt.textContent = cardKey;
@@ -232,39 +214,30 @@ S - SIGNALS & TIMINGS`,
   }
 
   renderVocabCard() {
-    const renderTbody = (selectEl, searchEl, tbodyEl) => {
-      if (!tbodyEl || !selectEl) return;
-      const selectedCard = selectEl.value;
-      const filter = (searchEl ? searchEl.value : '').toUpperCase();
-      tbodyEl.innerHTML = '';
-
-      const list = this.vocabCards[selectedCard] || [];
-      const filtered = list.filter(item => 
-        item.code.includes(filter) || item.plain.toUpperCase().includes(filter)
-      );
-
-      if (filtered.length === 0) {
-        tbodyEl.innerHTML = '<tr><td colspan="2" class="text-muted text-center py-2">No matching entries.</td></tr>';
-        return;
+    const updateImg = (selectEl, imgId) => {
+      if (!selectEl) return;
+      const imgEl = document.getElementById(imgId);
+      if (imgEl && selectEl.value) {
+        imgEl.src = `/static/images/VOCAB/${encodeURIComponent(selectEl.value)}.png`;
+        imgEl.alt = selectEl.value;
       }
-
-      filtered.forEach(item => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td><b>${item.code}</b></td><td>${item.plain}</td>`;
-        tbodyEl.appendChild(tr);
-      });
     };
 
-    renderTbody(this.vocabSelect, this.vocabSearch, this.vocabTbody);
-    renderTbody(this.mainVocabSelect, this.mainVocabSearch, this.mainVocabTbody);
+    updateImg(this.vocabSelect, 'vocab-card-img');
+    updateImg(this.mainVocabSelect, 'main-vocab-img');
   }
 
   renderSlateCard() {
-    if (this.slateSelect && this.slateContent) {
-      this.slateContent.textContent = this.slates[this.slateSelect.value] || '';
-    }
-    if (this.mainSlateSelect && this.mainSlateContent) {
-      this.mainSlateContent.textContent = this.slates[this.mainSlateSelect.value] || '';
-    }
+    const updateImg = (selectEl, imgId) => {
+      if (!selectEl) return;
+      const imgEl = document.getElementById(imgId);
+      if (imgEl && selectEl.value) {
+        imgEl.src = `/static/images/SLATE/${encodeURIComponent(selectEl.value)}.png`;
+        imgEl.alt = selectEl.value;
+      }
+    };
+
+    updateImg(this.slateSelect, 'slate-card-img');
+    updateImg(this.mainSlateSelect, 'main-slate-img');
   }
 }
