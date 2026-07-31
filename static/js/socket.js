@@ -97,7 +97,7 @@ export class SocketManager {
     this.socket.emit('leave_net', {});
   }
 
-  createNet(name, callsignIndicator, instructorPin, sunrayCallsign = "0") {
+  createNet(name, instructorPin, sunrayCallsign = "0", callsignIndicator = "") {
     this.socket.emit('create_net', {
       name,
       callsign_indicator: callsignIndicator,

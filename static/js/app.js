@@ -207,14 +207,13 @@ class VirtualNetApp {
     // SUNRAY Create Net trigger
     const submitCreate = () => {
       const name = document.getElementById('create-name').value.trim();
-      const ci = document.getElementById('create-ci').value.trim();
       const instructorPin = document.getElementById('create-instructor-pin').value.trim();
       const sunrayCallsign = (document.getElementById('create-sunray-callsign')?.value || "0").trim();
-      if (!name || !ci || !instructorPin) {
+      if (!name || !instructorPin) {
         alert("Please fill in all Net Session fields.");
         return;
       }
-      this.socketManager.createNet(name, ci, instructorPin, sunrayCallsign);
+      this.socketManager.createNet(name, instructorPin, sunrayCallsign);
     };
 
     const btnCreate = document.getElementById('btn-create-net');
@@ -225,7 +224,7 @@ class VirtualNetApp {
       });
     }
 
-    ['create-name', 'create-ci', 'create-instructor-pin', 'create-sunray-callsign'].forEach(id => {
+    ['create-name', 'create-instructor-pin', 'create-sunray-callsign'].forEach(id => {
       const el = document.getElementById(id);
       if (el) {
         el.addEventListener('keydown', (e) => {
@@ -728,9 +727,6 @@ class VirtualNetApp {
         this.updatePTTCardState('IDLE');
       }
     }
-
-    // Update Allocation summary reference modal rows
-    this.updateAllocationModal(stations);
   }
 
   updatePTTCardState(state, infoText = '') {
@@ -790,28 +786,7 @@ class VirtualNetApp {
 
 
 
-  updateAllocationModal(stations) {
-    const tbody = document.getElementById('allocation-table-tbody');
-    tbody.innerHTML = '';
 
-    const sorted = [...stations].sort((a,b) => (a.callSign || '').localeCompare(b.callSign || ''));
-    sorted.forEach(s => {
-      if (s.status === 'CONNECTED' && s.callSign) {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td><b>${s.callSign}</b></td>
-          <td>${s.nickname}</td>
-          <td>${s.role}</td>
-          <td><span class="text-success">${s.status}</span></td>
-        `;
-        tbody.appendChild(tr);
-      }
-    });
-
-    if (tbody.innerHTML === '') {
-      tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted">No active allocations.</td></tr>';
-    }
-  }
 
   updateDTGClock() {
     document.getElementById('system-clock').textContent = formatDTG(new Date());

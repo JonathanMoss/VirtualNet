@@ -41,7 +41,7 @@ def create_net_session(db, data: dict, client_info: dict, station_registry, broa
     db.flush()
 
     raw_cs = (validated.sunray_callsign or "0").strip().upper()
-    if raw_cs.isdigit():
+    if raw_cs.isdigit() and validated.callsign_indicator:
         sunray_callsign = f"{validated.callsign_indicator}{raw_cs}"
     else:
         sunray_callsign = raw_cs
