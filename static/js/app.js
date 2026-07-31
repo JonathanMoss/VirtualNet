@@ -4,6 +4,7 @@ import { SocketManager } from './socket.js';
 import { formatDTG } from './utils.js';
 import { AideMemoireManager } from './aide_memoire.js';
 import { WebAudioEngine } from './audio.js';
+import { showAlert, showConfirm, showPrompt } from './dialog.js';
 
 // Global exception & unhandled rejection handler to catch third-party browser extension errors (e.g. content_chrome.js / cs.js disconnected port errors)
 window.addEventListener('error', (event) => {
@@ -71,8 +72,13 @@ class VirtualNetApp {
     // 7. Setup Leave Net button
     const btnLeave = document.getElementById('btn-leave-net');
     if (btnLeave) {
-      btnLeave.addEventListener('click', () => {
-        if (confirm("Are you sure you want to leave this Net session?")) {
+      btnLeave.addEventListener('click', async () => {
+        const confirmed = await showConfirm("Are you sure you want to leave this Net session?", {
+          title: "LEAVE NET SESSION",
+          confirmText: "LEAVE NET",
+          confirmClass: "btn btn-danger btn-sm text-uppercase font-weight-bold"
+        });
+        if (confirmed) {
           this.socketManager.leaveNet();
           this.clearSavedSession();
           this.resetToLanding();
@@ -170,11 +176,11 @@ class VirtualNetApp {
     }
 
     // Student Join Net trigger
-    const submitJoin = () => {
+    const submitJoin = async () => {
       const pin = document.getElementById('join-pin').value.trim();
       const nickname = document.getElementById('join-nickname').value.trim();
       if (!pin || !nickname) {
-        alert("Please enter both Net PIN and Nickname.");
+        await showAlert("Please enter both Net PIN and Nickname.", { title: "INPUT REQUIRED" });
         return;
       }
       this.myNickname = nickname;
@@ -202,12 +208,12 @@ class VirtualNetApp {
     });
 
     // SUNRAY Create Net trigger
-    const submitCreate = () => {
+    const submitCreate = async () => {
       const name = document.getElementById('create-name').value.trim();
       const instructorPin = document.getElementById('create-instructor-pin').value.trim();
       const sunrayCallsign = (document.getElementById('create-sunray-callsign')?.value || "0").trim();
       if (!name || !instructorPin) {
-        alert("Please fill in all Net Session fields.");
+        await showAlert("Please fill in all Net Session fields.", { title: "INPUT REQUIRED" });
         return;
       }
       this.socketManager.createNet(name, instructorPin, sunrayCallsign);
@@ -455,7 +461,7 @@ class VirtualNetApp {
         document.getElementById('ptt-btn').disabled = false;
       }
     } else {
-      alert(`Failed to create net session: ${data.reason}`);
+      showAlert(`Failed to create net session: ${data.reason}`, { title: "CREATE NET FAILED", titleColor: "var(--color-hot-red)" });
     }
   }
 
@@ -507,8 +513,13 @@ class VirtualNetApp {
         const endBtn = document.getElementById('btn-end-session');
         if (endBtn && !endBtn.dataset.bound) {
           endBtn.dataset.bound = "true";
-          endBtn.addEventListener('click', () => {
-            if (confirm("Are you sure you want to end this Net Session? All students will be kicked.")) {
+          endBtn.addEventListener('click', async () => {
+            const confirmed = await showConfirm("Are you sure you want to end this Net Session? All students will be kicked.", {
+              title: "END NET SESSION",
+              confirmText: "END SESSION",
+              confirmClass: "btn btn-danger btn-sm text-uppercase font-weight-bold"
+            });
+            if (confirmed) {
               this.socketManager.endSession();
             }
           });
@@ -533,9 +544,9 @@ class VirtualNetApp {
       console.warn("Join/Rejoin failed:", data.reason);
       this.clearSavedSession();
       if (document.getElementById('dashboard-section').classList.contains('d-none')) {
-        alert(`Join Failed: ${data.reason}`);
+        showAlert(`Join Failed: ${data.reason}`, { title: "JOIN FAILED", titleColor: "var(--color-hot-red)" });
       } else {
-        alert(`Session Ended: ${data.reason}`);
+        showAlert(`Session Ended: ${data.reason}`, { title: "SESSION ENDED", titleColor: "var(--color-hot-red)" });
         this.resetToLanding();
       }
     }
@@ -728,7 +739,7 @@ class VirtualNetApp {
             if (cs) {
               this.socketManager.assignCallsign(sid, cs, role);
             } else {
-              alert("Please enter a numeric/alphanumeric Callsign suffix.");
+              showAlert("Please enter a numeric/alphanumeric Callsign suffix.", { title: "INVALID CALLSIGN" });
             }
           });
 
@@ -768,9 +779,12 @@ class VirtualNetApp {
           // Add listener for changing callsign (Issue #26)
           const changeBtn = tr.querySelector('.btn-change-callsign');
           if (changeBtn) {
-            changeBtn.addEventListener('click', () => {
+            changeBtn.addEventListener('click', async () => {
               const currentCS = s.callSign || '';
-              const newCS = prompt(`Enter new callsign/suffix for station '${s.nickname}':`, currentCS);
+              const newCS = await showPrompt(`Enter new callsign/suffix for station '${s.nickname}':`, currentCS, {
+                title: "CHANGE CALLSIGN",
+                confirmText: "ASSIGN"
+              });
               if (newCS !== null && newCS.trim() !== '') {
                 this.socketManager.assignCallsign(s.stationId, newCS.trim(), s.role);
               }
@@ -780,8 +794,13 @@ class VirtualNetApp {
           // Add listener for kicking student (Issue #26)
           const kickBtn = tr.querySelector('.btn-kick-student');
           if (kickBtn) {
-            kickBtn.addEventListener('click', () => {
-              if (confirm(`Are you sure you want to kick station '${s.callSign || s.nickname}' from the net session?`)) {
+            kickBtn.addEventListener('click', async () => {
+              const confirmed = await showConfirm(`Are you sure you want to kick station '${s.callSign || s.nickname}' from the net session?`, {
+                title: "KICK STATION",
+                confirmText: "KICK STATION",
+                confirmClass: "btn btn-danger btn-sm text-uppercase font-weight-bold"
+              });
+              if (confirmed) {
                 this.socketManager.kickStation(s.stationId);
               }
             });
