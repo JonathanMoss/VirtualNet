@@ -87,15 +87,15 @@
         <a class="navbar-brand font-weight-bold text-uppercase d-flex align-items-center" href="#" style="color: var(--color-phosphor-green);">
           📟 VIRTUALNET
         </a>
-        <div class="d-flex align-items-center gap-2 font-weight-bold fs-6">
-          <span class="text-warning text-uppercase" id="header-net-pin">PIN: ----</span>
-          <span class="text-muted">|</span>
-          <span class="text-white d-none d-sm-inline" id="header-net-name">Net: -</span>
+        <div class="d-flex align-items-center gap-1 gap-sm-2 font-weight-bold fs-6 flex-wrap justify-content-end">
+          <span class="text-warning text-uppercase small-mobile" id="header-net-pin">PIN: ----</span>
           <span class="text-muted d-none d-sm-inline">|</span>
-          <span class="text-warning" id="header-callsign">Callsign: AWAITING</span>
-          <span class="text-muted">|</span>
-          <span class="text-success monospace" id="system-clock">000000Z UTC</span>
-          <button id="btn-leave-net" class="btn btn-sm btn-outline-danger ms-2">🚪 LEAVE NET</button>
+          <span class="text-white d-none d-md-inline" id="header-net-name">Net: -</span>
+          <span class="text-muted d-none d-md-inline">|</span>
+          <span class="text-warning small-mobile" id="header-callsign">AWAITING</span>
+          <span class="text-muted d-none d-sm-inline">|</span>
+          <span class="text-success monospace small-mobile" id="system-clock">000000Z UTC</span>
+          <button id="btn-leave-net" class="btn btn-sm btn-outline-danger ms-1 ms-sm-2 py-0 px-2">🚪 LEAVE</button>
         </div>
       </div>
     </header>
@@ -109,10 +109,10 @@
         🚨 ENEMY DIRECTION FINDING ALERT! TRANSMISSION EXCEEDED 20 SECONDS! 🚨
       </div>
 
-      <div class="row h-100 flex-nowrap g-3">
+      <div class="row h-100 flex-wrap flex-md-nowrap g-3">
         
         <!-- Left Sidebar: NET Roster (Vertical Foldable Panel) -->
-        <aside id="net-roster-sidebar" class="col-auto net-sidebar d-flex flex-column" style="width: 25%; min-width: 250px; max-height: calc(100vh - 120px);">
+        <aside id="net-roster-sidebar" class="col-12 col-md-auto net-sidebar d-flex flex-column mb-2 mb-md-0" style="width: 25%; min-width: 250px; max-height: calc(100vh - 120px);">
           <div class="card flex-grow-1 overflow-hidden h-100">
             <div id="roster-card-header" class="card-header text-uppercase d-flex justify-content-between align-items-center py-2 px-3" style="cursor: pointer; user-select: none;">
               <span class="font-weight-bold d-flex align-items-center gap-2 fs-6">
@@ -164,26 +164,92 @@
             </div>
           </section>
 
+          <!-- SUNRAY PANEL (TOP-POSITIONED WHEN ACTIVE) -->
+          <section id="instructor-section" class="card border-warning mb-3 d-none">
+            <div id="sunray-card-header" class="card-header bg-dark text-warning d-flex justify-content-between align-items-center py-2 px-3" style="cursor: pointer; user-select: none;">
+              <span class="font-weight-bold d-flex align-items-center gap-2">
+                <span>📡</span>
+                <span>SUNRAY CENTRAL CONTROL PANEL</span>
+                <span id="sunray-queue-badge" class="badge bg-warning text-dark d-none">0 WAITING</span>
+              </span>
+              <button id="btn-toggle-sunray-panel" class="btn btn-sm text-warning p-0 border-0 shadow-none" title="Toggle SUNRAY panel">
+                <span class="toggle-icon-sunray d-inline-block transition-transform">▼</span>
+              </button>
+            </div>
+            <div id="sunray-collapse-body" class="card-body p-3">
+              <div class="row">
+                
+                <!-- Admissions Queue: Full Width (col-12) -->
+                <div class="col-12 mb-3">
+                  <h6 class="text-warning">📥 Callsign Assignment Queue (Awaiting Admissions)</h6>
+                  <div class="table-responsive border border-secondary bg-black" style="max-height: 180px; overflow-y: auto;">
+                    <table class="table table-dark table-sm m-0 align-middle">
+                      <thead>
+                        <tr>
+                          <th>NICK</th>
+                          <th>Role</th>
+                          <th>Call Sign</th>
+                          <th>Action</th>
+                        </tr>
+                      </thead>
+                      <tbody id="admissions-tbody">
+                        <!-- Student waiting lines -->
+                        <tr><td colspan="4" class="text-center text-muted py-3">No students waiting in queue.</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+              </div>
+              
+              <!-- Roster manager with signal controls -->
+              <div class="row mt-2">
+                <div class="col-12">
+                  <h6 class="text-warning">📋 Roster and Channel Control</h6>
+                  <div class="table-responsive border border-secondary bg-black" style="max-height: 220px; overflow-y: auto;">
+                    <table class="table table-dark table-sm m-0 align-middle">
+                      <thead>
+                        <tr>
+                          <th>Call Sign</th>
+                          <th>NICK</th>
+                          <th>Role</th>
+                          <th>State</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody id="instructor-roster-tbody">
+                        <tr><td colspan="5" class="text-center text-muted py-3">No active roster items.</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </section>
+
           <!-- Reference Resources Card (Issue #15: BATCO, VOCAB CARD, SLATE CARDS) -->
           <section class="card flex-grow-1 d-flex flex-column overflow-hidden">
             <div class="card-header py-2 bg-dark">
-              <ul class="nav nav-tabs card-header-tabs" id="resource-tabs" role="tablist">
-                <li class="nav-item">
-                  <button class="nav-link active text-uppercase font-weight-bold text-success" id="tab-batco-slider-link" data-bs-toggle="tab" data-bs-target="#tab-batco-slider" type="button" role="tab">🎚️ BATCO SLIDER</button>
-                </li>
-                <li class="nav-item">
-                  <button class="nav-link text-uppercase font-weight-bold text-success" id="tab-batco-link" data-bs-toggle="tab" data-bs-target="#tab-batco" type="button" role="tab">🔢 BATCO</button>
-                </li>
-                <li class="nav-item">
-                  <button class="nav-link text-uppercase font-weight-bold text-success" id="tab-vocab-link" data-bs-toggle="tab" data-bs-target="#tab-vocab" type="button" role="tab">📖 VOCAB CARD</button>
-                </li>
-                <li class="nav-item">
-                  <button class="nav-link text-uppercase font-weight-bold text-success" id="tab-slates-link" data-bs-toggle="tab" data-bs-target="#tab-slates" type="button" role="tab">📋 SLATE CARDS</button>
-                </li>
-                <li class="nav-item">
-                  <button class="nav-link text-uppercase font-weight-bold text-success" id="tab-logging-link" data-bs-toggle="tab" data-bs-target="#tab-logging" type="button" role="tab">📝 LOGGING</button>
-                </li>
-              </ul>
+              <div class="nav-tabs-responsive">
+                <ul class="nav nav-tabs card-header-tabs flex-nowrap" id="resource-tabs" role="tablist">
+                  <li class="nav-item">
+                    <button class="nav-link active text-uppercase font-weight-bold text-success" id="tab-batco-slider-link" data-bs-toggle="tab" data-bs-target="#tab-batco-slider" type="button" role="tab">🎚️ BATCO SLIDER</button>
+                  </li>
+                  <li class="nav-item">
+                    <button class="nav-link text-uppercase font-weight-bold text-success" id="tab-batco-link" data-bs-toggle="tab" data-bs-target="#tab-batco" type="button" role="tab">🔢 BATCO</button>
+                  </li>
+                  <li class="nav-item">
+                    <button class="nav-link text-uppercase font-weight-bold text-success" id="tab-vocab-link" data-bs-toggle="tab" data-bs-target="#tab-vocab" type="button" role="tab">📖 VOCAB CARD</button>
+                  </li>
+                  <li class="nav-item">
+                    <button class="nav-link text-uppercase font-weight-bold text-success" id="tab-slates-link" data-bs-toggle="tab" data-bs-target="#tab-slates" type="button" role="tab">📋 SLATE CARDS</button>
+                  </li>
+                  <li class="nav-item">
+                    <button class="nav-link text-uppercase font-weight-bold text-success" id="tab-logging-link" data-bs-toggle="tab" data-bs-target="#tab-logging" type="button" role="tab">📝 LOGGING</button>
+                  </li>
+                </ul>
+              </div>
             </div>
             
             <div class="card-body p-3 flex-grow-1 overflow-auto tab-content" id="resource-tab-content">
@@ -292,67 +358,6 @@
 
         </main>
       </div>
-
-      <!-- ==================== SUNRAY PANEL (ADMIN UTILITIES) ==================== -->
-      <section id="instructor-section" class="row d-none mt-3">
-        <div class="col-12">
-          <div class="card border-warning">
-            <div class="card-header bg-dark text-warning d-flex justify-content-between align-items-center">
-              <span class="font-weight-bold">📡 SUNRAY CENTRAL CONTROL PANEL</span>
-            </div>
-            <div class="card-body p-3">
-              <div class="row">
-                
-                <!-- Admissions Queue: Full Width (col-12) -->
-                <div class="col-12 mb-3">
-                  <h6 class="text-warning">📥 Callsign Assignment Queue (Awaiting Admissions)</h6>
-                  <div class="border border-secondary bg-black overflow-auto" style="height: 180px;">
-                    <table class="table table-dark table-sm m-0 align-middle">
-                      <thead>
-                        <tr>
-                          <th>NICK</th>
-                          <th>Role</th>
-                          <th>Call Sign</th>
-                          <th>Action</th>
-                        </tr>
-                      </thead>
-                      <tbody id="admissions-tbody">
-                        <!-- Student waiting lines -->
-                        <tr><td colspan="4" class="text-center text-muted py-3">No students waiting in queue.</td></tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-
-              </div>
-              
-              <!-- Roster manager with signal controls -->
-              <div class="row mt-2">
-                <div class="col-12">
-                  <h6 class="text-warning">📋 Roster and Channel Control</h6>
-                  <div class="border border-secondary bg-black" style="max-height: 250px; overflow-y: auto;">
-                    <table class="table table-dark table-sm m-0">
-                      <thead>
-                        <tr>
-                          <th>Call Sign</th>
-                          <th>NICK</th>
-                          <th>Role</th>
-                          <th>State</th>
-                          <th>Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody id="instructor-roster-tbody">
-                        <tr><td colspan="5" class="text-center text-muted py-3">No active roster items.</td></tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        </div>
-      </section>
 
     </div>
   </div>

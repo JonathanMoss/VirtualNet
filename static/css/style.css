@@ -399,4 +399,94 @@ h1, h2, h3, h4, h5, h6, .tactical-header {
   padding: 0.75rem 1rem;
 }
 
+/* Horizontal Scrollable Resource Tabs Container */
+.nav-tabs-responsive {
+  overflow-x: auto;
+  overflow-y: hidden;
+  white-space: nowrap;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none; /* Firefox */
+}
+
+.nav-tabs-responsive::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+.nav-tabs-responsive .nav-link {
+  white-space: nowrap;
+}
+
+/* Touch PTT Isolation & Touch Target Enhancements */
+.ptt-button {
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.toggle-icon-sunray {
+  transition: transform 0.2s ease-in-out;
+}
+
+#sunray-card-header.collapsed .toggle-icon-sunray {
+  transform: rotate(-90deg);
+}
+
+/* Mobile & Tablet Responsiveness Adjustments */
+@media (max-width: 767.98px) {
+  .net-sidebar {
+    width: 100% !important;
+    min-width: 100% !important;
+    max-height: none !important;
+  }
+
+  .net-sidebar.collapsed {
+    width: 100% !important;
+    min-width: 100% !important;
+    height: auto !important;
+  }
+
+  .net-sidebar.collapsed #roster-card-header {
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    height: auto !important;
+    padding: 0.5rem 0.75rem !important;
+  }
+
+  .net-sidebar.collapsed .roster-title-text {
+    display: inline !important;
+  }
+
+  .net-sidebar.collapsed #roster-collapse-body {
+    display: none !important;
+  }
+
+  #main-content-panel {
+    max-height: none !important;
+    width: 100% !important;
+  }
+
+  .ptt-button {
+    width: 88px !important;
+    height: 88px !important;
+    font-size: 1.15rem !important;
+  }
+
+  .small-mobile {
+    font-size: 0.75rem !important;
+  }
+
+  #df-alert-banner {
+    font-size: 1rem !important;
+    padding: 0.5rem !important;
+  }
+}
+
+@media (max-width: 400px) {
+  .btn-group-sm > .btn {
+    padding: 0.2rem 0.35rem !important;
+    font-size: 0.7rem !important;
+  }
+}
+
+
 
