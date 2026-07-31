@@ -63,20 +63,26 @@ class VirtualNetApp {
     // 4. Setup PTT UI Handlers & Mobile triggers
     this.setupPTTHandlers();
     
-    // 5. Paper Mode toggle trigger
-    document.getElementById('btn-paper-mode').addEventListener('click', () => this.togglePaperMode());
+    // 5. Paper Mode toggle trigger (optional element)
+    const btnPaper = document.getElementById('btn-paper-mode');
+    if (btnPaper) {
+      btnPaper.addEventListener('click', () => this.togglePaperMode());
+    }
 
     // 6. Connect Socket
     this.socketManager.connect();
 
     // 7. Setup Leave Net button
-    document.getElementById('btn-leave-net').addEventListener('click', () => {
-      if (confirm("Are you sure you want to leave this Net session?")) {
-        this.socketManager.leaveNet();
-        this.clearSavedSession();
-        this.resetToLanding();
-      }
-    });
+    const btnLeave = document.getElementById('btn-leave-net');
+    if (btnLeave) {
+      btnLeave.addEventListener('click', () => {
+        if (confirm("Are you sure you want to leave this Net session?")) {
+          this.socketManager.leaveNet();
+          this.clearSavedSession();
+          this.resetToLanding();
+        }
+      });
+    }
 
     // 8. Check for saved session persistence and auto-reconnect
     const saved = this.loadSavedSession();
@@ -133,19 +139,39 @@ class VirtualNetApp {
   setupLandingForms() {
     const viewJoin = document.getElementById('join-net-card');
     const viewCreate = document.getElementById('create-net-card');
-    
-    // Toggle login screen links
-    document.getElementById('toggle-create-view').addEventListener('click', (e) => {
-      e.preventDefault();
-      viewJoin.classList.add('d-none');
-      viewCreate.classList.remove('d-none');
-    });
+    const toggleCreate = document.getElementById('toggle-create-view');
+    const toggleJoin = document.getElementById('toggle-join-view');
 
-    document.getElementById('toggle-join-view').addEventListener('click', (e) => {
-      e.preventDefault();
-      viewCreate.classList.add('d-none');
-      viewJoin.classList.remove('d-none');
-    });
+    // Toggle login screen links
+    if (toggleCreate) {
+      const handleToggleCreate = (e) => {
+        if (e) {
+          e.preventDefault();
+          if (e.stopPropagation) e.stopPropagation();
+        }
+        if (viewJoin) viewJoin.classList.add('d-none');
+        if (viewCreate) viewCreate.classList.remove('d-none');
+        const createForm = document.getElementById('create-net-form');
+        const successBox = document.getElementById('create-success-box');
+        if (createForm) createForm.classList.remove('d-none');
+        if (successBox) successBox.classList.add('d-none');
+      };
+      toggleCreate.addEventListener('click', handleToggleCreate);
+      toggleCreate.addEventListener('pointerdown', handleToggleCreate);
+    }
+
+    if (toggleJoin) {
+      const handleToggleJoin = (e) => {
+        if (e) {
+          e.preventDefault();
+          if (e.stopPropagation) e.stopPropagation();
+        }
+        if (viewCreate) viewCreate.classList.add('d-none');
+        if (viewJoin) viewJoin.classList.remove('d-none');
+      };
+      toggleJoin.addEventListener('click', handleToggleJoin);
+      toggleJoin.addEventListener('pointerdown', handleToggleJoin);
+    }
 
     // Student Join Net trigger
     const submitJoin = () => {
