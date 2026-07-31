@@ -504,7 +504,6 @@ class VirtualNetApp {
       this.saveSession(data.pin, "SUNRAY", this.myRole, data.stationId);
 
       // Transition to Dashboard directly
-      document.getElementById('generated-pin').textContent = data.pin;
       document.getElementById('landing-section').classList.add('d-none');
       document.getElementById('dashboard-section').classList.remove('d-none');
       document.getElementById('instructor-section').classList.remove('d-none');
