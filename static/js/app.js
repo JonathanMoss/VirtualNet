@@ -813,25 +813,6 @@ class VirtualNetApp {
     }
   }
 
-  togglePaperMode() {
-    this.paperMode = !this.paperMode;
-    const logWrapper = document.getElementById('logsheet-wrapper');
-    const paperOverlay = document.getElementById('paper-mode-overlay');
-    const btn = document.getElementById('btn-paper-mode');
-    
-    if (this.paperMode) {
-      logWrapper.classList.add('d-none');
-      paperOverlay.classList.remove('d-none');
-      btn.textContent = "📝 SCREEN LOG: OFF (PAPER)";
-      btn.classList.replace('btn-outline-tactical', 'btn-outline-warning');
-    } else {
-      logWrapper.classList.remove('d-none');
-      paperOverlay.classList.add('d-none');
-      btn.textContent = "📝 SCREEN LOG: ON";
-      btn.classList.replace('btn-outline-warning', 'btn-outline-tactical');
-    }
-  }
-
   updateDTGClock() {
     document.getElementById('system-clock').textContent = formatDTG(new Date());
   }
