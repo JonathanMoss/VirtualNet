@@ -103,8 +103,7 @@ class VirtualNetApp {
     try {
       const data = { pin, nickname, role, stationId, timestamp: Date.now() };
       const sessionStr = JSON.stringify(data);
-      localStorage.setItem('virtualnet_session', sessionStr);
-      document.cookie = `virtualnet_session=${encodeURIComponent(sessionStr)}; path=/; max-age=86400; SameSite=Lax`;
+      sessionStorage.setItem('virtualnet_session', sessionStr);
     } catch (e) {
       console.warn("Failed to save session credentials:", e);
     }
@@ -112,13 +111,7 @@ class VirtualNetApp {
 
   loadSavedSession() {
     try {
-      let sessionStr = localStorage.getItem('virtualnet_session');
-      if (!sessionStr) {
-        const match = document.cookie.match(/(?:^|; )virtualnet_session=([^;]*)/);
-        if (match) {
-          sessionStr = decodeURIComponent(match[1]);
-        }
-      }
+      const sessionStr = sessionStorage.getItem('virtualnet_session');
       if (!sessionStr) return null;
       const data = JSON.parse(sessionStr);
       if (Date.now() - data.timestamp > 86400 * 1000) {
@@ -133,8 +126,7 @@ class VirtualNetApp {
 
   clearSavedSession() {
     try {
-      localStorage.removeItem('virtualnet_session');
-      document.cookie = 'virtualnet_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      sessionStorage.removeItem('virtualnet_session');
     } catch (e) {
       // Ignored
     }
