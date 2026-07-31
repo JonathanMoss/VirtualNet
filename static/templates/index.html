@@ -53,10 +53,6 @@
                 <input type="text" class="form-control" id="create-name" placeholder="e.g. Exercise Drill Alpha" maxlength="50" autocomplete="off" required>
               </div>
               <div class="mb-3">
-                <label for="create-ci" class="form-label text-uppercase">Daily Callsign Indicator letter prefix</label>
-                <input type="text" class="form-control text-uppercase text-center" id="create-ci" placeholder="e.g. R" maxlength="1" value="R" autocomplete="off" required>
-              </div>
-              <div class="mb-3">
                 <label for="create-sunray-callsign" class="form-label text-uppercase">SUNRAY Callsign</label>
                 <input type="text" class="form-control text-uppercase text-center font-weight-bold" id="create-sunray-callsign" placeholder="0" maxlength="15" value="0" autocomplete="off">
               </div>
@@ -95,7 +91,6 @@
           <span class="badge border border-warning text-warning text-uppercase" id="header-net-pin">PIN: ----</span>
           <span class="text-white d-none d-sm-inline" id="header-net-name">Net: -</span>
           <span class="text-warning font-weight-bold" id="header-callsign">Callsign: AWAITING</span>
-          <button id="btn-callsign-summary" class="btn btn-sm btn-outline-tactical" data-bs-toggle="modal" data-bs-target="#allocationModal">📞 ALLOCATION SUMMARY</button>
           <span class="text-light monospace font-weight-bold" id="system-clock">000000Z UTC</span>
           <button id="btn-leave-net" class="btn btn-sm btn-outline-danger ms-2">🚪 LEAVE NET</button>
         </div>
@@ -457,38 +452,7 @@
     </div>
   </div>
 
-  <!-- ==================== ALLOCATION MODAL ==================== -->
-  <div class="modal fade" id="allocationModal" tabindex="-1" aria-labelledby="allocationModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-      <div class="modal-content info-popover shadow-lg">
-        <div class="modal-header">
-          <h5 class="modal-title text-success" id="allocationModalLabel">📞 CALLSIGN ALLOCATION & STRUCTURAL MAP</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body p-3">
-          <p class="small text-muted">Review current assigned stations on frequency and standard allocation structural templates (SUNRAY = 0, Subordinate HQs = 10/20/30/40, Sections = 11-14 etc.)</p>
-          <div class="border border-secondary bg-black">
-            <table class="table table-dark table-sm table-striped m-0 text-center">
-              <thead>
-                <tr>
-                  <th>Call Sign</th>
-                  <th>NICK</th>
-                  <th>Role</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody id="allocation-table-tbody">
-                <!-- Populated dynamically -->
-              </tbody>
-            </table>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-tactical btn-sm" data-bs-dismiss="modal">CLOSE REFERENCE</button>
-        </div>
-      </div>
-    </div>
-  </div>
+
 
   <!-- Bootstrap 5 Bundle JS (Popper included) -->
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>

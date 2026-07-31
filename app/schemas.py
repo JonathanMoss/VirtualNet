@@ -19,7 +19,7 @@ class NetSessionCreate(BaseModel):
     """Validation schema for hosting a new net session."""
     # pylint: disable=too-few-public-methods
     name: str = Field(..., min_length=1, max_length=50)
-    callsign_indicator: str = Field(default="R", min_length=1, max_length=1)
+    callsign_indicator: Optional[str] = Field(default="", max_length=5)
     instructor_pin: str = Field(..., min_length=6, max_length=6)
     sunray_callsign: Optional[str] = Field(default="0", max_length=15)
 
@@ -33,10 +33,12 @@ class NetSessionCreate(BaseModel):
 
     @field_validator('callsign_indicator')
     @classmethod
-    def validate_ci(cls, v: str) -> str:
-        """Validate callsign indicator prefix."""
+    def validate_ci(cls, v: Optional[str]) -> str:
+        """Validate callsign indicator prefix if provided."""
+        if not v:
+            return ""
         v_upper = v.upper()
-        if not v_upper.isalpha() or v_upper == 'Z':
+        if len(v_upper) > 1 or not v_upper.isalpha() or v_upper == 'Z':
             raise ValueError("Callsign indicator must be a single letter from A-Y")
         return v_upper
 
