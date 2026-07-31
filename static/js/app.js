@@ -1,7 +1,7 @@
 // Main Application Coordinator Module - VirtualNet
 
 import { SocketManager } from './socket.js';
-import { LogsheetManager, formatDTG } from './logsheet.js';
+import { formatDTG } from './utils.js';
 import { AideMemoireManager } from './aide_memoire.js';
 import { WebAudioEngine } from './audio.js';
 
@@ -27,7 +27,6 @@ window.addEventListener('unhandledrejection', (event) => {
 class VirtualNetApp {
   constructor() {
     this.socketManager = new SocketManager(this);
-    this.logsheetManager = new LogsheetManager(this);
     this.aideMemoireManager = new AideMemoireManager();
     this.audioEngine = new WebAudioEngine(this);
 
@@ -492,8 +491,6 @@ class VirtualNetApp {
         // Initial student join. UI locked awaiting callsign
         document.getElementById('callsign-lock-overlay').classList.remove('d-none');
       }
-
-      this.logsheetManager.initialize();
     } else {
       console.warn("Join/Rejoin failed:", data.reason);
       this.clearSavedSession();
@@ -526,9 +523,6 @@ class VirtualNetApp {
           console.warn("Background microphone pre-warm warning:", err);
         });
       }
-
-      // Initialize logs management
-      this.logsheetManager.initialize();
     }
   }
 
