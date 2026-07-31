@@ -299,3 +299,13 @@ h1, h2, h3, h4, h5, h6, .tactical-header {
   background-color: var(--bg-color-card);
   color: var(--color-desert-sand);
 }
+
+/* Foldable Card Header Chevron */
+[data-bs-toggle="collapse"] .collapse-chevron {
+  transition: transform 0.2s ease-in-out;
+  display: inline-block;
+}
+
+[data-bs-toggle="collapse"].collapsed .collapse-chevron {
+  transform: rotate(-90deg);
+}
