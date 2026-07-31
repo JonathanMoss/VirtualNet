@@ -38,15 +38,15 @@ def handle_disconnect():
 
 @socketio.on('leave_net')
 def handle_leave_net(data):
-    """Station explicitly leaves the net session."""
+    """Station explicitly leaves the net session. If SUNRAY leaves, terminate net session."""
     # pylint: disable=unused-argument
     db = get_db()
-    station_service.process_station_leave(db, request.sid, transmission_service)
+    station_service.process_station_leave(db, request.sid, transmission_service, session_service)
 
 
 @socketio.on('create_net')
 def handle_create_net(data):
-    """Instructor hosts a new net session."""
+    """SUNRAY hosts a new net session."""
     db = get_db()
     client_info = {"remote_addr": request.remote_addr, "sid": request.sid}
     res = session_service.create_net_session(
@@ -61,14 +61,14 @@ def handle_create_net(data):
 
 @socketio.on('join_net')
 def handle_join_net(data):
-    """Station (student or instructor) joins a net session."""
+    """Station (student or SUNRAY) joins a net session."""
     db = get_db()
     pin = data.get('pin', '').upper()
     nickname = data.get('nickname', '')
     role = data.get('role', 'SUB_STATION')
 
-    if nickname.upper() in ["INSTRUCTOR", "CONTROL"]:
-        role = "CONTROL"
+    if nickname.upper() in ["INSTRUCTOR", "CONTROL", "SUNRAY"]:
+        role = "SUNRAY"
 
     session = db.query(session_service.NetSession).filter_by(pin=pin).first()
     if not session:
@@ -83,7 +83,7 @@ def handle_join_net(data):
     station = station_service.find_existing_station(db, session.id, nickname, role, provided_station_id)
 
     if station_service.check_duplicate_active_station(station, request.sid, provided_station_id):
-        emit('join_response', {"success": False, "reason": f"Nickname '{nickname}' is already in use."})
+        emit('join_response', {"success": False, "reason": f"NICK '{nickname}' is already in use."})
         return
 
     station_info = {"nickname": nickname, "role": role, "remote_addr": request.remote_addr}
@@ -110,10 +110,10 @@ def handle_join_net(data):
 
 @socketio.on('assign_callsign')
 def handle_assign_callsign(data):
-    """Instructor binds a tactical call sign to a nickname and unlocks their student dashboard."""
+    """SUNRAY binds a tactical call sign to a NICK and unlocks their student dashboard."""
     db = get_db()
     instructor = get_station_from_sid(db, request.sid)
-    if not instructor or instructor.role not in ["CONTROL", "INSTRUCTOR"]:
+    if not instructor or instructor.role not in ["SUNRAY", "CONTROL", "INSTRUCTOR"]:
         emit('error', {"reason": "Unauthorized action."})
         return
 
@@ -209,10 +209,10 @@ def handle_sync_log_entry(data):
 
 @socketio.on('set_signal_quality')
 def handle_set_signal_quality(data):
-    """Instructor alters signal quality for a student station."""
+    """SUNRAY alters signal quality for a student station."""
     db = get_db()
     instructor = get_station_from_sid(db, request.sid)
-    if not instructor or instructor.role not in ["CONTROL", "INSTRUCTOR"]:
+    if not instructor or instructor.role not in ["SUNRAY", "CONTROL", "INSTRUCTOR"]:
         emit('error', {"reason": "Unauthorized action."})
         return
 
@@ -228,7 +228,7 @@ def handle_set_signal_quality(data):
 
 @socketio.on('end_session')
 def handle_end_session(data):
-    """Instructor ends and terminates the net session. Purges ephemeral data."""
+    """SUNRAY ends and terminates the net session. Purges ephemeral data."""
     # pylint: disable=unused-argument
     db = get_db()
     instructor = get_station_from_sid(db, request.sid)

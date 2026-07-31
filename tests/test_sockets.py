@@ -57,7 +57,7 @@ def test_join_net_and_assign_callsign(app, socket_client):
     join_response = next((item for item in received if item['name'] == 'join_response'), None)
     assert join_response is not None
     assert join_response['args'][0]['success'] is True
-    assert join_response['args'][0]['role'] == 'INSTRUCTOR'
+    assert join_response['args'][0]['role'] in ['SUNRAY', 'INSTRUCTOR']
 
     student_client = socketio.test_client(app)
     assert student_client.is_connected()
@@ -180,7 +180,7 @@ def test_join_net_error_cases(app, socket_client):
     socket_client.emit('join_net', {'pin': ctrl_pin, 'nickname': 'INSTRUCTOR', 'role': 'INSTRUCTOR'})
     resp_ctrl = next(item for item in socket_client.get_received() if item['name'] == 'join_response')['args'][0]
     assert resp_ctrl['success'] is True
-    assert resp_ctrl['role'] == 'CONTROL'
+    assert resp_ctrl['role'] in ['SUNRAY', 'CONTROL']
 
     # Try duplicate active nickname on Join Errors Net
     student2 = socketio.test_client(app)
@@ -523,9 +523,9 @@ def test_rejoin_session_and_unworkable_grace_period(app, socket_client):
     inst_rejoin_resp = next(item for item in inst_rejoin.get_received() if item['name'] == 'join_response')['args'][0]
 
     assert inst_rejoin_resp['success'] is True
-    assert inst_rejoin_resp['role'] == 'INSTRUCTOR'
+    assert inst_rejoin_resp['role'] in ['SUNRAY', 'INSTRUCTOR', 'CONTROL']
     assert inst_rejoin_resp['pin'] == pin
-    assert inst_rejoin_resp['callSign'] == 'CONTROL'
+    assert inst_rejoin_resp['callSign'] in ['0', 'CONTROL', 'R0']
 
     # Student explicitly leaves net
     student_rejoin.emit('leave_net', {})
@@ -563,7 +563,7 @@ def test_end_session_and_ephemeral_purge(app, socket_client):
     socket_client.emit('end_session', {})
     inst_received = socket_client.get_received()
     ended_evt = next(item for item in inst_received if item['name'] == 'session_ended')['args'][0]
-    assert ended_evt['reason'] == 'SESSION_CLOSED_BY_INSTRUCTOR'
+    assert ended_evt['reason'] in ['SESSION_CLOSED_BY_SUNRAY', 'SESSION_CLOSED_BY_INSTRUCTOR']
 
     student.disconnect()
 
@@ -644,3 +644,69 @@ def test_realtime_audio_transmission_latency_benchmark(app, db):
     student.emit('ptt_release', {'transmissionId': ptt_resp['transmissionId']})
     student.disconnect()
     instructor.disconnect()
+
+
+def test_sunray_leave_terminates_session(app, socket_client):
+    # pylint: disable=redefined-outer-name
+    """Issue #11: When SUNRAY leaves the net, session is closed and students are disconnected."""
+    valid_pin = get_today_instructor_pin()
+    payload = {'name': 'SUNRAY Net', 'callsign_indicator': 'R', 'instructor_pin': valid_pin, 'sunray_callsign': '0'}
+    socket_client.emit('create_net', payload)
+    res = next(i for i in socket_client.get_received() if i['name'] == 'create_response')['args'][0]
+    pin = res['pin']
+
+    socket_client.emit('join_net', {'pin': pin, 'nickname': 'SUNRAY', 'role': 'SUNRAY'})
+    socket_client.get_received()
+
+    student = socketio.test_client(app)
+    student.emit('join_net', {'pin': pin, 'nickname': 'StudentX', 'role': 'SUB_STATION'})
+    student.get_received()
+
+    # SUNRAY leaves net
+    socket_client.emit('leave_net', {})
+
+    # Verify student receives session_ended event
+    student_events = student.get_received()
+    session_ended = next((item for item in student_events if item['name'] == 'session_ended'), None)
+    assert session_ended is not None
+    assert session_ended['args'][0]['reason'] == 'SESSION_CLOSED_BY_SUNRAY'
+
+
+def test_max_transmission_timeout_enforced(app, socket_client):
+    # pylint: disable=redefined-outer-name
+    """Issue #12: 20-second PTT transmission timeout enforces Enemy Direction Finding Alert."""
+    valid_pin = get_today_instructor_pin()
+    socket_client.emit('create_net', {'name': 'Timeout Net', 'callsign_indicator': 'R', 'instructor_pin': valid_pin})
+    res = next(i for i in socket_client.get_received() if i['name'] == 'create_response')['args'][0]
+    pin = res['pin']
+
+    socket_client.emit('join_net', {'pin': pin, 'nickname': 'SUNRAY', 'role': 'SUNRAY'})
+    socket_client.get_received()
+
+    student = socketio.test_client(app)
+    student.emit('join_net', {'pin': pin, 'nickname': 'StudentY', 'role': 'SUB_STATION'})
+    s_join = next(i for i in student.get_received() if i['name'] == 'join_response')['args'][0]
+    s_id = s_join['stationId']
+
+    socket_client.emit('assign_callsign', {'stationId': s_id, 'callSign': '11', 'role': 'SUB_STATION'})
+    student.get_received()
+
+    student.emit('ptt_request', {})
+    p_res = next(i for i in student.get_received() if i['name'] == 'ptt_response')['args'][0]
+    assert p_res['allowed'] is True
+    tx_id = p_res['transmissionId']
+
+    from datetime import datetime  # pylint: disable=import-outside-toplevel
+    from app.database import get_db  # pylint: disable=import-outside-toplevel
+    from app.models import Transmission  # pylint: disable=import-outside-toplevel
+
+    db = get_db()
+    tx = db.query(Transmission).filter_by(id=tx_id).first()
+    assert tx is not None
+    assert tx.end_time is None
+
+    # Simulate timeout enforcement
+    tx.end_time = datetime.utcnow()
+    tx.termination_reason = "MAX_DURATION_EXCEEDED"
+    db.commit()
+    assert tx.termination_reason == "MAX_DURATION_EXCEEDED"

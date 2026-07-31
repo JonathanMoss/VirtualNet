@@ -28,23 +28,23 @@
                 <input type="text" class="form-control text-uppercase text-center font-weight-bold" id="join-pin" placeholder="e.g. A3F9" maxlength="4" autocomplete="off" required>
               </div>
               <div class="mb-3">
-                <label for="join-nickname" class="form-label text-uppercase">Nickname</label>
-                <input type="text" class="form-control" id="join-nickname" placeholder="e.g. John" maxlength="20" autocomplete="off" required>
+                <label for="join-nickname" class="form-label text-uppercase">NICK</label>
+                <input type="text" class="form-control" id="join-nickname" placeholder="e.g. JOHN" maxlength="20" autocomplete="off" required>
               </div>
               <button type="button" id="btn-join-net" class="btn btn-tactical w-100 mt-2">CONNECT TO NET</button>
             </div>
             <div class="text-center mt-3">
-              <a href="#" id="toggle-create-view" class="text-decoration-none" style="color: var(--color-tactical-amber);">Instructor Portal</a>
+              <a href="#" id="toggle-create-view" class="text-decoration-none" style="color: var(--color-tactical-amber);">SUNRAY Portal</a>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Create Net Card (Instructor View - Hidden by default) -->
+      <!-- Create Net Card (SUNRAY View - Hidden by default) -->
       <div id="create-net-card" class="col-md-5 d-none">
         <div class="card shadow-lg border-secondary">
           <div class="card-header text-center">
-            <h3>📡 HOST NEW NET SESSION</h3>
+            <h3>📡 HOST NEW NET SESSION (SUNRAY)</h3>
           </div>
           <div class="card-body p-4">
             <div id="create-net-form">
@@ -57,6 +57,10 @@
                 <input type="text" class="form-control text-uppercase text-center" id="create-ci" placeholder="e.g. R" maxlength="1" value="R" autocomplete="off" required>
               </div>
               <div class="mb-3">
+                <label for="create-sunray-callsign" class="form-label text-uppercase">SUNRAY Callsign</label>
+                <input type="text" class="form-control text-uppercase text-center font-weight-bold" id="create-sunray-callsign" placeholder="0" maxlength="15" value="0" autocomplete="off">
+              </div>
+              <div class="mb-3">
                 <label for="create-instructor-pin" class="form-label text-uppercase">Daily Instructor 6-Digit PIN</label>
                 <input type="text" inputmode="numeric" style="-webkit-text-security: disc; text-security: disc;" class="form-control text-center" id="create-instructor-pin" placeholder="Enter 6-digit PIN" maxlength="6" pattern="\d{6}" autocomplete="off" data-lpignore="true" data-bwignore="true" required>
               </div>
@@ -66,7 +70,7 @@
               <p class="text-success font-weight-bold mb-1">NET SESSION CREATED</p>
               <h1 class="display-6" id="generated-pin" style="color: var(--color-phosphor-green);">-</h1>
               <small class="d-block text-white mb-2">Give this 4-character PIN to your student operators</small>
-              <button type="button" id="btn-go-instructor" class="btn btn-outline-tactical w-100">ENTER INSTRUCTOR DASHBOARD</button>
+              <button type="button" id="btn-go-instructor" class="btn btn-outline-tactical w-100">ENTER SUNRAY DASHBOARD</button>
             </div>
             <div class="text-center mt-3">
               <a href="#" id="toggle-join-view" class="text-decoration-none" style="color: var(--color-tactical-amber);">Back to Student Log-in</a>
@@ -78,7 +82,7 @@
     </div>
   </div>
 
-  <!-- ==================== MAIN DASHBOARD (STUDENT & INSTRUCTOR) ==================== -->
+  <!-- ==================== MAIN DASHBOARD ==================== -->
   <div id="dashboard-section" class="d-flex flex-column h-100 d-none">
     
     <!-- Header Bar -->
@@ -101,6 +105,12 @@
 
     <!-- Main Workspace -->
     <div class="container-fluid flex-grow-1 py-3 px-3">
+      
+      <!-- Enemy Direction Finding Alert Banner (Issue #12) -->
+      <div id="df-alert-banner" class="alert alert-danger text-center font-weight-bold d-none mb-3 border-3 border-danger shadow-lg" role="alert" style="background-color: #3f0000; color: #ff3333; font-size: 1.25rem;">
+        🚨 ENEMY DIRECTION FINDING ALERT! TRANSMISSION EXCEEDED 20 SECONDS! 🚨
+      </div>
+
       <div class="row h-100">
         
         <!-- Left Sidebar: Online Roster (col-md-3) -->
@@ -115,26 +125,26 @@
           </div>
         </aside>
 
-        <!-- Main Panel: Transceiver and Log sheet (col-md-9) -->
+        <!-- Main Panel: Transceiver and Reference Resources (col-md-9) -->
         <main class="col-md-9 mb-3 d-flex flex-column" style="max-height: calc(100vh - 120px);">
           
           <!-- PTT Transceiver Box -->
           <section id="ptt-container" class="card mb-3 ptt-card-idle shadow-sm position-relative">
             
-            <!-- Awaiting callsing lock overlay screen -->
+            <!-- Awaiting callsign lock overlay screen -->
             <div id="callsign-lock-overlay" class="position-absolute top-0 start-0 w-100 h-100 bg-dark d-flex flex-column align-items-center justify-content-center z-3">
               <div class="spinner-border text-success mb-3" role="status"></div>
               <h4 class="text-success text-center">AWAITING CALLSIGN ASSIGNMENT...</h4>
-              <p class="text-muted text-center max-width-75">The Net Control Station must assign your call sign before you can enter the active frequency.</p>
+              <p class="text-muted text-center max-width-75">SUNRAY must assign your call sign before you can enter the active frequency.</p>
               <div class="border border-secondary p-2 bg-black text-center font-weight-bold">
-                Operator Nickname: <span id="overlay-nickname" style="color: var(--color-tactical-amber);">-</span>
+                Operator NICK: <span id="overlay-nickname" style="color: var(--color-tactical-amber);">-</span>
               </div>
             </div>
 
             <div class="card-body d-flex flex-column flex-md-row align-items-center justify-content-between py-3">
               <div class="mb-3 mb-md-0 text-center text-md-start">
                 <h5 class="card-title text-uppercase m-0 font-weight-bold" id="ptt-state-text">RADIO SYSTEM IDLE</h5>
-                <p class="text-muted small m-0 mt-1" id="ptt-instruction">Hold SPACEBAR or push circular dial to speak</p>
+                <p class="text-muted small m-0 mt-1" id="ptt-instruction">Hold SPACEBAR or push circular dial to speak (Max 20s)</p>
                 <p class="text-warning small m-0 mt-1 d-none" id="audio-support-warning"></p>
                 <div class="mt-2" id="active-speaker-box">
                   <span class="text-muted">Active Speaker:</span> <span id="active-speaker" class="font-weight-bold text-white">None</span>
@@ -148,57 +158,96 @@
             </div>
           </section>
 
-          <!-- Digital Logsheet Card -->
+          <!-- Reference Resources Card (Issue #15: BATCO, VOCAB CARD, SLATE CARDS) -->
           <section class="card flex-grow-1 d-flex flex-column overflow-hidden">
-            <div class="card-header d-flex align-items-center justify-content-between py-2">
-              <span class="font-weight-bold text-uppercase">📝 Radio Logsheet (Operator Log)</span>
-              <div>
-                <button id="btn-paper-mode" class="btn btn-sm btn-outline-tactical">📝 SCREEN LOG: ON</button>
-              </div>
+            <div class="card-header py-2 bg-dark">
+              <ul class="nav nav-tabs card-header-tabs" id="resource-tabs" role="tablist">
+                <li class="nav-item">
+                  <button class="nav-link active text-uppercase font-weight-bold text-success" id="tab-batco-link" data-bs-toggle="tab" data-bs-target="#tab-batco" type="button" role="tab">🔢 BATCO REFERENCE</button>
+                </li>
+                <li class="nav-item">
+                  <button class="nav-link text-uppercase font-weight-bold text-success" id="tab-vocab-link" data-bs-toggle="tab" data-bs-target="#tab-vocab" type="button" role="tab">📖 VOCAB CARD</button>
+                </li>
+                <li class="nav-item">
+                  <button class="nav-link text-uppercase font-weight-bold text-success" id="tab-slates-link" data-bs-toggle="tab" data-bs-target="#tab-slates" type="button" role="tab">📋 SLATE CARDS</button>
+                </li>
+              </ul>
             </div>
             
-            <!-- Log Sheet Area -->
-            <div id="logsheet-wrapper" class="card-body p-0 flex-grow-1 overflow-auto">
-              <table class="table table-bordered table-tactical m-0" id="log-table">
-                <thead>
-                  <tr>
-                    <th style="width: 15%;">Time (DTG)</th>
-                    <th style="width: 12%;">From</th>
-                    <th style="width: 12%;">To</th>
-                    <th style="width: 15%;">Precedence</th>
-                    <th>Message Details / Operational Event</th>
-                    <th style="width: 10%;">Initials</th>
-                  </tr>
-                </thead>
-                <tbody id="log-tbody">
-                  <!-- Dynamically generated rows -->
-                </tbody>
-              </table>
-            </div>
-
-            <!-- Paper Mode collapsed placeholder watermark -->
-            <div id="paper-mode-overlay" class="card-body d-none flex-grow-1 d-flex align-items-center justify-content-center p-4">
-              <div class="paper-mode-watermark p-5 text-center w-100 bg-black">
-                <h3>📝 Paper Logging Mode Active</h3>
-                <p class="m-0 mt-2 text-muted">Maintain your log on physical slates or paper pad. Digital screen logsheet is hidden.</p>
+            <div class="card-body p-3 flex-grow-1 overflow-auto tab-content" id="resource-tab-content">
+              
+              <!-- BATCO TAB -->
+              <div class="tab-pane fade show active h-100" id="tab-batco" role="tabpanel">
+                <div class="d-flex flex-column align-items-center justify-content-center h-100 p-2 bg-black border border-secondary text-center">
+                  <h6 class="text-success mb-2 text-uppercase">🔢 BATCO TACTICAL SECURITY CODE SLIDE</h6>
+                  <div class="batco-grid-container w-100 overflow-auto bg-dark p-2 border border-success">
+                    <table class="table table-bordered table-dark table-sm m-0 text-center monospace small" id="main-batco-table">
+                      <thead>
+                        <tr class="text-success">
+                          <th>Row</th><th>0</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th>
+                        </tr>
+                      </thead>
+                      <tbody id="main-batco-tbody">
+                        <!-- Populated dynamically -->
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
-            </div>
 
-            <div class="card-footer py-2 text-muted small d-flex justify-content-between align-items-center">
-              <span>Press <b>Ctrl + N</b> or hit <b>Enter</b> on initials to save row & append next</span>
-              <button id="btn-export-log" class="btn btn-sm btn-outline-tactical">💾 EXPORT LOG (CSV)</button>
+              <!-- VOCAB CARD TAB -->
+              <div class="tab-pane fade h-100" id="tab-vocab" role="tabpanel">
+                <div class="d-flex flex-column h-100">
+                  <div class="mb-2 d-flex gap-2">
+                    <select class="form-select form-select-sm bg-dark text-white border-secondary" id="main-vocab-select"></select>
+                    <input type="text" class="form-control form-control-sm bg-dark text-white border-secondary" id="main-vocab-search" placeholder="Search vocabulary terms...">
+                  </div>
+                  <div class="border border-secondary bg-black flex-grow-1 overflow-auto">
+                    <table class="table table-dark table-striped table-hover m-0 small">
+                      <thead>
+                        <tr class="text-success"><th>Code / Term</th><th>Meaning / Procedure</th></tr>
+                      </thead>
+                      <tbody id="main-vocab-tbody">
+                        <!-- Populated dynamically -->
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              <!-- SLATE CARDS TAB -->
+              <div class="tab-pane fade h-100" id="tab-slates" role="tabpanel">
+                <div class="d-flex flex-column h-100">
+                  <div class="mb-2">
+                    <select class="form-select form-select-sm bg-dark text-white border-secondary" id="main-slate-select">
+                      <option value="SITREP">SITREP (Situation Report)</option>
+                      <option value="MIST">MIST AT (Casualty Report)</option>
+                      <option value="MEDEVAC">MEDEVAC 9-Line</option>
+                      <option value="CFF">Call for Fire (CFF) Slate</option>
+                      <option value="QAOS">QAOS (Quick Attack Orders)</option>
+                      <option value="JAMREP">JAMREP (Jamming Report)</option>
+                      <option value="EQUIPRECREQ">EQUIPRECREQ (Recovery Request)</option>
+                      <option value="EOINCREP">EOINCREP (Explosive Ordnance)</option>
+                    </select>
+                  </div>
+                  <div class="border border-secondary bg-black p-3 flex-grow-1 overflow-auto monospace text-success" id="main-slate-content" style="white-space: pre-wrap; font-size: 0.85rem; line-height: 1.4;">
+                    <!-- Loaded dynamically -->
+                  </div>
+                </div>
+              </div>
+
             </div>
           </section>
 
         </main>
       </div>
 
-      <!-- ==================== INSTRUCTOR PANEL (ADMIN UTILITIES) ==================== -->
+      <!-- ==================== SUNRAY PANEL (ADMIN UTILITIES) ==================== -->
       <section id="instructor-section" class="row d-none mt-3">
         <div class="col-12">
           <div class="card border-warning">
             <div class="card-header bg-dark text-warning d-flex justify-content-between align-items-center">
-              <span class="font-weight-bold">📡 INSTRUCTOR / NCS CENTRAL CONTROL PANEL</span>
+              <span class="font-weight-bold">📡 SUNRAY CENTRAL CONTROL PANEL</span>
               <span class="badge bg-warning text-dark font-weight-bold" id="instructor-pin-badge">PIN: -</span>
             </div>
             <div class="card-body p-3">
@@ -211,7 +260,7 @@
                     <table class="table table-dark table-sm m-0 align-middle">
                       <thead>
                         <tr>
-                          <th>Nickname</th>
+                          <th>NICK</th>
                           <th>Role</th>
                           <th>Call Sign</th>
                           <th>Action</th>
@@ -247,7 +296,7 @@
                       <thead>
                         <tr>
                           <th>Call Sign</th>
-                          <th>Nickname</th>
+                          <th>NICK</th>
                           <th>Role</th>
                           <th>State</th>
                           <th>Actions</th>
@@ -295,7 +344,7 @@
             <div class="accordion-body p-2 text-white small">
               <table class="table table-dark table-sm m-0 small">
                 <tbody>
-                  <tr><td><b>0</b> / <b>CS 0</b></td><td>Net Control Station (NCS)</td></tr>
+                  <tr><td><b>0</b> / <b>CS 0</b></td><td>Net Control Station (SUNRAY)</td></tr>
                   <tr><td><b>R</b> / <b>P</b></td><td>Routine / Priority Precedence</td></tr>
                   <tr><td><b>I</b> / <b>F</b></td><td>Immediate / Flash Precedence</td></tr>
                   <tr><td><b>C</b> / <b>S</b></td><td>Contact / Sighting Report</td></tr>
@@ -417,13 +466,13 @@
           <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body p-3">
-          <p class="small text-muted">Review current assigned stations on frequency and standard allocation structural templates (NCS = 0, Subordinate HQs = 10/20/30/40, Sections = 11-14 etc.)</p>
+          <p class="small text-muted">Review current assigned stations on frequency and standard allocation structural templates (SUNRAY = 0, Subordinate HQs = 10/20/30/40, Sections = 11-14 etc.)</p>
           <div class="border border-secondary bg-black">
             <table class="table table-dark table-sm table-striped m-0 text-center">
               <thead>
                 <tr>
                   <th>Call Sign</th>
-                  <th>Operator Nickname</th>
+                  <th>NICK</th>
                   <th>Role</th>
                   <th>Status</th>
                 </tr>

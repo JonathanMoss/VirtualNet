@@ -128,14 +128,17 @@ def process_station_disconnect(db, sid: str, transmission_service):
         eventlet.spawn(grace_period_disconnect_timer, station_id, net_id)
 
 
-def process_station_leave(db, sid: str, transmission_service):
-    """Handle explicit leave net event."""
+def process_station_leave(db, sid: str, transmission_service, session_service=None):
+    """Handle explicit leave net event. If SUNRAY leaves, terminate the session."""
     transmission_service.unregister_transmitting_sid(sid)
     station = get_station_from_sid(db, sid)
     if station:
-        _, net_id = detach_station(db, station, "LEFT")
-        registry.unregister_sid(sid)
-        broadcast_roster(db, net_id)
+        if station.role in ["SUNRAY", "CONTROL", "INSTRUCTOR"] and session_service:
+            session_service.end_net_session(db, station, registry, transmission_service)
+        else:
+            _, net_id = detach_station(db, station, "LEFT")
+            registry.unregister_sid(sid)
+            broadcast_roster(db, net_id)
 
 
 def find_existing_station(db, session_id: str, nickname: str, role: str, provided_station_id: str = None):
@@ -144,10 +147,10 @@ def find_existing_station(db, session_id: str, nickname: str, role: str, provide
     if provided_station_id:
         station = db.query(Station).filter_by(id=provided_station_id, net_id=session_id).first()
 
-    if not station and role in ["CONTROL", "INSTRUCTOR"]:
+    if not station and role in ["SUNRAY", "CONTROL", "INSTRUCTOR"]:
         station = db.query(Station).filter(
             Station.net_id == session_id,
-            Station.role.in_(["CONTROL", "INSTRUCTOR"])
+            Station.role.in_(["SUNRAY", "CONTROL", "INSTRUCTOR"])
         ).first()
 
     if not station:
@@ -174,12 +177,15 @@ def bind_or_create_station(db, session_id: str, station_info: dict, station: Sta
     role = station_info.get("role")
     remote_addr = station_info.get("remote_addr")
 
-    is_control = role in ["CONTROL", "INSTRUCTOR"]
+    is_control = role in ["SUNRAY", "CONTROL", "INSTRUCTOR"]
+    actual_role = "SUNRAY" if is_control else role
+
     if station:
         if is_control:
             station.nickname = nickname
-            station.role = role
-            station.call_sign = "CONTROL"
+            station.role = actual_role
+            if not station.call_sign:
+                station.call_sign = "0"
             station.status = "CONNECTED"
         else:
             station.status = "CONNECTED" if station.call_sign else "AWAITING_ASSIGNMENT"
@@ -187,8 +193,8 @@ def bind_or_create_station(db, session_id: str, station_info: dict, station: Sta
         station = Station(
             net_id=session_id,
             nickname=nickname,
-            role=role,
-            call_sign="CONTROL" if is_control else None,
+            role=actual_role,
+            call_sign="0" if is_control else None,
             status="CONNECTED" if is_control else "AWAITING_ASSIGNMENT"
         )
         db.add(station)

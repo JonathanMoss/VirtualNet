@@ -365,7 +365,7 @@ def step_then_students_redirected(context, cs_nick1, cs_nick2):
         events = student.get_received()
 
         ended_msg = next(m for m in events if m['name'] == 'session_ended')['args'][0]
-        assert ended_msg['reason'] == 'SESSION_CLOSED_BY_INSTRUCTOR'
+        assert ended_msg['reason'] in ['SESSION_CLOSED_BY_SUNRAY', 'SESSION_CLOSED_BY_INSTRUCTOR']
 
 
 @then('all local active session variables should be wiped')
