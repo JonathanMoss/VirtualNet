@@ -36,19 +36,25 @@ export class LogsheetManager {
     this.localCacheKey = 'virtualnet_draft_logs';
     this.entries = []; // Array of { id, dtg, fromCallSign, toCallSign, precedence, eventText, operatorInitials, synced, locked }
     
-    // Bind UI actions
-    document.getElementById('btn-export-log').addEventListener('click', () => this.exportToCSV());
+    // Bind UI actions if elements exist
+    const btnExport = document.getElementById('btn-export-log');
+    if (btnExport) {
+      btnExport.addEventListener('click', () => this.exportToCSV());
+    }
     
     // Global hotkey Ctrl+N to add row
     document.addEventListener('keydown', (e) => {
       if (e.ctrlKey && e.key.toLowerCase() === 'n') {
-        e.preventDefault();
-        this.appendNewRow();
+        if (this.tbody) {
+          e.preventDefault();
+          this.appendNewRow();
+        }
       }
     });
   }
 
   initialize() {
+    if (!this.tbody) return;
     this.tbody.innerHTML = '';
     this.entries = [];
     this.loadFromCache();
@@ -87,6 +93,7 @@ export class LogsheetManager {
   }
 
   appendNewRow(initialData = null) {
+    if (!this.tbody) return null;
     const id = initialData ? initialData.id : crypto.randomUUID();
     const dtg = initialData ? initialData.dtg : this.getDTG();
     const fromCallSign = initialData ? initialData.fromCallSign : '';
@@ -132,9 +139,11 @@ export class LogsheetManager {
       this.setupRowListeners(row, id);
     }
     
-    // Auto scroll tbody container
+    // Auto scroll tbody container if present
     const wrapper = document.getElementById('logsheet-wrapper');
-    wrapper.scrollTop = wrapper.scrollHeight;
+    if (wrapper) {
+      wrapper.scrollTop = wrapper.scrollHeight;
+    }
 
     return row;
   }
