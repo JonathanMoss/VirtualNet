@@ -230,30 +230,6 @@ class VirtualNetApp {
         });
       }
     });
-
-    // Host Success dashboard transition click & pointerdown
-    const btnGoInst = document.getElementById('btn-go-instructor');
-    if (btnGoInst) {
-      const handleInstructorTransition = (e) => {
-        if (e) {
-          e.preventDefault();
-          if (e.stopPropagation) e.stopPropagation();
-          if (e.stopImmediatePropagation) e.stopImmediatePropagation();
-        }
-        try {
-          const pin = document.getElementById('generated-pin').textContent.trim();
-          this.myNickname = "SUNRAY";
-          this.myRole = "SUNRAY";
-          this.netPin = pin;
-          this.socketManager.joinNet(pin, "SUNRAY", "SUNRAY");
-        } catch (err) {
-          console.warn("SUNRAY dashboard transition error:", err);
-        }
-      };
-
-      btnGoInst.addEventListener('pointerdown', handleInstructorTransition);
-      btnGoInst.addEventListener('click', handleInstructorTransition);
-    }
   }
 
   setupRosterFoldToggle() {
@@ -513,10 +489,6 @@ class VirtualNetApp {
       document.getElementById('header-net-name').textContent = `Net: ${data.netName}`;
       document.getElementById('header-net-name').classList.remove('d-none');
       document.getElementById('header-callsign').textContent = `Callsign: ${this.myCallSign}`;
-      const pinBadgeCreate = document.getElementById('instructor-pin-badge');
-      if (pinBadgeCreate) {
-        pinBadgeCreate.textContent = `PIN: ${data.pin}`;
-      }
 
       if (WebAudioEngine.isMediaCaptureSupported()) {
         document.getElementById('ptt-btn').disabled = false;
@@ -565,26 +537,6 @@ class VirtualNetApp {
         
         // Show SUNRAY Dashboard controls
         document.getElementById('instructor-section').classList.remove('d-none');
-        const pinBadgeJoin = document.getElementById('instructor-pin-badge');
-        if (pinBadgeJoin) {
-          pinBadgeJoin.textContent = `PIN: ${data.pin}`;
-        }
-        
-        // Setup Instructor Session controls
-        const endBtn = document.getElementById('btn-end-session');
-        if (endBtn && !endBtn.dataset.bound) {
-          endBtn.dataset.bound = "true";
-          endBtn.addEventListener('click', async () => {
-            const confirmed = await showConfirm("Are you sure you want to end this Net Session? All students will be kicked.", {
-              title: "END NET SESSION",
-              confirmText: "END SESSION",
-              confirmClass: "btn btn-danger btn-sm text-uppercase font-weight-bold"
-            });
-            if (confirmed) {
-              this.socketManager.endSession();
-            }
-          });
-        }
 
 
       } else if (data.status === 'CONNECTED' && data.callSign) {
