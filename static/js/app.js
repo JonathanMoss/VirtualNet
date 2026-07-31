@@ -62,11 +62,8 @@ class VirtualNetApp {
     // 4. Setup PTT UI Handlers & Mobile triggers
     this.setupPTTHandlers();
     
-    // 5. Paper Mode toggle trigger (optional element)
-    const btnPaper = document.getElementById('btn-paper-mode');
-    if (btnPaper) {
-      btnPaper.addEventListener('click', () => this.togglePaperMode());
-    }
+    // 5. Setup NET Roster sidebar fold/unfold trigger
+    this.setupRosterFoldToggle();
 
     // 6. Connect Socket
     this.socketManager.connect();
@@ -258,6 +255,44 @@ class VirtualNetApp {
 
       btnGoInst.addEventListener('pointerdown', handleInstructorTransition);
       btnGoInst.addEventListener('click', handleInstructorTransition);
+    }
+  }
+
+  setupRosterFoldToggle() {
+    const sidebar = document.getElementById('net-roster-sidebar');
+    const toggleBtn = document.getElementById('btn-toggle-roster');
+    const header = document.getElementById('roster-card-header');
+
+    if (sidebar && toggleBtn && header) {
+      const toggleRoster = () => {
+        sidebar.classList.toggle('collapsed');
+        const isCollapsed = sidebar.classList.contains('collapsed');
+        try {
+          localStorage.setItem('virtualnet_roster_collapsed', isCollapsed ? 'true' : 'false');
+        } catch (e) {
+          // Ignored
+        }
+      };
+
+      toggleBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleRoster();
+      });
+
+      header.addEventListener('click', () => {
+        if (sidebar.classList.contains('collapsed')) {
+          toggleRoster();
+        }
+      });
+
+      // Restore collapsed preference
+      try {
+        if (localStorage.getItem('virtualnet_roster_collapsed') === 'true') {
+          sidebar.classList.add('collapsed');
+        }
+      } catch (e) {
+        // Ignored
+      }
     }
   }
 

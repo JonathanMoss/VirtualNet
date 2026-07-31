@@ -106,21 +106,21 @@
         🚨 ENEMY DIRECTION FINDING ALERT! TRANSMISSION EXCEEDED 20 SECONDS! 🚨
       </div>
 
-      <div class="row h-100">
+      <div class="row h-100 flex-nowrap g-3">
         
-        <!-- Left Sidebar: Online Roster (col-md-3) -->
-        <aside class="col-md-3 mb-3 d-flex flex-column" style="max-height: calc(100vh - 120px);">
-          <div class="card flex-grow-1 overflow-hidden">
-            <div class="card-header text-uppercase d-flex justify-content-between align-items-center" 
-                 data-bs-toggle="collapse" 
-                 data-bs-target="#roster-collapse" 
-                 aria-expanded="true" 
-                 aria-controls="roster-collapse"
-                 style="cursor: pointer; user-select: none;">
-              <span class="font-weight-bold">👥 NET</span>
-              <span class="collapse-chevron small">▼</span>
+        <!-- Left Sidebar: NET Roster (Vertical Foldable Panel) -->
+        <aside id="net-roster-sidebar" class="col-auto net-sidebar d-flex flex-column" style="width: 25%; min-width: 250px; max-height: calc(100vh - 120px);">
+          <div class="card flex-grow-1 overflow-hidden h-100">
+            <div id="roster-card-header" class="card-header text-uppercase d-flex justify-content-between align-items-center py-2 px-3" style="cursor: pointer; user-select: none;">
+              <span class="font-weight-bold d-flex align-items-center gap-2 fs-6">
+                <span>👥</span>
+                <span class="roster-title-text">NET</span>
+              </span>
+              <button id="btn-toggle-roster" class="btn btn-sm text-success p-0 border-0 shadow-none" title="Toggle NET panel">
+                <span class="toggle-icon d-inline-block transition-transform">◀</span>
+              </button>
             </div>
-            <div id="roster-collapse" class="collapse show flex-grow-1 overflow-auto">
+            <div id="roster-collapse-body" class="flex-grow-1 overflow-auto">
               <div class="list-group list-group-flush list-group-tactical" id="roster-list">
                 <!-- Dynamically populated roster -->
               </div>
@@ -128,8 +128,8 @@
           </div>
         </aside>
 
-        <!-- Main Panel: Transceiver and Reference Resources (col-md-9) -->
-        <main class="col-md-9 mb-3 d-flex flex-column" style="max-height: calc(100vh - 120px);">
+        <!-- Main Panel: Transceiver and Reference Resources -->
+        <main id="main-content-panel" class="col flex-grow-1 mb-3 d-flex flex-column overflow-hidden" style="max-height: calc(100vh - 120px);">
           
           <!-- PTT Transceiver Box -->
           <section id="ptt-container" class="card mb-3 ptt-card-idle shadow-sm position-relative">

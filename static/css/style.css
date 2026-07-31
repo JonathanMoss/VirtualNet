@@ -300,12 +300,34 @@ h1, h2, h3, h4, h5, h6, .tactical-header {
   color: var(--color-desert-sand);
 }
 
-/* Foldable Card Header Chevron */
-[data-bs-toggle="collapse"] .collapse-chevron {
-  transition: transform 0.2s ease-in-out;
-  display: inline-block;
+/* Vertical Foldable NET Sidebar */
+.net-sidebar {
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-[data-bs-toggle="collapse"].collapsed .collapse-chevron {
-  transform: rotate(-90deg);
+.net-sidebar.collapsed {
+  width: 52px !important;
+  min-width: 52px !important;
+}
+
+.net-sidebar.collapsed .roster-title-text,
+.net-sidebar.collapsed #roster-collapse-body {
+  display: none !important;
+}
+
+.net-sidebar.collapsed #roster-card-header {
+  flex-direction: column;
+  justify-content: flex-start !important;
+  gap: 1rem;
+  padding-top: 0.75rem !important;
+  padding-bottom: 0.75rem !important;
+  height: 100%;
+}
+
+.net-sidebar.collapsed .toggle-icon {
+  transform: rotate(180deg);
+}
+
+.transition-transform {
+  transition: transform 0.2s ease-in-out;
 }
