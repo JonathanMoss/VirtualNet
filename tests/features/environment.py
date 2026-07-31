@@ -3,7 +3,11 @@ import os
 import sys
 
 # Ensure project root is in the path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
+sys.path.insert(0, ROOT)
+
+os.environ['TESTING'] = '1'
+os.environ.setdefault('DATABASE_URL', f'sqlite:///{ROOT}/virtualnet_test.db')
 
 # pylint: disable=wrong-import-position
 from app import create_app

@@ -446,7 +446,10 @@ class VirtualNetApp {
       document.getElementById('header-net-name').textContent = `Net: ${data.netName}`;
       document.getElementById('header-net-name').classList.remove('d-none');
       document.getElementById('header-callsign').textContent = `Callsign: ${this.myCallSign}`;
-      document.getElementById('instructor-pin-badge').textContent = `PIN: ${data.pin}`;
+      const pinBadgeCreate = document.getElementById('instructor-pin-badge');
+      if (pinBadgeCreate) {
+        pinBadgeCreate.textContent = `PIN: ${data.pin}`;
+      }
 
       if (WebAudioEngine.isMediaCaptureSupported()) {
         document.getElementById('ptt-btn').disabled = false;
@@ -495,7 +498,10 @@ class VirtualNetApp {
         
         // Show SUNRAY Dashboard controls
         document.getElementById('instructor-section').classList.remove('d-none');
-        document.getElementById('instructor-pin-badge').textContent = `PIN: ${data.pin}`;
+        const pinBadgeJoin = document.getElementById('instructor-pin-badge');
+        if (pinBadgeJoin) {
+          pinBadgeJoin.textContent = `PIN: ${data.pin}`;
+        }
         
         // Setup Instructor Session controls
         const endBtn = document.getElementById('btn-end-session');
@@ -542,6 +548,11 @@ class VirtualNetApp {
       this.netId = data.netSession.netId;
       this.netName = data.netSession.netName;
       this.netState = data.netSession.netState;
+
+      // Update local session storage / cookie credentials when callsign changes (Issue #26)
+      if (this.netPin) {
+        this.saveSession(this.netPin, this.myNickname, this.myRole, this.myStationId);
+      }
 
       // Unlock dashboard
       document.getElementById('callsign-lock-overlay').classList.add('d-none');
@@ -749,9 +760,32 @@ class VirtualNetApp {
               </span>
             </td>
             <td>
+              <button class="btn btn-sm btn-outline-warning btn-change-callsign me-1" data-id="${s.stationId}">CALLSIGN</button>
               <button class="btn btn-sm btn-outline-danger btn-kick-student" data-id="${s.stationId}">KICK</button>
             </td>
           `;
+
+          // Add listener for changing callsign (Issue #26)
+          const changeBtn = tr.querySelector('.btn-change-callsign');
+          if (changeBtn) {
+            changeBtn.addEventListener('click', () => {
+              const currentCS = s.callSign || '';
+              const newCS = prompt(`Enter new callsign/suffix for station '${s.nickname}':`, currentCS);
+              if (newCS !== null && newCS.trim() !== '') {
+                this.socketManager.assignCallsign(s.stationId, newCS.trim(), s.role);
+              }
+            });
+          }
+
+          // Add listener for kicking student (Issue #26)
+          const kickBtn = tr.querySelector('.btn-kick-student');
+          if (kickBtn) {
+            kickBtn.addEventListener('click', () => {
+              if (confirm(`Are you sure you want to kick station '${s.callSign || s.nickname}' from the net session?`)) {
+                this.socketManager.kickStation(s.stationId);
+              }
+            });
+          }
 
           instructorRoster.appendChild(tr);
         }
@@ -761,6 +795,16 @@ class VirtualNetApp {
 
     if (pendingQueueCount === 0 && admissionsQueue) {
       admissionsQueue.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">No students waiting in queue.</td></tr>';
+    }
+
+    // Issue #25: Slowly flash NET column header whilst there is anyone in the callsign assignment queue
+    const rosterHeader = document.getElementById('roster-card-header');
+    if (rosterHeader) {
+      if (isSunrayView && pendingQueueCount > 0) {
+        rosterHeader.classList.add('slow-flash-header');
+      } else {
+        rosterHeader.classList.remove('slow-flash-header');
+      }
     }
 
     if (!activeSpeakerFound) {

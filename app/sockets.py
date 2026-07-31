@@ -162,6 +162,31 @@ def handle_assign_callsign(data):
     broadcast_roster(db, session.id)
 
 
+@socketio.on('kick_station')
+def handle_kick_station(data):
+    """SUNRAY forcibly kicks a student station from the net session."""
+    db = get_db()
+    instructor = get_station_from_sid(db, request.sid)
+    if not instructor or instructor.role not in ["SUNRAY", "CONTROL", "INSTRUCTOR"]:
+        emit('error', {"reason": "Unauthorized action."})
+        return
+
+    station_id = data.get('stationId')
+    station = db.query(Station).filter_by(id=station_id).first()
+    if not station:
+        emit('error', {"reason": "Station not found."})
+        return
+
+    target_sid = registry.get_sid(station.id)
+    net_id = station.net_id
+    station_service.detach_station(db, station, "DISCONNECTED")
+    if target_sid:
+        registry.unregister_sid(target_sid)
+        socketio.emit('kicked', {"reason": "You have been kicked from the net session by SUNRAY."}, to=target_sid)
+
+    broadcast_roster(db, net_id)
+
+
 @socketio.on('ptt_request')
 def handle_ptt_request(data):
     """Station requests frequency access to transmit voice."""

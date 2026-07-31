@@ -3,30 +3,15 @@ from pydantic import ValidationError
 import pytest
 from conftest import get_today_instructor_pin
 
-from app import create_app, socketio
-from app.database import Base, engine, db_session, init_db
+from app import socketio
+from app.database import db_session
 from app.models import NetSession, Station, LogEntry
 from app.schemas import NetSessionCreate, StationCreate, LogEntryCreate
 
 
 
 
-@pytest.fixture(scope="module")
-def app():
-    """Module-level Flask app test fixture."""
-    app_instance = create_app()
-    app_instance.config['TESTING'] = True
 
-    # Initialize database
-    init_db()
-    Base.metadata.drop_all(bind=engine)
-    Base.metadata.create_all(bind=engine)
-
-    yield app_instance
-
-    # Cleanup
-    Base.metadata.drop_all(bind=engine)
-    db_session.remove()
 
 
 def test_net_session_create_validation():
