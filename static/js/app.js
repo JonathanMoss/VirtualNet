@@ -425,15 +425,15 @@ class VirtualNetApp {
   handleCreateResponse(data) {
     if (data.success) {
       this.myStationId = data.stationId;
-      this.myNickname = "Instructor";
-      this.myRole = data.role || "CONTROL";
-      this.myCallSign = data.callSign || "CONTROL";
+      this.myNickname = "SUNRAY";
+      this.myRole = data.role || "SUNRAY";
+      this.myCallSign = data.callSign || data.sunrayCallsign || "0";
       this.netId = data.netId;
       this.netName = data.netName;
       this.netPin = data.pin;
 
       // Save session cookie
-      this.saveSession(data.pin, "Instructor", this.myRole, data.stationId);
+      this.saveSession(data.pin, "SUNRAY", this.myRole, data.stationId);
 
       // Transition to Dashboard directly
       document.getElementById('generated-pin').textContent = data.pin;
@@ -445,14 +445,12 @@ class VirtualNetApp {
       document.getElementById('header-net-pin').textContent = `PIN: ${data.pin}`;
       document.getElementById('header-net-name').textContent = `Net: ${data.netName}`;
       document.getElementById('header-net-name').classList.remove('d-none');
-      document.getElementById('header-callsign').textContent = `Callsign: CONTROL`;
+      document.getElementById('header-callsign').textContent = `Callsign: ${this.myCallSign}`;
       document.getElementById('instructor-pin-badge').textContent = `PIN: ${data.pin}`;
 
       if (WebAudioEngine.isMediaCaptureSupported()) {
         document.getElementById('ptt-btn').disabled = false;
       }
-
-      this.logsheetManager.initialize();
     } else {
       alert(`Failed to create net session: ${data.reason}`);
     }
@@ -644,6 +642,16 @@ class VirtualNetApp {
     let pendingQueueCount = 0;
 
     const isSunrayView = (this.myRole === 'SUNRAY' || this.myRole === 'CONTROL' || this.myRole === 'INSTRUCTOR');
+
+    // Sync current station callsign from active roster
+    const me = stations.find(s => s.stationId === this.myStationId);
+    if (me && me.callSign) {
+      this.myCallSign = me.callSign;
+      const headerCallsign = document.getElementById('header-callsign');
+      if (headerCallsign) {
+        headerCallsign.textContent = `Callsign: ${this.myCallSign}`;
+      }
+    }
 
     stations.forEach(s => {
       // 1. Build Student view roster panel
