@@ -9,7 +9,7 @@
   <!-- Custom Monospace Tactical CRT Styles -->
   <link href="/static/css/style.css" rel="stylesheet">
 </head>
-<body class="d-flex flex-column h-100 crt-screen">
+<body class="d-flex flex-column h-100">
 
   <!-- ==================== LANDING / LOGIN SCREEN ==================== -->
   <div id="landing-section" class="container d-flex align-items-center justify-content-center flex-grow-1 min-vh-100 py-4">
@@ -184,18 +184,33 @@
               
               <!-- BATCO TAB -->
               <div class="tab-pane fade show active h-100" id="tab-batco" role="tabpanel">
-                <div class="d-flex flex-column align-items-center justify-content-center h-100 p-2 bg-black border border-secondary text-center overflow-auto">
-                  <img src="/static/images/BATCO/BATCO.png" alt="BATCO Reference Card" class="img-fluid rounded border border-success" style="max-height: 100%; object-fit: contain;">
+                <div class="d-flex flex-column h-100">
+                  <div class="mb-2 d-flex justify-content-between align-items-center bg-dark p-1 px-2 border border-secondary rounded">
+                    <span class="small font-weight-bold text-success">BATCO REFERENCE</span>
+                    <div class="btn-group btn-group-sm">
+                      <button class="btn btn-outline-secondary text-white btn-zoom-in" data-target="main-batco-img" title="Zoom In">🔍+</button>
+                      <button class="btn btn-outline-secondary text-white btn-zoom-out" data-target="main-batco-img" title="Zoom Out">🔍-</button>
+                      <button class="btn btn-outline-secondary text-white btn-zoom-reset" data-target="main-batco-img" title="Reset Zoom">↺ Reset</button>
+                    </div>
+                  </div>
+                  <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 p-2 bg-black border border-secondary text-center overflow-hidden position-relative">
+                    <img id="main-batco-img" src="/static/images/BATCO/BATCO.png" alt="BATCO Reference Card" class="img-fluid rounded border border-success" style="max-height: 100%; object-fit: contain;">
+                  </div>
                 </div>
               </div>
 
               <!-- VOCAB CARD TAB -->
               <div class="tab-pane fade h-100" id="tab-vocab" role="tabpanel">
                 <div class="d-flex flex-column h-100">
-                  <div class="mb-2">
-                    <select class="form-select form-select-sm bg-dark text-white border-secondary" id="main-vocab-select"></select>
+                  <div class="mb-2 d-flex gap-2 align-items-center">
+                    <select class="form-select form-select-sm bg-dark text-white border-secondary flex-grow-1" id="main-vocab-select"></select>
+                    <div class="btn-group btn-group-sm flex-shrink-0">
+                      <button class="btn btn-outline-secondary text-white btn-zoom-in" data-target="main-vocab-img" title="Zoom In">🔍+</button>
+                      <button class="btn btn-outline-secondary text-white btn-zoom-out" data-target="main-vocab-img" title="Zoom Out">🔍-</button>
+                      <button class="btn btn-outline-secondary text-white btn-zoom-reset" data-target="main-vocab-img" title="Reset Zoom">↺ Reset</button>
+                    </div>
                   </div>
-                  <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 p-2 bg-black border border-secondary text-center overflow-auto">
+                  <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 p-2 bg-black border border-secondary text-center overflow-hidden position-relative">
                     <img id="main-vocab-img" src="/static/images/VOCAB/001-OPS%201.png" alt="Vocab Card" class="img-fluid rounded border border-success" style="max-height: 100%; object-fit: contain;">
                   </div>
                 </div>
@@ -204,16 +219,21 @@
               <!-- SLATE CARDS TAB -->
               <div class="tab-pane fade h-100" id="tab-slates" role="tabpanel">
                 <div class="d-flex flex-column h-100">
-                  <div class="mb-2">
-                    <select class="form-select form-select-sm bg-dark text-white border-secondary" id="main-slate-select">
+                  <div class="mb-2 d-flex gap-2 align-items-center">
+                    <select class="form-select form-select-sm bg-dark text-white border-secondary flex-grow-1" id="main-slate-select">
                       <option value="CFF">CFF (Call for Fire)</option>
                       <option value="CONTACT">CONTACT Report</option>
                       <option value="MEDEVAC">MEDEVAC 9-Line</option>
                       <option value="MISTAT">MISTAT (Casualty Report)</option>
                       <option value="SITREP">SITREP (Situation Report)</option>
                     </select>
+                    <div class="btn-group btn-group-sm flex-shrink-0">
+                      <button class="btn btn-outline-secondary text-white btn-zoom-in" data-target="main-slate-img" title="Zoom In">🔍+</button>
+                      <button class="btn btn-outline-secondary text-white btn-zoom-out" data-target="main-slate-img" title="Zoom Out">🔍-</button>
+                      <button class="btn btn-outline-secondary text-white btn-zoom-reset" data-target="main-slate-img" title="Reset Zoom">↺ Reset</button>
+                    </div>
                   </div>
-                  <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 p-2 bg-black border border-secondary text-center overflow-auto">
+                  <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 p-2 bg-black border border-secondary text-center overflow-hidden position-relative">
                     <img id="main-slate-img" src="/static/images/SLATE/CFF.png" alt="Slate Card" class="img-fluid rounded border border-success" style="max-height: 100%; object-fit: contain;">
                   </div>
                 </div>
@@ -375,12 +395,17 @@
           </h2>
           <div id="collapseVocab" class="accordion-collapse collapse" data-bs-parent="#aideMemoireAccordion">
             <div class="accordion-body p-2 text-white small">
-              <div class="mb-2">
+              <div class="mb-2 d-flex gap-2 align-items-center">
                 <select class="form-select form-select-sm" id="select-vocab-card">
                   <!-- Cards list -->
                 </select>
+                <div class="btn-group btn-group-sm flex-shrink-0">
+                  <button class="btn btn-outline-secondary text-white btn-zoom-in" data-target="vocab-card-img" title="Zoom In">🔍+</button>
+                  <button class="btn btn-outline-secondary text-white btn-zoom-out" data-target="vocab-card-img" title="Zoom Out">🔍-</button>
+                  <button class="btn btn-outline-secondary text-white btn-zoom-reset" data-target="vocab-card-img" title="Reset Zoom">↺</button>
+                </div>
               </div>
-              <div class="d-flex flex-column align-items-center justify-content-center p-2 bg-black border border-secondary text-center overflow-auto" style="max-height: 350px;">
+              <div class="d-flex flex-column align-items-center justify-content-center p-2 bg-black border border-secondary text-center overflow-hidden position-relative" style="height: 350px;">
                 <img id="vocab-card-img" src="/static/images/VOCAB/001-OPS%201.png" alt="Vocab Card" class="img-fluid rounded border border-success" style="max-height: 100%; object-fit: contain;">
               </div>
             </div>
@@ -396,14 +421,21 @@
           </h2>
           <div id="collapseSlates" class="accordion-collapse collapse" data-bs-parent="#aideMemoireAccordion">
             <div class="accordion-body p-2 text-white small">
-              <select class="form-select form-select-sm mb-2" id="select-slate-template">
-                <option value="CFF">CFF (Call for Fire)</option>
-                <option value="CONTACT">CONTACT Report</option>
-                <option value="MEDEVAC">MEDEVAC 9-Line</option>
-                <option value="MISTAT">MISTAT (Casualty Report)</option>
-                <option value="SITREP">SITREP (Situation Report)</option>
-              </select>
-              <div class="d-flex flex-column align-items-center justify-content-center p-2 bg-black border border-secondary text-center overflow-auto" style="max-height: 350px;">
+              <div class="mb-2 d-flex gap-2 align-items-center">
+                <select class="form-select form-select-sm" id="select-slate-template">
+                  <option value="CFF">CFF (Call for Fire)</option>
+                  <option value="CONTACT">CONTACT Report</option>
+                  <option value="MEDEVAC">MEDEVAC 9-Line</option>
+                  <option value="MISTAT">MISTAT (Casualty Report)</option>
+                  <option value="SITREP">SITREP (Situation Report)</option>
+                </select>
+                <div class="btn-group btn-group-sm flex-shrink-0">
+                  <button class="btn btn-outline-secondary text-white btn-zoom-in" data-target="slate-card-img" title="Zoom In">🔍+</button>
+                  <button class="btn btn-outline-secondary text-white btn-zoom-out" data-target="slate-card-img" title="Zoom Out">🔍-</button>
+                  <button class="btn btn-outline-secondary text-white btn-zoom-reset" data-target="slate-card-img" title="Reset Zoom">↺</button>
+                </div>
+              </div>
+              <div class="d-flex flex-column align-items-center justify-content-center p-2 bg-black border border-secondary text-center overflow-hidden position-relative" style="height: 350px;">
                 <img id="slate-card-img" src="/static/images/SLATE/CFF.png" alt="Slate Card" class="img-fluid rounded border border-success" style="max-height: 100%; object-fit: contain;">
               </div>
             </div>

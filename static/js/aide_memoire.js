@@ -1,4 +1,5 @@
 // Aide Memoire Module - VirtualNet
+import { panZoomController } from './pan_zoom.js';
 
 export class AideMemoireManager {
   constructor() {
@@ -58,63 +59,14 @@ export class AideMemoireManager {
 
     // Tactical Slate Cards
     this.slates = {
-      "SITREP": `SITREP TEMPLATE
------------------------------
-LINE 1: DTG (Date Time Group)
-LINE 2: UNIT / CALLSIGN
-LINE 3: ENEMY ACTIVITY / LOC
-LINE 4: OWN SITUATION / GRID
-LINE 5: INTENTION / NEXT MOVE
-LINE 6: ADMIN & LOGISTICS`,
-      "MIST": `MIST CASUALTY REPORT
------------------------------
-M - MECHANISM OF INJURY
-I - INJURIES SUSTAINED
-S - SIGNS & VITAL STATS
-T - TREATMENT GIVEN`,
-      "MEDEVAC": `9-LINE MEDEVAC SLATE
------------------------------
-LINE 1: LOCATION OF PICKUP (GRID)
-LINE 2: FREQ & CALL SIGN AT SITE
-LINE 3: NUMBER OF PATIENTS BY PRECEDENCE
-LINE 4: SPECIAL EQUIPMENT REQUIRED
-LINE 5: NUMBER OF PATIENTS BY TYPE
-LINE 6: SECURITY AT PICKUP SITE
-LINE 7: METHOD OF MARKING SITE
-LINE 8: PATIENT NATIONALITY & STATUS
-LINE 9: NBC CONTAMINATION / TERRAIN`,
-      "CFF": `CALL FOR FIRE (CFF) SLATE
------------------------------
-1. OBSERVER IDENTIFICATION & WARN O
-2. TARGET LOCATION (GRID 6/8 FIG)
-3. TARGET DESCRIPTION
-4. METHOD OF ENGAGEMENT
-5. METHOD OF FIRE AND CONTROL`,
-      "QAOS": `QUICK ATTACK ORDERS (QAOS)
------------------------------
-Q - QUICK OBJECTIVE / GROUND
-A - AXIS OF ADVANCE
-O - ORDERS & TASK ALLOCATION
-S - SIGNALS & TIMINGS`,
-      "JAMREP": `JAMREP (JAMMING REPORT)
------------------------------
-1. CALL SIGN AFFECTED
-2. FREQUENCY / BAND JAMMED
-3. TYPE OF INTERFERENCE / NOISE
-4. SIGNAL STRENGTH & BEARING
-5. TIME STARTED / DURATION`,
-      "EQUIPRECREQ": `RECOVERY REQUEST (EQUIPRECREQ)
------------------------------
-1. CALLSIGN & LOCATION
-2. VEHICLE TYPE & REGISTRATION
-3. NATURE OF CASUALTY / FAULT
-4. RECOVERY METHOD REQUIRED`,
-      "EOINCREP": `EOINCREP (EXPLOSIVE ORDNANCE)
------------------------------
-1. DTG & DISCOVERER
-2. EXACT LOCATION (GRID)
-3. ITEM TYPE & DESCRIPTION
-4. HAZARD TO FRIENDLY / CIVILIAN`
+      "SITREP": `SITREP TEMPLATE`,
+      "MIST": `MIST CASUALTY REPORT`,
+      "MEDEVAC": `9-LINE MEDEVAC SLATE`,
+      "CFF": `CALL FOR FIRE (CFF) SLATE`,
+      "QAOS": `QUICK ATTACK ORDERS (QAOS)`,
+      "JAMREP": `JAMREP (JAMMING REPORT)`,
+      "EQUIPRECREQ": `RECOVERY REQUEST (EQUIPRECREQ)`,
+      "EOINCREP": `EOINCREP (EXPLOSIVE ORDNANCE)`
     };
   }
 
@@ -148,12 +100,6 @@ S - SIGNALS & TIMINGS`,
     if (this.mainVocabSelect) {
       this.mainVocabSelect.addEventListener('change', () => this.renderVocabCard());
     }
-    if (this.vocabSearch) {
-      this.vocabSearch.addEventListener('input', () => this.renderVocabCard());
-    }
-    if (this.mainVocabSearch) {
-      this.mainVocabSearch.addEventListener('input', () => this.renderVocabCard());
-    }
 
     if (this.slateSelect) {
       this.slateSelect.addEventListener('change', () => this.renderSlateCard());
@@ -166,6 +112,13 @@ S - SIGNALS & TIMINGS`,
     this.renderBatcoTable();
     this.renderVocabCard();
     this.renderSlateCard();
+
+    // Attach Pan & Zoom functionality to resource images
+    ['main-batco-img', 'main-vocab-img', 'main-slate-img', 'vocab-card-img', 'slate-card-img'].forEach(imgId => {
+      panZoomController.attach(imgId);
+    });
+
+    panZoomController.initGlobalZoomButtons();
   }
 
   populateVocabSelect(selectElement) {
@@ -220,6 +173,7 @@ S - SIGNALS & TIMINGS`,
       if (imgEl && selectEl.value) {
         imgEl.src = `/static/images/VOCAB/${encodeURIComponent(selectEl.value)}.png`;
         imgEl.alt = selectEl.value;
+        panZoomController.reset(imgId);
       }
     };
 
@@ -234,6 +188,7 @@ S - SIGNALS & TIMINGS`,
       if (imgEl && selectEl.value) {
         imgEl.src = `/static/images/SLATE/${encodeURIComponent(selectEl.value)}.png`;
         imgEl.alt = selectEl.value;
+        panZoomController.reset(imgId);
       }
     };
 
