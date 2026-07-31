@@ -4,23 +4,19 @@ import time
 import pytest
 from conftest import get_today_instructor_pin
 
-from app import create_app, socketio
-from app.database import Base, db_session, engine, init_db
+from app import socketio
+from app.database import db_session
 from app.models import NetSession, Station
 from app.sockets import sid_to_station_id, station_id_to_sid, transmitting_sids
 
 
-
-
-@pytest.fixture(scope="function")
-def app():
-    """Create the Flask app and initialize the database for socket tests."""
-    app_instance = create_app()
-    app_instance.config['TESTING'] = True
-    init_db()
-    yield app_instance
-    db_session.remove()
-    Base.metadata.drop_all(bind=engine)
+@pytest.fixture(autouse=True)
+def reset_socket_registries():
+    """Reset socket registries before and after each test."""
+    sid_to_station_id.clear()
+    station_id_to_sid.clear()
+    transmitting_sids.clear()
+    yield
     sid_to_station_id.clear()
     station_id_to_sid.clear()
     transmitting_sids.clear()

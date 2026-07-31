@@ -84,6 +84,12 @@ export class SocketManager {
       this.app.resetToLanding();
     });
 
+    this.socket.on('kicked', (data) => {
+      alert(data.reason || "You have been kicked from the net by SUNRAY.");
+      this.app.clearSavedSession();
+      this.app.resetToLanding();
+    });
+
     this.socket.on('error', (data) => {
       alert(`Error: ${data.reason}`);
     });
@@ -108,6 +114,10 @@ export class SocketManager {
 
   assignCallsign(stationId, callSign, role) {
     this.socket.emit('assign_callsign', { stationId, callSign, role });
+  }
+
+  kickStation(stationId) {
+    this.socket.emit('kick_station', { stationId });
   }
 
   requestPTT() {
