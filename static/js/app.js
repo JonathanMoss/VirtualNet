@@ -148,9 +148,7 @@ class VirtualNetApp {
         if (viewJoin) viewJoin.classList.add('d-none');
         if (viewCreate) viewCreate.classList.remove('d-none');
         const createForm = document.getElementById('create-net-form');
-        const successBox = document.getElementById('create-success-box');
         if (createForm) createForm.classList.remove('d-none');
-        if (successBox) successBox.classList.add('d-none');
       };
       toggleCreate.addEventListener('click', handleToggleCreate);
       toggleCreate.addEventListener('pointerdown', handleToggleCreate);
@@ -506,7 +504,6 @@ class VirtualNetApp {
       this.saveSession(data.pin, "SUNRAY", this.myRole, data.stationId);
 
       // Transition to Dashboard directly
-      document.getElementById('generated-pin').textContent = data.pin;
       document.getElementById('landing-section').classList.add('d-none');
       document.getElementById('dashboard-section').classList.remove('d-none');
       document.getElementById('instructor-section').classList.remove('d-none');
@@ -1032,7 +1029,6 @@ class VirtualNetApp {
     document.getElementById('dashboard-section').classList.add('d-none');
     document.getElementById('landing-section').classList.remove('d-none');
     document.getElementById('join-pin').value = '';
-    document.getElementById('create-success-box').classList.add('d-none');
     const headerPinBadge = document.getElementById('header-net-pin');
     if (headerPinBadge) {
       headerPinBadge.textContent = 'PIN: ----';
