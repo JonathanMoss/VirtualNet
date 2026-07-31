@@ -1,5 +1,6 @@
 // Aide Memoire Module - VirtualNet
 import { panZoomController } from './pan_zoom.js';
+import { batcoSvgSliderManager } from './svg_batco_slider.js';
 
 export class AideMemoireManager {
   constructor() {
@@ -113,8 +114,11 @@ export class AideMemoireManager {
     this.renderVocabCard();
     this.renderSlateCard();
 
-    // Attach Pan & Zoom functionality to resource images
-    ['main-batco-img', 'main-vocab-img', 'main-slate-img', 'main-logging-img', 'vocab-card-img', 'slate-card-img'].forEach(imgId => {
+    // Initialize SVG BATCO Slider
+    batcoSvgSliderManager.initialize();
+
+    // Attach Pan & Zoom functionality to resource images & SVG wrapper
+    ['batco-svg-wrapper', 'main-batco-img', 'main-vocab-img', 'main-slate-img', 'main-logging-img', 'vocab-card-img', 'slate-card-img'].forEach(imgId => {
       panZoomController.attach(imgId);
     });
 

@@ -169,7 +169,10 @@
             <div class="card-header py-2 bg-dark">
               <ul class="nav nav-tabs card-header-tabs" id="resource-tabs" role="tablist">
                 <li class="nav-item">
-                  <button class="nav-link active text-uppercase font-weight-bold text-success" id="tab-batco-link" data-bs-toggle="tab" data-bs-target="#tab-batco" type="button" role="tab">🔢 BATCO</button>
+                  <button class="nav-link active text-uppercase font-weight-bold text-success" id="tab-batco-slider-link" data-bs-toggle="tab" data-bs-target="#tab-batco-slider" type="button" role="tab">🎚️ BATCO SLIDER</button>
+                </li>
+                <li class="nav-item">
+                  <button class="nav-link text-uppercase font-weight-bold text-success" id="tab-batco-link" data-bs-toggle="tab" data-bs-target="#tab-batco" type="button" role="tab">🔢 BATCO</button>
                 </li>
                 <li class="nav-item">
                   <button class="nav-link text-uppercase font-weight-bold text-success" id="tab-vocab-link" data-bs-toggle="tab" data-bs-target="#tab-vocab" type="button" role="tab">📖 VOCAB CARD</button>
@@ -185,8 +188,27 @@
             
             <div class="card-body p-3 flex-grow-1 overflow-auto tab-content" id="resource-tab-content">
               
+              <!-- BATCO SLIDER SVG TAB -->
+              <div class="tab-pane fade show active h-100" id="tab-batco-slider" role="tabpanel">
+                <div class="d-flex flex-column h-100">
+                  <div class="mb-2 d-flex justify-content-between align-items-center bg-dark p-1 px-2 border border-secondary rounded">
+                    <span class="small font-weight-bold text-success">BATCO INTERACTIVE SLIDER (DRAG VERTICALLY)</span>
+                    <div class="btn-group btn-group-sm">
+                      <button class="btn btn-outline-secondary text-white btn-zoom-in" data-target="batco-svg-wrapper" title="Zoom In">🔍+</button>
+                      <button class="btn btn-outline-secondary text-white btn-zoom-out" data-target="batco-svg-wrapper" title="Zoom Out">🔍-</button>
+                      <button class="btn btn-outline-secondary text-white btn-zoom-reset" data-target="batco-svg-wrapper" title="Reset Zoom">↺ Reset</button>
+                    </div>
+                  </div>
+                  <div class="d-flex flex-column align-items-center justify-content-center flex-grow-1 p-2 bg-black border border-secondary text-center overflow-hidden position-relative" id="batco-svg-container">
+                    <div id="batco-svg-wrapper" class="w-100 h-100 d-flex align-items-center justify-content-center">
+                      <!-- SVG dynamically loaded -->
+                    </div>
+                  </div>
+                </div>
+              </div>
+
               <!-- BATCO TAB -->
-              <div class="tab-pane fade show active h-100" id="tab-batco" role="tabpanel">
+              <div class="tab-pane fade h-100" id="tab-batco" role="tabpanel">
                 <div class="d-flex flex-column h-100">
                   <div class="mb-2 d-flex justify-content-between align-items-center bg-dark p-1 px-2 border border-secondary rounded">
                     <span class="small font-weight-bold text-success">BATCO REFERENCE</span>
