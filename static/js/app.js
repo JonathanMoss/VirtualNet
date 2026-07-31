@@ -666,7 +666,10 @@ class VirtualNetApp {
           statusBadge = `<span class="badge bg-danger text-white small">TALKING</span>`;
           
           this.activeSpeaker = s.callSign;
-          document.getElementById('active-speaker').textContent = isSunrayView ? `${s.callSign} (${s.nickname})` : s.callSign;
+          const speakerEl = document.getElementById('active-speaker');
+          const speakerBox = document.getElementById('active-speaker-box');
+          if (speakerEl) speakerEl.textContent = isSunrayView ? `${s.callSign} (${s.nickname})` : s.callSign;
+          if (speakerBox) speakerBox.classList.remove('d-none');
           this.updatePTTCardState('RECEIVING', s.callSign);
           activeSpeakerFound = true;
         }
@@ -761,12 +764,15 @@ class VirtualNetApp {
     }
 
     if (!activeSpeakerFound) {
-      this.activeSpeaker = 'None';
-      document.getElementById('active-speaker').textContent = 'None';
+      this.activeSpeaker = null;
+      const speakerEl = document.getElementById('active-speaker');
+      const speakerBox = document.getElementById('active-speaker-box');
+      if (speakerEl) speakerEl.textContent = '';
+      if (speakerBox) speakerBox.classList.add('d-none');
       
       // If we were receiving, reset to idle
       const container = document.getElementById('ptt-container');
-      if (container.classList.contains('ptt-card-receiving')) {
+      if (container && container.classList.contains('ptt-card-receiving')) {
         this.updatePTTCardState('IDLE');
       }
     }
@@ -783,11 +789,13 @@ class VirtualNetApp {
     
     if (state === 'IDLE') {
       container.classList.add('ptt-card-idle');
-      stateText.textContent = "RADIO SYSTEM IDLE";
+      stateText.textContent = "STANDBY";
       stateText.style.color = "var(--color-phosphor-green)";
       instruction.textContent = "Hold SPACEBAR or push circular dial to speak";
       pttBtn.classList.remove('active', 'btn-danger');
       this.audioEngine.clearPlaybackQueue();
+      const speakerBox = document.getElementById('active-speaker-box');
+      if (speakerBox) speakerBox.classList.add('d-none');
       
     } else if (state === 'KEYING') {
       container.classList.add('ptt-card-transmitting');
