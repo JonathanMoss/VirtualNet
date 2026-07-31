@@ -12,6 +12,14 @@ export class AideMemoireManager {
     this.slateSelect = document.getElementById('select-slate-template');
     this.slateContent = document.getElementById('slate-card-content');
     this.batcoTbody = document.getElementById('batco-tbody');
+
+    // Main workspace tab references (Issue #15)
+    this.mainBatcoTbody = document.getElementById('main-batco-tbody');
+    this.mainVocabSelect = document.getElementById('main-vocab-select');
+    this.mainVocabSearch = document.getElementById('main-vocab-search');
+    this.mainVocabTbody = document.getElementById('main-vocab-tbody');
+    this.mainSlateSelect = document.getElementById('main-slate-select');
+    this.mainSlateContent = document.getElementById('main-slate-content');
     
     this.batcoActiveRow = 0; // Index of highlighted row
     this.batcoRowsCount = 12; // Row A to L
@@ -58,99 +66,162 @@ export class AideMemoireManager {
         { code: "05", plain: "EFFECTS OBTAINED: HARASSING" },
         { code: "07", plain: "EFFECTS OBTAINED: NEUTRALIZED" }
       ],
-      "Card 004 (AVN / HELO)": [
-        { code: "11", plain: "HELICOPTER LANDING SITE (HLS) SECURE" },
-        { code: "14", plain: "AIRCRAFT AIRBORNE" },
-        { code: "18", plain: "EVACUATION IN PROGRESS" },
-        { code: "22", plain: "CASUALTY PICKUP COMPLETED" }
-      ],
-      "Card 005 (COMMS / SIGS)": [
-        { code: "90", plain: "RADIO SILENCE ORDERED / DIRECTED" },
-        { code: "91", plain: "RADIO SILENCE LIFTED" },
-        { code: "94", plain: "FREQUENCY CHANGER ORDERED (STBY FOR EMER)" },
-        { code: "99", plain: "NET CLOSED BY CONTROL" }
-      ],
-      "Card 006 (LOG / CSS)": [
-        { code: "50", plain: "AMMUNITION RESUPPLY REQUIRED" },
-        { code: "52", plain: "RATIONS AND WATER NEEDED" },
-        { code: "58", plain: "FUEL RESUPPLY (POL) REQUESTED" },
-        { code: "60", plain: "VEHICLE CASUALTY REPORTED" }
+      "Card 004 (MEDICAL / EVAC)": [
+        { code: "99", plain: "MEDEVAC REQUIRED IMMEDIATELY" },
+        { code: "98", plain: "CASUALTY CAT A (URGENT)" },
+        { code: "97", plain: "CASUALTY CAT B (PRIORITY)" },
+        { code: "96", plain: "CASUALTY CAT C (ROUTINE)" }
       ]
     };
 
-    // Define Tactical Slate templates
+    // Tactical Slate Cards
     this.slates = {
-      "SITREP": `NATO SITREP (SITUATION REPORT)\n-----------------------------\nLine A: DATE TIME GROUP (DTG) of situation (e.g. 281015Z JUL 26)\nLine B: OWN POSITION (6-figure Grid Ref, e.g. GR 789 456)\nLine C: ENEMY SITUATION (Location, Activity, Strength)\nLine D: OWN SITUATION & INTENTIONS (Actions being taken)`,
-      
-      "MIST": `UK ONLY: MIST (AT) CASUALTY REPORT\n----------------------------------\nZAP NO: [Callsign suffix / Anonymized ID]\n\nM: MECHANISM OF INJURY (e.g. Blast, GSW, Fall)\nI: INJURY SUSTAINED (e.g. Shrapnel leg, head wound)\nS: SYMPTOMS (MARCH checklist, Vitals)\nT: TREATMENT GIVEN (e.g. Tourniquet applied 1030Z)\n\nA: AGE OF CASUALTY (Approx)\nT: TIME OF WOUNDING (DTG)`,
-      
-      "MEDEVAC": `NATO MEDEVAC 9-LINE REQUEST\n---------------------------\nLine 1: PICKUP LOCATION (Grid Ref & Callsign)\nLine 2: FREQUENCY & CALLSIGN (At HLS)\nLine 3: PATIENTS BY PRECEDENCE (A: Flash, B: Urgent, C: Priority, D: Routine, E: Convenience)\nLine 4: SPECIAL EQUIPMENT REQUIRED (A: None, B: Hoist, C: Extraction kit, D: Ventilator)\nLine 5: PATIENTS BY TYPE (L + number: Stretcher, W + number: Walking)\nLine 6: SECURITY OF HLS (N: No enemy, P: Possible enemy, E: Enemy in area, X: Armed escort)\nLine 7: METHOD OF MARKING HLS (A: Panels, B: Pyrotechnics, C: Smoke signal, D: None)\nLine 8: PATIENT NATIONALITY & STATUS (A: Military, B: Civilian, C: EPW)\nLine 9: NBC CONTAMINATION / TERRAIN DETAIL`,
-      
-      "CFF": `FIRE MISSION (CALL FOR FIRE) SLATE\n----------------------------------\n"Fire Mission, Over"\n\nLine A: TARGET LOCATION (6-fig Grid Ref, e.g. GR 123 456)\nLine B: DIRECTION (in mils, e.g. Dir 4800 Mils)\nLine C: TARGET DESCRIPTION (e.g. 3 x En Vehicles in open)\nLine D: NEAREST FRIENDLY POSITION (Distance/Direction)\nLine E: EFFECT REQUIRED (Smoke, Illum, Harass, Destroy)\nLine F: DURATION (e.g. 2 Minutes)\nLine G: TIMING (e.g. At H-Hour / Now)`,
-      
-      "QAOS": `QUICK ATTACK ORDERS SLATE (QAOS)\n-------------------------------\n01: GROUND (Assault route, FUP, LOE)\n02: ENEMY (Strength, Weapons, Layout)\n03: ORBAT (Assault Group, Fire Support, Reserve)\n04: SCHEME OF MANOEUVRE (Concept of Ops)\n05: KEY TIMINGS (H-Hour, Bounds)\n06: FIRE SUPPORT COORDINATION MEASURES (FSCM)\n07: COMBAT ID MARKS & SIGNALS`,
-      
-      "JAMREP": `JAMREP (JAMMING REPORT)\n------------------------\nLine A: TYPE OF JAMMING (Music, Tones, Carrier Wave, Noise, Voice)\nLine B: STRENGTH (Weak, Medium, Strong)\nLine C: MODE (Responsive, Constant)\nLine D: AFFECTED FREQUENCY\nLine E: VICTIM LOCATION (Grid Ref)\nLine F: TIME START & DURATION`,
-      
-      "EQUIPRECREQ": `NATO EQUIPMENT RECOVERY REQUEST (EQUIPRECREQ)\n---------------------------------------------\nLine A: RECOVERY LOCATION (Grid Ref & Landmark)\nLine B: VEHICLE DETAILS (Make, Model, Wpn Serial)\nLine C: VEHICLE PROBLEM (e.g. Bogged in mud, engine seize)\nLine D: CREW AVAILABLE (Yes / No)\nLine E: DESTINATION FOR RECOVERY`,
-      
-      "EOINCREP": `NATO EXPLOSIVE ORDNANCE INCIDENT (EOINCREP)\n-------------------------------------------\nLine 1: DTG OF DISCOVERY\nLine 2: REPORTING UNIT / CALLSIGN\nLine 3: RV LOCATION GRID (Link-up point)\nLine 4: COMMUNICATIONS METHOD\nLine 5: DESCRIPTION OF EO (Size, type, shape)\nLine 6: LOCATION OF EO (Grid Ref)\nLine 7: TACTICAL SITUATION\nLine 8: DAMAGE / THREAT RADIUS\nLine 9: PRIORITY (Immediate, Urgent, Routine)`
+      "SITREP": `SITREP TEMPLATE
+-----------------------------
+LINE 1: DTG (Date Time Group)
+LINE 2: UNIT / CALLSIGN
+LINE 3: ENEMY ACTIVITY / LOC
+LINE 4: OWN SITUATION / GRID
+LINE 5: INTENTION / NEXT MOVE
+LINE 6: ADMIN & LOGISTICS`,
+      "MIST": `MIST CASUALTY REPORT
+-----------------------------
+M - MECHANISM OF INJURY
+I - INJURIES SUSTAINED
+S - SIGNS & VITAL STATS
+T - TREATMENT GIVEN`,
+      "MEDEVAC": `9-LINE MEDEVAC SLATE
+-----------------------------
+LINE 1: LOCATION OF PICKUP (GRID)
+LINE 2: FREQ & CALL SIGN AT SITE
+LINE 3: NUMBER OF PATIENTS BY PRECEDENCE
+LINE 4: SPECIAL EQUIPMENT REQUIRED
+LINE 5: NUMBER OF PATIENTS BY TYPE
+LINE 6: SECURITY AT PICKUP SITE
+LINE 7: METHOD OF MARKING SITE
+LINE 8: PATIENT NATIONALITY & STATUS
+LINE 9: NBC CONTAMINATION / TERRAIN`,
+      "CFF": `CALL FOR FIRE (CFF) SLATE
+-----------------------------
+1. OBSERVER IDENTIFICATION & WARN O
+2. TARGET LOCATION (GRID 6/8 FIG)
+3. TARGET DESCRIPTION
+4. METHOD OF ENGAGEMENT
+5. METHOD OF FIRE AND CONTROL`,
+      "QAOS": `QUICK ATTACK ORDERS (QAOS)
+-----------------------------
+Q - QUICK OBJECTIVE / GROUND
+A - AXIS OF ADVANCE
+O - ORDERS & TASK ALLOCATION
+S - SIGNALS & TIMINGS`,
+      "JAMREP": `JAMREP (JAMMING REPORT)
+-----------------------------
+1. CALL SIGN AFFECTED
+2. FREQUENCY / BAND JAMMED
+3. TYPE OF INTERFERENCE / NOISE
+4. SIGNAL STRENGTH & BEARING
+5. TIME STARTED / DURATION`,
+      "EQUIPRECREQ": `RECOVERY REQUEST (EQUIPRECREQ)
+-----------------------------
+1. CALLSIGN & LOCATION
+2. VEHICLE TYPE & REGISTRATION
+3. NATURE OF CASUALTY / FAULT
+4. RECOVERY METHOD REQUIRED`,
+      "EOINCREP": `EOINCREP (EXPLOSIVE ORDNANCE)
+-----------------------------
+1. DTG & DISCOVERER
+2. EXACT LOCATION (GRID)
+3. ITEM TYPE & DESCRIPTION
+4. HAZARD TO FRIENDLY / CIVILIAN`
     };
   }
 
   initialize() {
-    // Initialize Off-Canvas drawer object
-    const el = document.getElementById('aideMemoireDrawer');
-    this.drawer = new bootstrap.Offcanvas(el);
+    // Instantiate Bootstrap Offcanvas drawer
+    const drawerEl = document.getElementById('aideMemoireDrawer');
+    if (drawerEl) {
+      this.drawer = new bootstrap.Offcanvas(drawerEl);
+    }
 
-    // Toggle drawer on tab button click
-    this.btnTab.addEventListener('click', () => {
-      this.drawer.toggle();
-    });
+    if (this.btnTab) {
+      this.btnTab.addEventListener('click', () => {
+        if (this.drawer) this.drawer.toggle();
+      });
+    }
 
-    // BATCO slider events
-    this.btnBatcoUp.addEventListener('click', () => this.moveBatcoSlider(-1));
-    this.btnBatcoDown.addEventListener('click', () => this.moveBatcoSlider(1));
+    if (this.btnBatcoUp) {
+      this.btnBatcoUp.addEventListener('click', () => this.moveBatcoSlider(-1));
+    }
+    if (this.btnBatcoDown) {
+      this.btnBatcoDown.addEventListener('click', () => this.moveBatcoSlider(1));
+    }
 
-    // Render BATCO table
+    // Populate vocab card dropdowns
+    this.populateVocabSelect(this.vocabSelect);
+    if (this.mainVocabSelect) this.populateVocabSelect(this.mainVocabSelect);
+
+    if (this.vocabSelect) {
+      this.vocabSelect.addEventListener('change', () => this.renderVocabCard());
+    }
+    if (this.mainVocabSelect) {
+      this.mainVocabSelect.addEventListener('change', () => this.renderVocabCard());
+    }
+    if (this.vocabSearch) {
+      this.vocabSearch.addEventListener('input', () => this.renderVocabCard());
+    }
+    if (this.mainVocabSearch) {
+      this.mainVocabSearch.addEventListener('input', () => this.renderVocabCard());
+    }
+
+    if (this.slateSelect) {
+      this.slateSelect.addEventListener('change', () => this.renderSlateCard());
+    }
+    if (this.mainSlateSelect) {
+      this.mainSlateSelect.addEventListener('change', () => this.renderSlateCard());
+    }
+
+    // Initial renders
     this.renderBatcoTable();
-
-    // Render Vocab Cards dropdown
-    this.vocabSelect.innerHTML = '';
-    Object.keys(this.vocabCards).forEach(cardName => {
-      const opt = document.createElement('option');
-      opt.value = cardName;
-      opt.textContent = cardName;
-      this.vocabSelect.appendChild(opt);
-    });
-
-    this.vocabSelect.addEventListener('change', () => this.renderVocabCard());
-    this.vocabSearch.addEventListener('input', () => this.renderVocabCard());
     this.renderVocabCard();
-
-    // Render Slate templates dropdown
-    this.slateSelect.addEventListener('change', () => this.renderSlateCard());
     this.renderSlateCard();
   }
 
-  renderBatcoTable() {
-    this.batcoTbody.innerHTML = '';
-    this.batcoGrid.forEach((row, rIdx) => {
-      const tr = document.createElement('tr');
-      if (rIdx === this.batcoActiveRow) {
-        tr.classList.add('batco-row-highlight');
-      }
-      
-      let html = `<td><b>${row.name.split(' ')[1]}</b></td>`;
-      row.codes.forEach(code => {
-        html += `<td>${code}</td>`;
-      });
-      tr.innerHTML = html;
-      this.batcoTbody.appendChild(tr);
+  populateVocabSelect(selectElement) {
+    if (!selectElement) return;
+    selectElement.innerHTML = '';
+    Object.keys(this.vocabCards).forEach(cardKey => {
+      const opt = document.createElement('option');
+      opt.value = cardKey;
+      opt.textContent = cardKey;
+      selectElement.appendChild(opt);
     });
+  }
 
-    // Update active label
-    document.getElementById('batco-active-row-name').textContent = this.batcoGrid[this.batcoActiveRow].name;
+  renderBatcoTable() {
+    const renderTbody = (tbodyEl) => {
+      if (!tbodyEl) return;
+      tbodyEl.innerHTML = '';
+      this.batcoGrid.forEach((row, rIdx) => {
+        const tr = document.createElement('tr');
+        if (rIdx === this.batcoActiveRow) {
+          tr.classList.add('batco-row-highlight');
+        }
+        let html = `<td><b>${row.name.split(' ')[1]}</b></td>`;
+        row.codes.forEach(code => {
+          html += `<td>${code}</td>`;
+        });
+        tr.innerHTML = html;
+        tbodyEl.appendChild(tr);
+      });
+    };
+
+    renderTbody(this.batcoTbody);
+    renderTbody(this.mainBatcoTbody);
+
+    const label = document.getElementById('batco-active-row-name');
+    if (label) {
+      label.textContent = this.batcoGrid[this.batcoActiveRow].name;
+    }
   }
 
   moveBatcoSlider(dir) {
@@ -161,29 +232,39 @@ export class AideMemoireManager {
   }
 
   renderVocabCard() {
-    const selectedCard = this.vocabSelect.value;
-    const filter = this.vocabSearch.value.toUpperCase();
-    this.vocabTbody.innerHTML = '';
+    const renderTbody = (selectEl, searchEl, tbodyEl) => {
+      if (!tbodyEl || !selectEl) return;
+      const selectedCard = selectEl.value;
+      const filter = (searchEl ? searchEl.value : '').toUpperCase();
+      tbodyEl.innerHTML = '';
 
-    const list = this.vocabCards[selectedCard] || [];
-    const filtered = list.filter(item => 
-      item.code.includes(filter) || item.plain.toUpperCase().includes(filter)
-    );
+      const list = this.vocabCards[selectedCard] || [];
+      const filtered = list.filter(item => 
+        item.code.includes(filter) || item.plain.toUpperCase().includes(filter)
+      );
 
-    if (filtered.length === 0) {
-      this.vocabTbody.innerHTML = '<tr><td colspan="2" class="text-muted text-center py-2">No matching entries.</td></tr>';
-      return;
-    }
+      if (filtered.length === 0) {
+        tbodyEl.innerHTML = '<tr><td colspan="2" class="text-muted text-center py-2">No matching entries.</td></tr>';
+        return;
+      }
 
-    filtered.forEach(item => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td><b>${item.code}</b></td><td>${item.plain}</td>`;
-      this.vocabTbody.appendChild(tr);
-    });
+      filtered.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td><b>${item.code}</b></td><td>${item.plain}</td>`;
+        tbodyEl.appendChild(tr);
+      });
+    };
+
+    renderTbody(this.vocabSelect, this.vocabSearch, this.vocabTbody);
+    renderTbody(this.mainVocabSelect, this.mainVocabSearch, this.mainVocabTbody);
   }
 
   renderSlateCard() {
-    const selectedSlate = this.slateSelect.value;
-    this.slateContent.textContent = this.slates[selectedSlate] || '';
+    if (this.slateSelect && this.slateContent) {
+      this.slateContent.textContent = this.slates[this.slateSelect.value] || '';
+    }
+    if (this.mainSlateSelect && this.mainSlateContent) {
+      this.mainSlateContent.textContent = this.slates[this.mainSlateSelect.value] || '';
+    }
   }
 }

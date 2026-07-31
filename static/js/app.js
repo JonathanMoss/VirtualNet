@@ -179,16 +179,17 @@ class VirtualNetApp {
       }
     });
 
-    // Instructor Create Net trigger
+    // SUNRAY Create Net trigger
     const submitCreate = () => {
       const name = document.getElementById('create-name').value.trim();
       const ci = document.getElementById('create-ci').value.trim();
       const instructorPin = document.getElementById('create-instructor-pin').value.trim();
+      const sunrayCallsign = (document.getElementById('create-sunray-callsign')?.value || "0").trim();
       if (!name || !ci || !instructorPin) {
         alert("Please fill in all Net Session fields.");
         return;
       }
-      this.socketManager.createNet(name, ci, instructorPin);
+      this.socketManager.createNet(name, ci, instructorPin, sunrayCallsign);
     };
 
     const btnCreate = document.getElementById('btn-create-net');
@@ -199,7 +200,7 @@ class VirtualNetApp {
       });
     }
 
-    ['create-name', 'create-ci', 'create-instructor-pin'].forEach(id => {
+    ['create-name', 'create-ci', 'create-instructor-pin', 'create-sunray-callsign'].forEach(id => {
       const el = document.getElementById(id);
       if (el) {
         el.addEventListener('keydown', (e) => {
@@ -222,12 +223,12 @@ class VirtualNetApp {
         }
         try {
           const pin = document.getElementById('generated-pin').textContent.trim();
-          this.myNickname = "Instructor";
-          this.myRole = "INSTRUCTOR";
+          this.myNickname = "SUNRAY";
+          this.myRole = "SUNRAY";
           this.netPin = pin;
-          this.socketManager.joinNet(pin, "Instructor", "CONTROL");
+          this.socketManager.joinNet(pin, "SUNRAY", "SUNRAY");
         } catch (err) {
-          console.warn("Instructor dashboard transition error:", err);
+          console.warn("SUNRAY dashboard transition error:", err);
         }
       };
 
@@ -427,15 +428,15 @@ class VirtualNetApp {
       // Update basic details
       document.getElementById('overlay-nickname').textContent = this.myNickname;
 
-      if (this.myRole === 'CONTROL' || this.myRole === 'INSTRUCTOR') {
-        // Unlock full dashboard directly (Instructor lacks Callsign lock)
+      if (this.myRole === 'SUNRAY' || this.myRole === 'CONTROL' || this.myRole === 'INSTRUCTOR') {
+        // Unlock full dashboard directly (SUNRAY lacks Callsign lock)
         document.getElementById('callsign-lock-overlay').classList.add('d-none');
-        document.getElementById('header-callsign').textContent = `Callsign: CONTROL`;
+        document.getElementById('header-callsign').textContent = `Callsign: ${this.myCallSign || '0'}`;
         if (WebAudioEngine.isMediaCaptureSupported()) {
           document.getElementById('ptt-btn').disabled = false;
         }
         
-        // Show Instructor Dashboard controls
+        // Show SUNRAY Dashboard controls
         document.getElementById('instructor-section').classList.remove('d-none');
         document.getElementById('instructor-pin-badge').textContent = `PIN: ${data.pin}`;
         
@@ -559,6 +560,22 @@ class VirtualNetApp {
     }, 2000);
   }
 
+  handlePTTTimeout(data) {
+    // 20-second max transmission limit exceeded
+    this.isTransmitting = false;
+    this.audioEngine.stopRecording();
+    this.audioEngine.playPTTEndSquelchTail();
+
+    const banner = document.getElementById('df-alert-banner');
+    if (banner) {
+      banner.classList.remove('d-none');
+      setTimeout(() => banner.classList.add('d-none'), 5000);
+    }
+
+    this.updatePTTCardState('OVERRIDDEN');
+    setTimeout(() => this.updatePTTCardState('IDLE'), 2000);
+  }
+
   handleRosterUpdate(stations) {
     const list = document.getElementById('roster-list');
     list.innerHTML = '';
@@ -571,6 +588,8 @@ class VirtualNetApp {
 
     let activeSpeakerFound = false;
     let pendingQueueCount = 0;
+
+    const isSunrayView = (this.myRole === 'SUNRAY' || this.myRole === 'CONTROL' || this.myRole === 'INSTRUCTOR');
 
     stations.forEach(s => {
       // 1. Build Student view roster panel
@@ -585,23 +604,27 @@ class VirtualNetApp {
           statusBadge = `<span class="badge bg-danger text-white small">TALKING</span>`;
           
           this.activeSpeaker = s.callSign;
-          document.getElementById('active-speaker').textContent = `${s.callSign} (${s.nickname})`;
+          document.getElementById('active-speaker').textContent = isSunrayView ? `${s.callSign} (${s.nickname})` : s.callSign;
           this.updatePTTCardState('RECEIVING', s.callSign);
           activeSpeakerFound = true;
         }
 
-        const roleIcon = s.role === 'CONTROL' ? '⭐ ' : '';
+        const roleIcon = (s.role === 'SUNRAY' || s.role === 'CONTROL') ? '⭐ ' : '';
+        const nameHtml = isSunrayView
+          ? `<b>${roleIcon}${s.callSign}</b> <span class="text-muted">(${s.nickname})</span>`
+          : `<b>${roleIcon}${s.callSign}</b>`;
+
         item.innerHTML = `
           <div>
-            <b>${roleIcon}${s.callSign}</b> <span class="text-muted">(${s.nickname})</span>
+            ${nameHtml}
           </div>
           ${statusBadge}
         `;
         list.appendChild(item);
       }
 
-      // 2. Build Instructor queues
-      if (this.myRole === 'CONTROL' || this.myRole === 'INSTRUCTOR') {
+      // 2. Build SUNRAY queues
+      if (isSunrayView) {
         if (s.status === 'AWAITING_ASSIGNMENT') {
           pendingQueueCount++;
           const tr = document.createElement('tr');
@@ -610,7 +633,7 @@ class VirtualNetApp {
             <td>
               <select class="form-select form-select-sm select-assign-role">
                 <option value="SUB_STATION">SUB_STATION</option>
-                <option value="CONTROL">CONTROL</option>
+                <option value="SUNRAY">SUNRAY</option>
               </select>
             </td>
             <td>

@@ -19,7 +19,7 @@ def generate_unique_net_pin(db) -> str:
 
 
 def create_net_session(db, data: dict, client_info: dict, station_registry, broadcast_roster):
-    """Host a new net session and initialize CONTROL station."""
+    """Host a new net session and initialize SUNRAY station."""
     remote_addr = client_info.get('remote_addr')
     sid = client_info.get('sid')
 
@@ -40,11 +40,17 @@ def create_net_session(db, data: dict, client_info: dict, station_registry, broa
     db.add(session)
     db.flush()
 
+    raw_cs = (validated.sunray_callsign or "0").strip().upper()
+    if raw_cs.isdigit():
+        sunray_callsign = f"{validated.callsign_indicator}{raw_cs}"
+    else:
+        sunray_callsign = raw_cs
+
     station = Station(
         net_id=session.id,
-        nickname="Instructor",
-        role="CONTROL",
-        call_sign="CONTROL",
+        nickname="SUNRAY",
+        role="SUNRAY",
+        call_sign=sunray_callsign,
         status="CONNECTED",
         ip_address=remote_addr
     )
@@ -62,22 +68,22 @@ def create_net_session(db, data: dict, client_info: dict, station_registry, broa
         "netId": session.id,
         "netName": session.name,
         "stationId": station.id,
-        "role": "CONTROL",
-        "callSign": "CONTROL",
+        "role": "SUNRAY",
+        "callSign": sunray_callsign,
         "status": "CONNECTED"
     }
 
 
 def end_net_session(db, instructor_station: Station, station_registry, transmission_service):
     """End a net session and purge all ephemeral data."""
-    if not instructor_station or instructor_station.role not in ["CONTROL", "INSTRUCTOR"]:
+    if not instructor_station or instructor_station.role not in ["SUNRAY", "CONTROL", "INSTRUCTOR"]:
         return {"success": False, "reason": "Unauthorized action."}
 
     net_id = instructor_station.net_id
     session = db.query(NetSession).filter_by(id=net_id).first()
     if session:
         session.status = "CLOSED"
-        socketio.emit('session_ended', {"reason": "SESSION_CLOSED_BY_INSTRUCTOR"}, room=net_id)
+        socketio.emit('session_ended', {"reason": "SESSION_CLOSED_BY_SUNRAY"}, room=net_id)
 
         stations = db.query(Station).filter_by(net_id=net_id).all()
         for s in stations:

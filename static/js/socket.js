@@ -63,13 +63,15 @@ export class SocketManager {
       this.app.handlePTTOverride(data);
     });
 
+    this.socket.on('ptt_timeout', (data) => {
+      this.app.handlePTTTimeout(data);
+    });
+
     this.socket.on('audio_chunk', (data) => {
       console.log("🌐 [SOCKET-RX] Received 'audio_chunk' event from Socket.IO", data ? (data.byteLength || data.length) : 0, "bytes");
       // Decode binary chunk and play back
       this.app.audioEngine.receiveAudioChunk(data);
     });
-
-
 
     this.socket.on('sync_response', (data) => {
       if (!data.success) {
@@ -78,7 +80,7 @@ export class SocketManager {
     });
 
     this.socket.on('session_ended', (data) => {
-      alert("This net session has been ended by the Instructor.");
+      alert("This net session has been ended by SUNRAY.");
       this.app.resetToLanding();
     });
 
@@ -95,10 +97,14 @@ export class SocketManager {
     this.socket.emit('leave_net', {});
   }
 
-  createNet(name, callsignIndicator, instructorPin) {
-    this.socket.emit('create_net', { name, callsign_indicator: callsignIndicator, instructor_pin: instructorPin });
+  createNet(name, callsignIndicator, instructorPin, sunrayCallsign = "0") {
+    this.socket.emit('create_net', {
+      name,
+      callsign_indicator: callsignIndicator,
+      instructor_pin: instructorPin,
+      sunray_callsign: sunrayCallsign
+    });
   }
-
 
   assignCallsign(stationId, callSign, role) {
     this.socket.emit('assign_callsign', { stationId, callSign, role });
@@ -133,8 +139,6 @@ export class SocketManager {
       }
     });
   }
-
-
 
   setSignalQuality(stationId, signalQuality) {
     this.socket.emit('set_signal_quality', { stationId, signalQuality });

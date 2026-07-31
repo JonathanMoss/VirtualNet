@@ -21,6 +21,7 @@ class NetSessionCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=50)
     callsign_indicator: str = Field(default="R", min_length=1, max_length=1)
     instructor_pin: str = Field(..., min_length=6, max_length=6)
+    sunray_callsign: Optional[str] = Field(default="0", max_length=15)
 
     @field_validator('name')
     @classmethod
