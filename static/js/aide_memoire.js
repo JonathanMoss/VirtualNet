@@ -114,7 +114,7 @@ export class AideMemoireManager {
     this.renderSlateCard();
 
     // Attach Pan & Zoom functionality to resource images
-    ['main-batco-img', 'main-vocab-img', 'main-slate-img', 'vocab-card-img', 'slate-card-img'].forEach(imgId => {
+    ['main-batco-img', 'main-vocab-img', 'main-slate-img', 'main-logging-img', 'vocab-card-img', 'slate-card-img'].forEach(imgId => {
       panZoomController.attach(imgId);
     });
 
