@@ -87,11 +87,14 @@
         <a class="navbar-brand font-weight-bold text-uppercase d-flex align-items-center" href="#" style="color: var(--color-phosphor-green);">
           📟 VIRTUALNET
         </a>
-        <div class="d-flex align-items-center gap-3">
-          <span class="badge border border-warning text-warning text-uppercase" id="header-net-pin">PIN: ----</span>
+        <div class="d-flex align-items-center gap-2 font-weight-bold fs-6">
+          <span class="text-warning text-uppercase" id="header-net-pin">PIN: ----</span>
+          <span class="text-muted">|</span>
           <span class="text-white d-none d-sm-inline" id="header-net-name">Net: -</span>
-          <span class="text-warning font-weight-bold" id="header-callsign">Callsign: AWAITING</span>
-          <span class="text-light monospace font-weight-bold" id="system-clock">000000Z UTC</span>
+          <span class="text-muted d-none d-sm-inline">|</span>
+          <span class="text-warning" id="header-callsign">Callsign: AWAITING</span>
+          <span class="text-muted">|</span>
+          <span class="text-success monospace" id="system-clock">000000Z UTC</span>
           <button id="btn-leave-net" class="btn btn-sm btn-outline-danger ms-2">🚪 LEAVE NET</button>
         </div>
       </div>
@@ -146,11 +149,11 @@
 
             <div class="card-body d-flex flex-column flex-md-row align-items-center justify-content-between py-3">
               <div class="mb-3 mb-md-0 text-center text-md-start">
-                <h5 class="card-title text-uppercase m-0 font-weight-bold" id="ptt-state-text">RADIO SYSTEM IDLE</h5>
+                <h5 class="card-title text-uppercase m-0 font-weight-bold" id="ptt-state-text">STANDBY</h5>
                 <p class="text-muted small m-0 mt-1" id="ptt-instruction">Hold SPACEBAR or push circular dial to speak (Max 20s)</p>
                 <p class="text-warning small m-0 mt-1 d-none" id="audio-support-warning"></p>
-                <div class="mt-2" id="active-speaker-box">
-                  <span class="text-muted">Active Speaker:</span> <span id="active-speaker" class="font-weight-bold text-white">None</span>
+                <div class="mt-2 d-none" id="active-speaker-box">
+                  <span class="text-muted">Active Speaker:</span> <span id="active-speaker" class="font-weight-bold text-white"></span>
                 </div>
               </div>
               
