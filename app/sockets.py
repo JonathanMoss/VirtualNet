@@ -1,84 +1,27 @@
 """WebSocket event handlers and radio net session management for VirtualNet."""
-from datetime import datetime
-import json
-from pathlib import Path
-import random
-import string
-
-
-import eventlet
 from flask import request
-from flask_socketio import emit, join_room, leave_room
-from pydantic import ValidationError
-
+from flask_socketio import emit, join_room
 from app import socketio
 from app.database import get_db
-from app.models import NetSession, Station, Transmission, LogEntry, InstructorInject
-from app.schemas import NetSessionCreate, LogEntryCreate
+from app.models import Station
+from app.services import (
+    pin_service,
+    station_service,
+    transmission_service,
+    log_service,
+    session_service,
+)
 
-# Thread-safe in-memory mapping of socket session ID (sid) to station ID
-sid_to_station_id = {}
-station_id_to_sid = {}
-sid_to_net_id = {}
+# Re-export dictionary mappings and functions for backward compatibility with existing tests
+registry = station_service.registry
+sid_to_station_id = registry.sid_to_station_id
+station_id_to_sid = registry.station_id_to_sid
+sid_to_net_id = registry.sid_to_net_id
+transmitting_sids = transmission_service.transmitting_sids
 
-# Fast-path in-memory mapping of transmitting SIDs to net_id (Zero-DB audio streaming)
-transmitting_sids = {}
-
-
-
-
-def get_station_from_sid(db, sid):
-    """Utility to look up the Station model from the active socket ID."""
-    station_id = sid_to_station_id.get(sid)
-    if not station_id:
-        return None
-    return db.query(Station).filter_by(id=station_id).first()
-
-
-def broadcast_roster(db, net_id):
-    """Utility to broadcast the updated roster to all active clients in the session room."""
-    stations = db.query(Station).filter(
-        Station.net_id == net_id,
-        ~Station.status.in_(["LEFT", "DISCONNECTED"])
-    ).all()
-
-    now = datetime.utcnow()
-    roster = []
-    for s in stations:
-        seconds_ago = int((now - (s.last_seen or s.connected_at)).total_seconds())
-        last_active_str = "Active now" if seconds_ago < 5 else f"{seconds_ago}s ago"
-
-        roster.append({
-            "stationId": s.id,
-            "callSign": s.call_sign if s.call_sign else "",
-            "nickname": s.nickname,
-            "role": s.role,
-            "status": s.status,
-            "transmissionStatus": s.transmission_status,
-            "lastActiveAgo": last_active_str
-        })
-
-    # Broadcast to all clients in the net session room
-    socketio.emit('roster_update', {"stations": roster}, room=net_id)
-
-
-
-
-
-def grace_period_disconnect_timer(station_id, net_id):
-    """Wait 30 seconds after socket disconnect; if station hasn't reconnected, mark LEFT."""
-    eventlet.sleep(30)
-    db = get_db()
-    try:
-        station = db.query(Station).filter_by(id=station_id).first()
-        if station and station.status == "UNWORKABLE":
-            station.status = "LEFT"
-            station.transmission_status = "IDLE"
-            db.commit()
-            broadcast_roster(db, net_id)
-    # pylint: disable=broad-exception-caught
-    except Exception:
-        db.rollback()
+get_station_from_sid = station_service.get_station_from_sid
+broadcast_roster = station_service.broadcast_roster
+verify_instructor_pin = pin_service.verify_instructor_pin
 
 
 @socketio.on('connect')
@@ -89,175 +32,45 @@ def handle_connect():
 @socketio.on('disconnect')
 def handle_disconnect():
     """Client disconnected socket event. Sets status to UNWORKABLE during 30s grace period."""
-    transmitting_sids.pop(request.sid, None)
     db = get_db()
-    station = get_station_from_sid(db, request.sid)
-    if station:
-        net_id = station.net_id
-        station.status = "UNWORKABLE"
-        station.transmission_status = "IDLE"
-        station.last_seen = datetime.utcnow()
-
-        # Clean up global PTT lock if this station was speaking
-        transmission = db.query(Transmission).filter_by(
-            net_id=net_id,
-            sender_call_sign=station.call_sign,
-            end_time=None
-        ).first()
-        if transmission:
-            transmission.end_time = datetime.utcnow()
-            transmission.termination_reason = "UNWORKABLE"
-
-        db.commit()
-
-        # Clean up memory mapping
-        station_id = station.id
-        sid_to_station_id.pop(request.sid, None)
-        if station_id_to_sid.get(station_id) == request.sid:
-            station_id_to_sid.pop(station_id, None)
-        sid_to_net_id.pop(request.sid, None)
-
-        # Broadcast roster update (displays UNWORKABLE to instructor)
-        broadcast_roster(db, net_id)
-
-        # Spawn 30-second grace period timer
-        eventlet.spawn(grace_period_disconnect_timer, station_id, net_id)
+    station_service.process_station_disconnect(db, request.sid, transmission_service)
 
 
 @socketio.on('leave_net')
 def handle_leave_net(data):
     """Station explicitly leaves the net session."""
     # pylint: disable=unused-argument
-    transmitting_sids.pop(request.sid, None)
     db = get_db()
-    station = get_station_from_sid(db, request.sid)
-    if station:
-        net_id = station.net_id
-        station.status = "LEFT"
-        station.transmission_status = "IDLE"
-        station.last_seen = datetime.utcnow()
-
-        transmission = db.query(Transmission).filter_by(
-            net_id=net_id,
-            sender_call_sign=station.call_sign,
-            end_time=None
-        ).first()
-        if transmission:
-            transmission.end_time = datetime.utcnow()
-            transmission.termination_reason = "LEFT"
-
-        db.commit()
-
-        station_id = station.id
-        sid_to_station_id.pop(request.sid, None)
-        if station_id_to_sid.get(station_id) == request.sid:
-            station_id_to_sid.pop(station_id, None)
-        sid_to_net_id.pop(request.sid, None)
-
-        broadcast_roster(db, net_id)
-
-
-PINS_FILE = Path(__file__).resolve().parent / "instructor_pins.json"
-
-
-
-def verify_instructor_pin(pin: str) -> bool:
-    """Validate 6-digit instructor PIN against today's day-of-month PIN table (UTC or local time)."""
-    if not PINS_FILE.exists():
-        return False
-    try:
-        with open(PINS_FILE, 'r', encoding='utf-8') as f:
-            pins_data = json.load(f)
-        exp_utc = pins_data.get(str(datetime.utcnow().day))
-        exp_loc = pins_data.get(str(datetime.now().day))
-        return (exp_utc is not None and pin == exp_utc) or (exp_loc is not None and pin == exp_loc)
-    except (OSError, KeyError, json.JSONDecodeError):
-        return False
-
+    station_service.process_station_leave(db, request.sid, transmission_service)
 
 
 @socketio.on('create_net')
 def handle_create_net(data):
     """Instructor hosts a new net session."""
     db = get_db()
-    try:
-        validated = NetSessionCreate(**data)
-    except ValidationError as e:
-        emit('create_response', {"success": False, "reason": str(e)})
-        return
-
-    # Verify 6-digit daily Instructor PIN
-    if not verify_instructor_pin(validated.instructor_pin):
-        emit('create_response', {"success": False, "reason": "Invalid 6-digit Instructor PIN for today."})
-        return
-
-    # Generate a unique 4-character alphanumeric PIN
-    while True:
-        pin = ''.join(random.choices(string.ascii_uppercase + string.digits, k=4))
-        existing = db.query(NetSession).filter_by(pin=pin).first()
-        if not existing:
-            break
-
-    session = NetSession(
-        name=validated.name,
-        pin=pin,
-        callsign_indicator=validated.callsign_indicator
+    client_info = {"remote_addr": request.remote_addr, "sid": request.sid}
+    res = session_service.create_net_session(
+        db,
+        data,
+        client_info,
+        registry,
+        broadcast_roster
     )
-    db.add(session)
-    db.flush()
-
-    # Automatically create & connect Instructor Station record
-    station = Station(
-        net_id=session.id,
-        nickname="Instructor",
-        role="CONTROL",
-        call_sign="CONTROL",
-        status="CONNECTED",
-        ip_address=request.remote_addr,
-        last_seen=datetime.utcnow()
-    )
-    db.add(station)
-    db.commit()
-
-    # Link socket mapping for instructor
-    sid_to_station_id[request.sid] = station.id
-    station_id_to_sid[station.id] = request.sid
-    sid_to_net_id[request.sid] = session.id
-
-    # Join SocketIO room for this session
-    join_room(session.id)
-
-    emit('create_response', {
-        "success": True,
-        "pin": pin,
-        "netId": session.id,
-        "netName": session.name,
-        "stationId": station.id,
-        "role": "CONTROL",
-        "callSign": "CONTROL",
-        "status": "CONNECTED"
-    })
-
-    # Broadcast initial roster update
-    broadcast_roster(db, session.id)
-
-
-
+    emit('create_response', res)
 
 
 @socketio.on('join_net')
 def handle_join_net(data):
     """Station (student or instructor) joins a net session."""
-    # pylint: disable=too-many-statements
     db = get_db()
     pin = data.get('pin', '').upper()
     nickname = data.get('nickname', '')
-    role = data.get('role', 'SUB_STATION')  # CONTROL/INSTRUCTOR or SUB_STATION
+    role = data.get('role', 'SUB_STATION')
 
     if nickname.upper() in ["INSTRUCTOR", "CONTROL"]:
         role = "CONTROL"
 
-    session = db.query(NetSession).filter_by(pin=pin).first()
+    session = db.query(session_service.NetSession).filter_by(pin=pin).first()
     if not session:
         emit('join_response', {"success": False, "reason": f"Invalid Net PIN '{pin}'."})
         return
@@ -267,63 +80,16 @@ def handle_join_net(data):
         return
 
     provided_station_id = data.get('stationId')
+    station = station_service.find_existing_station(db, session.id, nickname, role, provided_station_id)
 
-    # Look up existing station record
-    station = None
-    if provided_station_id:
-        station = db.query(Station).filter_by(id=provided_station_id, net_id=session.id).first()
+    if station_service.check_duplicate_active_station(station, request.sid, provided_station_id):
+        emit('join_response', {"success": False, "reason": f"Nickname '{nickname}' is already in use."})
+        return
 
-    if not station and role in ["CONTROL", "INSTRUCTOR"]:
-        station = db.query(Station).filter(
-            Station.net_id == session.id,
-            Station.role.in_(["CONTROL", "INSTRUCTOR"])
-        ).first()
+    station_info = {"nickname": nickname, "role": role, "remote_addr": request.remote_addr}
+    station = station_service.bind_or_create_station(db, session.id, station_info, station)
 
-    if not station:
-        station = db.query(Station).filter(
-            Station.net_id == session.id,
-            Station.nickname == nickname
-        ).first()
-
-    # If active on another window/tab, block duplicate
-    if station and station.status not in ["LEFT", "DISCONNECTED"]:
-        existing_sid = station_id_to_sid.get(station.id)
-        if existing_sid and existing_sid != request.sid and provided_station_id != station.id:
-            emit('join_response', {"success": False, "reason": f"Nickname '{nickname}' is already in use."})
-            return
-
-    if station:
-        # Reconnect existing station!
-        if role in ["CONTROL", "INSTRUCTOR"]:
-            station.nickname = nickname
-            station.role = role
-            station.call_sign = "CONTROL"
-            station.status = "CONNECTED"
-        else:
-            station.status = "CONNECTED" if station.call_sign else "AWAITING_ASSIGNMENT"
-    else:
-        # Create new station
-        is_control = role in ["CONTROL", "INSTRUCTOR"]
-        station = Station(
-            net_id=session.id,
-            nickname=nickname,
-            role=role,
-            call_sign="CONTROL" if is_control else None,
-            status="CONNECTED" if is_control else "AWAITING_ASSIGNMENT"
-        )
-        db.add(station)
-        db.flush()
-
-    station.ip_address = request.remote_addr
-    station.last_seen = datetime.utcnow()
-    db.commit()
-
-    # Link socket mapping
-    sid_to_station_id[request.sid] = station.id
-    station_id_to_sid[station.id] = request.sid
-    sid_to_net_id[request.sid] = session.id
-
-    # Join the SocketIO room for this session
+    registry.register(request.sid, station.id, session.id)
     join_room(session.id)
 
     emit('join_response', {
@@ -339,7 +105,6 @@ def handle_join_net(data):
         "pin": session.pin
     })
 
-    # Broadcast roster update
     broadcast_roster(db, session.id)
 
 
@@ -361,14 +126,11 @@ def handle_assign_callsign(data):
         emit('error', {"reason": "Station not found."})
         return
 
-    session = db.query(NetSession).filter_by(id=station.net_id).first()
-
-    # Clean up and prepend Callsign Indicator prefix if callsign is purely numerical
+    session = station.net_session
     cleaned_callsign = raw_callsign.strip()
     if cleaned_callsign.isdigit():
         cleaned_callsign = f"{session.callsign_indicator}{cleaned_callsign}"
 
-    # Verify uniqueness of callsign in this net session
     duplicate = db.query(Station).filter(
         Station.net_id == session.id,
         Station.call_sign == cleaned_callsign,
@@ -384,8 +146,7 @@ def handle_assign_callsign(data):
     station.role = role
     db.commit()
 
-    # Notify student client that they have been assigned and unlocked
-    student_sid = station_id_to_sid.get(station.id)
+    student_sid = registry.get_sid(station.id)
     if student_sid:
         socketio.emit('callsign_assigned', {
             "success": True,
@@ -398,132 +159,38 @@ def handle_assign_callsign(data):
             }
         }, to=student_sid)
 
-    # Broadcast updated roster to the whole room
     broadcast_roster(db, session.id)
 
 
 @socketio.on('ptt_request')
 def handle_ptt_request(data):
     """Station requests frequency access to transmit voice."""
-    # pylint: disable=too-many-statements,too-many-branches,unused-argument
+    # pylint: disable=unused-argument
     db = get_db()
     station = get_station_from_sid(db, request.sid)
-    if not station or station.status == "AWAITING_ASSIGNMENT":
-        emit('ptt_response', {"allowed": False, "reason": "Not connected or callsign not assigned."})
-        return
-
-    if station.status == "MUTED":
-        emit('ptt_response', {"allowed": False, "reason": "You are muted by the instructor."})
-        return
-
-    net_id = station.net_id
-    session = db.query(NetSession).filter_by(id=net_id).first()
-    if session.status == "SUSPENDED":
-        emit('ptt_response', {"allowed": False, "reason": "Net is currently suspended."})
-        return
-
-    # Check if there is an active speaker
-    active_tx = db.query(Transmission).filter_by(net_id=net_id, end_time=None).first()
-
-    if not active_tx:
-        # Channel free, grant lock
-        station.transmission_status = "TRANSMITTING"
-        tx = Transmission(
-            net_id=net_id,
-            sender_call_sign=station.call_sign,
-            start_time=datetime.utcnow()
-        )
-        db.add(tx)
-        db.commit()
-
-        # Register SID in zero-DB fast-path transmitting map
-        transmitting_sids[request.sid] = net_id
-
-
-
-        emit('ptt_response', {"allowed": True, "transmissionId": tx.id})
-        broadcast_roster(db, net_id)
-
-    else:
-        # Channel is busy. Check if requesting station is CONTROL (NCS Override / Break-In)
-        if station.role == "CONTROL":
-            # Cut off the current sender
-            cur_sender = db.query(Station).filter_by(net_id=net_id, call_sign=active_tx.sender_call_sign).first()
-            if cur_sender:
-                cur_sender.transmission_status = "IDLE"
-
-                # Emit override event to cut-off socket
-                cur_sid = station_id_to_sid.get(cur_sender.id)
-                if cur_sid:
-                    transmitting_sids.pop(cur_sid, None)
-                    socketio.emit('ptt_override', {"reason": "NCS_BREAK_IN"}, to=cur_sid)
-
-            active_tx.end_time = datetime.utcnow()
-            active_tx.termination_reason = "OVERRIDDEN"
-
-            # Grant lock to CONTROL
-            station.transmission_status = "TRANSMITTING"
-            new_tx = Transmission(
-                net_id=net_id,
-                sender_call_sign=station.call_sign,
-                start_time=datetime.utcnow()
-            )
-            db.add(new_tx)
-            db.commit()
-
-            # Register CONTROL SID in zero-DB fast-path transmitting map
-            transmitting_sids[request.sid] = net_id
-
-            emit('ptt_response', {"allowed": True, "transmissionId": new_tx.id})
-            broadcast_roster(db, net_id)
-        else:
-            # Deny permission
-            emit('ptt_response', {
-                "allowed": False,
-                "reason": f"Channel Busy - {active_tx.sender_call_sign} is currently transmitting."
-            })
+    res = transmission_service.handle_ptt_request(db, station, request.sid, registry, broadcast_roster)
+    emit('ptt_response', res)
 
 
 @socketio.on('ptt_release')
 def handle_ptt_release(data):
     """Station releases PTT key, freeing the channel."""
-    transmitting_sids.pop(request.sid, None)
     db = get_db()
     station = get_station_from_sid(db, request.sid)
-    if not station:
-        return
-
-    net_id = station.net_id
-    tx_id = data.get('transmissionId')
-
-    tx = db.query(Transmission).filter_by(id=tx_id, end_time=None).first()
-    if tx and tx.sender_call_sign == station.call_sign:
-        tx.end_time = datetime.utcnow()
-        tx.termination_reason = "PTT_RELEASED"
-        station.transmission_status = "IDLE"
-        db.commit()
-
-        broadcast_roster(db, net_id)
-
-
+    tx_id = data.get('transmissionId') if data else None
+    transmission_service.handle_ptt_release(db, station, tx_id, request.sid, broadcast_roster)
 
 
 @socketio.on('audio_chunk')
 def handle_audio_chunk(data):
     """Broadcasts a binary audio chunk from speaker to all other stations."""
     if not isinstance(data, (bytes, bytearray)) or len(data) < 4:
-        print(f"⚠️ [SERVER-AUDIO] Ignored invalid audio packet from sid={request.sid}")
         return
 
-    # Fast-path O(1) memory lookup with room fallback
-    net_id = transmitting_sids.get(request.sid) or sid_to_net_id.get(request.sid)
+    net_id = transmission_service.get_audio_net_id(request.sid, registry)
     if not net_id:
-        print(f"⚠️ [SERVER-AUDIO] Dropped audio chunk ({len(data)} B) sid={request.sid} - No net_id found")
         return
 
-    print(f"📡 [SERVER-AUDIO] Broadcasting audio chunk ({len(data)} bytes) from sid={request.sid} to net_id={net_id}")
-
-    # Broadcast binary chunk to the room, excluding the sender
     emit('audio_chunk', data, room=net_id, include_self=False, binary=True)
 
 
@@ -532,59 +199,12 @@ def handle_sync_log_entry(data):
     """Saves or updates a log entry row, enforcing finality/immutability constraints."""
     db = get_db()
     station = get_station_from_sid(db, request.sid)
-    if not station or station.status == "AWAITING_ASSIGNMENT":
-        emit('sync_response', {"success": False, "reason": "Unauthorized log sync"})
-        return
-
-    try:
-        validated = LogEntryCreate(**data.get('entry', {}))
-    except ValidationError as e:
-        emit('sync_response', {"success": False, "reason": str(e)})
-        return
-
     net_id = data.get('netId')
-    entry_id = data.get('entry', {}).get('entryId')
+    entry_payload = data.get('entry', {})
+    entry_id = entry_payload.get('entryId')
 
-    # Look up existing entry in database
-    existing = db.query(LogEntry).filter_by(id=entry_id).first()
-
-    if existing:
-        # Check if the existing entry is finalized (contains initials and complete details)
-        # Finalized entries are immutable.
-        if existing.operator_initials and len(existing.operator_initials) >= 2:
-            emit('sync_response', {
-                "success": False,
-                "reason": "Log sheet entry is locked/finalized and cannot be modified."
-            })
-            return
-
-        # Update draft
-        existing.dtg = validated.dtg
-        existing.from_call_sign = validated.from_call_sign
-        existing.to_call_sign = validated.to_call_sign
-        existing.precedence = validated.precedence
-        existing.event_text = validated.event_text
-        existing.operator_initials = validated.operator_initials
-    else:
-        # Create new log entry
-        new_entry = LogEntry(
-            id=entry_id,
-            net_id=net_id,
-            owner_station_id=station.id,
-            dtg=validated.dtg,
-            from_call_sign=validated.from_call_sign,
-            to_call_sign=validated.to_call_sign,
-            precedence=validated.precedence,
-            event_text=validated.event_text,
-            operator_initials=validated.operator_initials
-        )
-        db.add(new_entry)
-
-    db.commit()
-    emit('sync_response', {"success": True, "entryId": entry_id})
-
-
-
+    res = log_service.sync_log_entry(db, station, net_id, entry_id, entry_payload)
+    emit('sync_response', res)
 
 
 @socketio.on('set_signal_quality')
@@ -610,38 +230,8 @@ def handle_set_signal_quality(data):
 def handle_end_session(data):
     """Instructor ends and terminates the net session. Purges ephemeral data."""
     # pylint: disable=unused-argument
-    transmitting_sids.pop(request.sid, None)
     db = get_db()
     instructor = get_station_from_sid(db, request.sid)
-    if not instructor or instructor.role not in ["CONTROL", "INSTRUCTOR"]:
-        emit('error', {"reason": "Unauthorized action."})
-        return
-
-    net_id = instructor.net_id
-    session = db.query(NetSession).filter_by(id=net_id).first()
-    if session:
-        session.status = "CLOSED"
-
-        # Broadcast termination message
-        socketio.emit('session_ended', {"reason": "SESSION_CLOSED_BY_INSTRUCTOR"}, room=net_id)
-
-
-
-        # Force disconnect sockets mapping
-        stations = db.query(Station).filter_by(net_id=net_id).all()
-        for s in stations:
-            sid = station_id_to_sid.get(s.id)
-            if sid:
-                leave_room(net_id, sid=sid)
-                sid_to_station_id.pop(sid, None)
-                station_id_to_sid.pop(s.id, None)
-                transmitting_sids.pop(sid, None)
-
-        # Ephemeral Purge
-        db.query(InstructorInject).filter_by(net_id=net_id).delete()
-        db.query(LogEntry).filter_by(net_id=net_id).delete()
-        db.query(Transmission).filter_by(net_id=net_id).delete()
-        db.query(Station).filter_by(net_id=net_id).delete()
-        db.delete(session)
-
-        db.commit()
+    res = session_service.end_net_session(db, instructor, registry, transmission_service)
+    if not res.get("success"):
+        emit('error', {"reason": res.get("reason", "Unauthorized action.")})
