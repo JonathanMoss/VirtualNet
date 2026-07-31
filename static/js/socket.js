@@ -1,5 +1,7 @@
 // SocketIO Client Manager Module - VirtualNet
 
+import { showAlert } from './dialog.js';
+
 export class SocketManager {
   constructor(app) {
     this.app = app;
@@ -80,18 +82,18 @@ export class SocketManager {
     });
 
     this.socket.on('session_ended', (data) => {
-      alert("This net session has been ended by SUNRAY.");
+      showAlert("This net session has been ended by SUNRAY.", { title: "SESSION ENDED", titleColor: "var(--color-hot-red)" });
       this.app.resetToLanding();
     });
 
     this.socket.on('kicked', (data) => {
-      alert(data.reason || "You have been kicked from the net by SUNRAY.");
+      showAlert(data.reason || "You have been kicked from the net by SUNRAY.", { title: "KICKED FROM NET", titleColor: "var(--color-hot-red)" });
       this.app.clearSavedSession();
       this.app.resetToLanding();
     });
 
     this.socket.on('error', (data) => {
-      alert(`Error: ${data.reason}`);
+      showAlert(`Error: ${data.reason}`, { title: "SOCKET ERROR", titleColor: "var(--color-hot-red)" });
     });
   }
 
