@@ -1,5 +1,5 @@
 """HTTP routes and API endpoints for VirtualNet."""
-from flask import Blueprint, jsonify, current_app
+from flask import Blueprint, jsonify, render_template
 from app.database import get_db
 from app.models import NetSession, LogEntry, Station
 
@@ -9,7 +9,7 @@ bp = Blueprint('routes', __name__)
 @bp.route('/')
 def index():
     """Serves the main application page."""
-    return current_app.send_static_file('templates/index.html')
+    return render_template('index.html')
 
 
 @bp.route('/favicon.ico')
