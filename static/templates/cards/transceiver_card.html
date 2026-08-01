@@ -1,0 +1,41 @@
+<!-- PTT Transceiver Box -->
+<section id="ptt-container" class="card mb-3 ptt-card-idle shadow-sm position-relative">
+  
+  <!-- PTT Card Header with Minimise Toggle -->
+  <div id="ptt-card-header" class="card-header bg-dark text-uppercase d-flex justify-content-between align-items-center py-1 px-3" style="cursor: pointer; user-select: none;">
+    <span class="font-weight-bold d-flex align-items-center gap-2 small">
+      <span>📻</span>
+      <span>TRANSCEIVER CONTROLS</span>
+      <span id="ptt-header-status-badge" class="badge bg-secondary text-white ms-1">STANDBY</span>
+    </span>
+    <button id="btn-toggle-ptt-panel" class="btn btn-sm text-success p-0 border-0 shadow-none" title="Toggle PTT panel size">
+      <span class="toggle-icon-ptt small font-weight-bold">▲ MINIMISE</span>
+    </button>
+  </div>
+
+  <!-- Awaiting callsign lock overlay screen -->
+  <div id="callsign-lock-overlay" class="position-absolute top-0 start-0 w-100 h-100 bg-dark d-flex flex-column align-items-center justify-content-center z-3">
+    <div class="spinner-border text-success mb-3" role="status"></div>
+    <h4 class="text-success text-center">AWAITING CALLSIGN ASSIGNMENT...</h4>
+    <p class="text-muted text-center max-width-75">SUNRAY must assign your call sign before you can enter the active frequency.</p>
+    <div class="border border-secondary p-2 bg-black text-center font-weight-bold">
+      Operator NICK: <span id="overlay-nickname" style="color: var(--color-tactical-amber);">-</span>
+    </div>
+  </div>
+
+  <div id="ptt-card-body" class="card-body d-flex flex-row align-items-center justify-content-between py-3 transition-all">
+    <div class="mb-0 text-start">
+      <h5 class="card-title text-uppercase m-0 font-weight-bold" id="ptt-state-text">STANDBY</h5>
+      <p class="text-muted small m-0 mt-1" id="ptt-instruction">Hold SPACEBAR or push circular dial to speak (Max 20s)</p>
+      <p class="text-warning small m-0 mt-1 d-none" id="audio-support-warning"></p>
+      <div class="mt-1 d-none" id="active-speaker-box">
+        <span class="text-muted small">Active Speaker:</span> <span id="active-speaker" class="font-weight-bold text-white small"></span>
+      </div>
+    </div>
+    
+    <!-- Circular Physical PTT Button -->
+    <div class="my-0 text-center flex-shrink-0 ms-2">
+      <button id="ptt-btn" class="ptt-button" disabled>PTT</button>
+    </div>
+  </div>
+</section>

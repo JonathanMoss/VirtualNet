@@ -24,7 +24,7 @@ from . import sockets
 
 def create_app(testing=False):
     """Create and configure the Flask application instance."""
-    app = Flask(__name__, static_folder='../static', static_url_path='/static')
+    app = Flask(__name__, static_folder='../static', static_url_path='/static', template_folder='../static/templates')
     if testing or IS_TESTING:
         app.config['TESTING'] = True
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'virtualnet-secret-key-1234')

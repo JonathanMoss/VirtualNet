@@ -10,7 +10,7 @@ import re
 from pathlib import Path
 
 BASE_DIR = Path(__file__).parent.parent
-INDEX_HTML_PATH = BASE_DIR / "static" / "templates" / "index.html"
+TEMPLATES_DIR_PATH = BASE_DIR / "static" / "templates"
 JS_DIR_PATH = BASE_DIR / "static" / "js"
 
 
@@ -30,12 +30,13 @@ class IndexHTMLParser(HTMLParser):
             self.data_targets.add(attr_dict["data-target"])
 
 
-def get_html_data(html_path: Path) -> tuple[set[str], set[str]]:
-    """Parse index.html and return sets of element IDs and data-target values."""
-    assert html_path.exists(), f"HTML template file not found at {html_path}"
+def get_html_data(templates_dir: Path) -> tuple[set[str], set[str]]:
+    """Parse all HTML templates in static/templates/ and return sets of element IDs and data-target values."""
+    assert templates_dir.exists(), f"HTML template directory not found at {templates_dir}"
     parser = IndexHTMLParser()
-    with open(html_path, "r", encoding="utf-8") as f:
-        parser.feed(f.read())
+    for html_file in templates_dir.rglob("*.html"):
+        with open(html_file, "r", encoding="utf-8") as f:
+            parser.feed(f.read())
     return parser.element_ids, parser.data_targets
 
 
@@ -61,11 +62,11 @@ def get_js_element_references(js_dir: Path) -> list[tuple[str, str, int]]:
 
 
 def test_all_js_get_element_by_id_references_exist_in_html():
-    """Verify that 100% of DOM IDs queried in static/js/*.js exist in index.html."""
-    html_ids, _ = get_html_data(INDEX_HTML_PATH)
+    """Verify that 100% of DOM IDs queried in static/js/*.js exist in index.html or card templates."""
+    html_ids, _ = get_html_data(TEMPLATES_DIR_PATH)
     js_references = get_js_element_references(JS_DIR_PATH)
 
-    assert len(html_ids) > 0, "No HTML IDs found in index.html!"
+    assert len(html_ids) > 0, "No HTML IDs found in templates!"
     assert len(js_references) > 0, "No JS element ID references found in static/js/*.js!"
 
     missing_references = []
@@ -77,14 +78,15 @@ def test_all_js_get_element_by_id_references_exist_in_html():
             missing_references.append(f"{js_filename}:L{line_no} -> #{elem_id}")
 
     assert not missing_references, (
-        f"Found {len(missing_references)} JavaScript element ID reference(s) that DO NOT exist in index.html:\n"
+        f"Found {len(missing_references)} JavaScript element ID reference(s) "
+        "that DO NOT exist in template HTML files:\n"
         + "\n".join(f"  - {ref}" for ref in missing_references)
     )
 
 
 def test_all_html_data_zoom_targets_exist_in_html():
-    """Verify that all data-target attributes in index.html refer to valid element IDs."""
-    html_ids, data_targets = get_html_data(INDEX_HTML_PATH)
+    """Verify that all data-target attributes in template HTML files refer to valid element IDs."""
+    html_ids, data_targets = get_html_data(TEMPLATES_DIR_PATH)
 
     missing_targets = []
     for target_id in data_targets:
@@ -92,6 +94,7 @@ def test_all_html_data_zoom_targets_exist_in_html():
             missing_targets.append(f"data-target=\"{target_id}\"")
 
     assert not missing_targets, (
-        f"Found {len(missing_targets)} data-target reference(s) in index.html that DO NOT exist as HTML element IDs:\n"
+        f"Found {len(missing_targets)} data-target reference(s) "
+        "in template HTML files that DO NOT exist as HTML element IDs:\n"
         + "\n".join(f"  - {target}" for target in missing_targets)
     )

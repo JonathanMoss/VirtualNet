@@ -1,0 +1,28 @@
+<!-- Create Net Card (SUNRAY View - Hidden by default) -->
+<div id="create-net-card" class="col-md-5 d-none">
+  <div class="card shadow-lg border-secondary">
+    <div class="card-header text-center">
+      <h3>📡 HOST NEW NET SESSION (SUNRAY)</h3>
+    </div>
+    <div class="card-body p-4">
+      <div id="create-net-form">
+        <div class="mb-3">
+          <label for="create-name" class="form-label text-uppercase">Net Session Name</label>
+          <input type="text" class="form-control" id="create-name" placeholder="e.g. Exercise Drill Alpha" maxlength="50" autocomplete="off" required>
+        </div>
+        <div class="mb-3">
+          <label for="create-sunray-callsign" class="form-label text-uppercase">SUNRAY Callsign</label>
+          <input type="text" class="form-control text-uppercase text-center font-weight-bold" id="create-sunray-callsign" placeholder="0" maxlength="15" value="0" autocomplete="off">
+        </div>
+        <div class="mb-3">
+          <label for="create-instructor-pin" class="form-label text-uppercase">Daily Instructor 6-Digit PIN</label>
+          <input type="text" inputmode="numeric" style="-webkit-text-security: disc; text-security: disc;" class="form-control text-center" id="create-instructor-pin" placeholder="Enter 6-digit PIN" maxlength="6" pattern="\d{6}" autocomplete="off" data-lpignore="true" data-bwignore="true" required>
+        </div>
+        <button type="button" id="btn-create-net" class="btn btn-tactical w-100 mt-2">CREATE NET SESSION</button>
+      </div>
+      <div class="text-center mt-3">
+        <a href="#" id="toggle-join-view" class="text-decoration-none" style="color: var(--color-tactical-amber);">Back to Student Log-in</a>
+      </div>
+    </div>
+  </div>
+</div>
