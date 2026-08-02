@@ -40,6 +40,7 @@ class Station(Base):
     ip_address = Column(String(45), nullable=True)
     status = Column(String(20), default="AWAITING_ASSIGNMENT", nullable=False)
     transmission_status = Column(String(20), default="IDLE", nullable=False)  # IDLE, TRANSMITTING, BLOCKED
+    signal_quality = Column(String(15), default="OK", nullable=True)
     connected_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     last_seen = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
