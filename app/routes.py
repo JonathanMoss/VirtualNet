@@ -2,6 +2,7 @@
 from flask import Blueprint, jsonify, render_template
 from app.database import get_db
 from app.models import NetSession, LogEntry, Station
+from app.services import instructor_service
 
 bp = Blueprint('routes', __name__)
 
@@ -62,8 +63,29 @@ def get_session_roster(pin):
         "callSign": s.call_sign,
         "role": s.role,
         "status": s.status,
-        "signalQuality": s.signal_quality,
         "transmissionStatus": s.transmission_status
     } for s in stations]
 
     return jsonify({"pin": pin, "roster": roster_data})
+
+
+@bp.route('/api/session/<pin>/telemetry')
+def get_session_telemetry(pin):
+    """API endpoint to get real-time instructor telemetry for a net session."""
+    db = get_db()
+    res = instructor_service.get_net_telemetry(db, pin)
+    if not res.get("success"):
+        return jsonify({"error": res.get("reason", "Not found")}), 404
+    return jsonify(res)
+
+
+@bp.route('/api/session/<pin>/injects')
+def get_session_injects(pin):
+    """API endpoint to get scenario injects for a net session."""
+    db = get_db()
+    session = db.query(NetSession).filter_by(pin=pin.upper()).first()
+    if not session:
+        return jsonify({"error": "Session not found"}), 404
+
+    injects = instructor_service.get_injects(db, session.id)
+    return jsonify({"pin": pin, "injects": injects})

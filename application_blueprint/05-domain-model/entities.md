@@ -79,7 +79,7 @@ Represents a voice transmission segment.
 
 ## 4. LogEntry
 
-A single log row entered on an operator's logsheet.
+Master log row recorded for the net by Net Control / SUNRAY.
 
 ### Pydantic Schema: `LogEntrySchema`
 - `entry_id`: `uuid.UUID`

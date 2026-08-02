@@ -1,0 +1,185 @@
+<!-- LIVE INSTRUCTOR DASHBOARD CARD -->
+<section id="instructor-dashboard-section" class="card border-warning mb-3 d-none shadow-lg bg-dark text-light">
+  
+  <!-- Dashboard Header Bar -->
+  <div id="sunray-card-header" class="card-header bg-dark text-warning d-flex justify-content-between align-items-center py-2 px-3 border-bottom border-warning" style="cursor: pointer; user-select: none;">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
+      <span class="fs-5">📡</span>
+      <span class="fw-bold text-uppercase tracking-wider">SUNRAY CONTROL & INSTRUCTOR DASHBOARD</span>
+      <span id="sunray-queue-badge" class="badge bg-warning text-dark d-none">0 WAITING</span>
+      <span id="inst-net-state-badge" class="badge bg-info text-dark">DIRECTED NET</span>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <button id="btn-toggle-sunray-panel" class="btn btn-sm text-warning p-0 border-0 shadow-none" title="Toggle Dashboard">
+        <span class="toggle-icon-sunray d-inline-block transition-transform">▼</span>
+      </button>
+    </div>
+  </div>
+
+  <div id="sunray-collapse-body" class="card-body p-3">
+    
+    <!-- Navigation Tabs -->
+    <ul class="nav nav-tabs border-secondary mb-3" id="instructorTab" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active text-warning bg-transparent border-secondary fw-bold" id="inst-telemetry-tab" data-bs-toggle="tab" data-bs-target="#inst-telemetry-pane" type="button" role="tab">
+          📋 Net Roster & Mode
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link text-warning bg-transparent border-secondary fw-bold" id="inst-injects-tab" data-bs-toggle="tab" data-bs-target="#inst-injects-pane" type="button" role="tab">
+          🎯 Scenario Injects <span id="inst-inject-count-badge" class="badge bg-secondary">0</span>
+        </button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link text-warning bg-transparent border-secondary fw-bold" id="inst-masterlog-tab" data-bs-toggle="tab" data-bs-target="#inst-masterlog-pane" type="button" role="tab">
+          📜 Master Net Log
+        </button>
+      </li>
+    </ul>
+
+    <div class="tab-content" id="instructorTabContent">
+      
+      <!-- ================= TAB 1: NET ROSTER & MODE ================= -->
+      <div class="tab-pane fade show active" id="inst-telemetry-pane" role="tabpanel">
+        
+        <!-- Mode Controls Bar -->
+        <div class="d-flex justify-content-between align-items-center bg-black p-2 rounded border border-secondary mb-3">
+          <div class="d-flex align-items-center gap-2">
+            <span class="text-muted small fw-bold">OPERATIONAL MODE:</span>
+            <div class="btn-group btn-group-sm" role="group">
+              <button id="btn-net-state-directed" type="button" class="btn btn-outline-warning active">DIRECTED NET</button>
+              <button id="btn-net-state-free" type="button" class="btn btn-outline-info">FREE NET</button>
+            </div>
+          </div>
+          <div class="text-muted small">
+            <span>Active Stations: <strong id="inst-active-station-count" class="text-warning">0</strong></span>
+          </div>
+        </div>
+
+        <!-- Admissions Queue -->
+        <div class="mb-3">
+          <h6 class="text-warning d-flex justify-content-between align-items-center">
+            <span>📥 Admissions Queue (Awaiting Callsign)</span>
+          </h6>
+          <div class="table-responsive border border-secondary bg-black" style="max-height: 160px; overflow-y: auto;">
+            <table class="table table-dark table-sm m-0 align-middle">
+              <thead>
+                <tr>
+                  <th>NICK</th>
+                  <th>Role</th>
+                  <th>Assign Callsign</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="admissions-tbody">
+                <tr><td colspan="4" class="text-center text-muted py-2">No students waiting in queue.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Active Roster Table -->
+        <div>
+          <h6 class="text-warning">📋 Active Net Roster</h6>
+          <div class="table-responsive border border-secondary bg-black" style="max-height: 200px; overflow-y: auto;">
+            <table class="table table-dark table-sm m-0 align-middle">
+              <thead>
+                <tr>
+                  <th>Call Sign</th>
+                  <th>NICK</th>
+                  <th>Role</th>
+                  <th>State</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="instructor-roster-tbody">
+                <tr><td colspan="5" class="text-center text-muted py-2">No active stations.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= TAB 2: SCENARIO INJECTS ================= -->
+      <div class="tab-pane fade" id="inst-injects-pane" role="tabpanel">
+        
+        <!-- Preset Inject Buttons -->
+        <div class="mb-3">
+          <span class="text-muted small fw-bold d-block mb-1">QUICK TACTICAL PRESETS:</span>
+          <div class="d-flex flex-wrap gap-2">
+            <button type="button" class="btn btn-sm btn-outline-danger btn-preset-inject" data-title="CONTACT REPORT" data-desc="ENEMIES IN SIGHT. Grid 443812. 1x Infantry Squad advancing south.">🔥 Contact Report</button>
+            <button type="button" class="btn btn-sm btn-outline-warning btn-preset-inject" data-title="9-LINE MEDEVAC" data-desc="REQUEST 9-LINE MEDEVAC. 1x Priority Casualty (Gunshot wound). Pick-up Zone LZ Falcon.">🚑 9-Line MEDEVAC</button>
+            <button type="button" class="btn btn-sm btn-outline-info btn-preset-inject" data-title="SITREP REQUEST" data-desc="ALL STATIONS THIS IS ZERO. SEND SITUATION REPORT IMMEDIATELY. OVER.">📡 SITREP Request</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary btn-preset-inject" data-title="BARRIER / JAMMING ALERT" data-desc="POSSIBLE ENEMY SPOT JAMMING ON FREQUENCY. PREPARE TO SWITCH TO SECONDARY FREQUENCY.">⚠️ Jamming Alert</button>
+          </div>
+        </div>
+
+        <!-- Inject Creation Form -->
+        <form id="form-create-inject" class="bg-black p-3 rounded border border-secondary mb-3">
+          <h6 class="text-warning mb-2">➕ Create Custom Scenario Inject</h6>
+          <div class="row g-2">
+            <div class="col-md-6">
+              <input type="text" id="inject-title" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="Inject Title (e.g. CONTACT REPORT)" required maxLength="100">
+            </div>
+            <div class="col-md-6">
+              <input type="text" id="inject-target" class="form-control form-control-sm bg-dark text-light border-secondary" placeholder="Target Callsign (blank for broadcast)" maxLength="15">
+            </div>
+            <div class="col-12">
+              <textarea id="inject-description" class="form-control form-control-sm bg-dark text-light border-secondary" rows="2" placeholder="Inject Description / Message body..." required maxLength="1000"></textarea>
+            </div>
+            <div class="col-12 text-end">
+              <button type="submit" class="btn btn-sm btn-warning">➕ Add Inject</button>
+            </div>
+          </div>
+        </form>
+
+        <!-- Injects Table -->
+        <h6 class="text-warning">📋 Active Exercise Injects</h6>
+        <div class="table-responsive border border-secondary bg-black" style="max-height: 220px; overflow-y: auto;">
+          <table class="table table-dark table-sm m-0 align-middle">
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Target</th>
+                <th>Description</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="injects-tbody">
+              <tr><td colspan="5" class="text-center text-muted py-2">No injects created yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+
+      <!-- ================= TAB 3: MASTER NET LOG ================= -->
+      <div class="tab-pane fade" id="inst-masterlog-pane" role="tabpanel">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h6 class="text-warning m-0">📜 Server-Side Master Transmission & Log Feed</h6>
+          <button id="btn-export-master-log" class="btn btn-sm btn-outline-warning">💾 Export Master Log</button>
+        </div>
+        <div class="table-responsive border border-secondary bg-black" style="max-height: 280px; overflow-y: auto;">
+          <table class="table table-dark table-sm m-0 align-middle">
+            <thead>
+              <tr>
+                <th>Time (DTG)</th>
+                <th>From</th>
+                <th>To</th>
+                <th>Precedence</th>
+                <th>Event / Message Text</th>
+                <th>Initials</th>
+              </tr>
+            </thead>
+            <tbody id="master-log-tbody">
+              <tr><td colspan="6" class="text-center text-muted py-2">No master log entries recorded.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</section>

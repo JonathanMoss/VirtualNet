@@ -104,7 +104,6 @@ class StationSchema(BaseModel):
     ip_address: Optional[str] = None
     status: str
     transmission_status: str
-    signal_quality: str
     connected_at: datetime
 
 
@@ -170,6 +169,30 @@ class LogEntrySchema(BaseModel):
     event_text: str
     operator_initials: str
     created_at: datetime
+
+
+class InstructorInjectCreate(BaseModel):
+    """Validation schema for creating a scenario inject."""
+    # pylint: disable=too-few-public-methods
+    title: str = Field(..., min_length=1, max_length=100)
+    description: str = Field(..., min_length=1, max_length=1000)
+    target_call_sign: Optional[str] = Field(default=None, max_length=15)
+    time_offset_seconds: int = Field(default=0, ge=0)
+
+
+class NetStateUpdate(BaseModel):
+    """Validation schema for updating net operational mode (FREE vs DIRECTED)."""
+    # pylint: disable=too-few-public-methods
+    net_state: str
+
+    @field_validator('net_state')
+    @classmethod
+    def validate_net_state(cls, v: str) -> str:
+        """Validate net state mode."""
+        v_upper = v.upper()
+        if v_upper not in ["FREE", "DIRECTED"]:
+            raise ValueError("Net state must be either FREE or DIRECTED")
+        return v_upper
 
 
 class InstructorInjectSchema(BaseModel):

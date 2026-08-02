@@ -51,25 +51,18 @@ Simulates the physical behavior of a half-duplex radio transceiver.
 
 ---
 
-## 3. Real-Time Radio Log (Logsheet)
+## 3. Instructor Controls & Scenario Injects
 
-Logging is a core skill in Voice Procedure training. Each station maintains their own log.
+Instructors (SUNRAY) have centralized oversight and scenario management capabilities:
 
-- **Interactive Log Table**:
-  - Columns:
-    - **Time (DTG)**: Auto-filled with current Date-Time-Group (e.g., `311032Z JUL 26`), fully editable.
-    - **From**: Call sign of the transmitting station.
-    - **To**: Call sign of the receiving station.
-    - **Precedence**: Precedence selector (Routine, Priority, Immediate, Flash).
-    - **Text / Event**: Detailed contents of the message or event.
-    - **Initials**: Operator initials for accountability.
-- **Quick-Log Shortcuts & Keyboard Navigation**:
-  - Strict tab-index mapping (<kbd>Tab</kbd> cell traversal, <kbd>Enter</kbd> on Initials cell appends row and syncs entry).
-  - <kbd>Ctrl+N</kbd> hotkey appends a new entry row instantly.
-- **Log Export**:
-  - Export radio logs as local JSON or text files for submission to instructors.
-- **Optional Screen Logsheet (Paper Mode)**:
-  - Toggle digital logsheet on/off. When hidden ("Paper Mode"), the interface encourages physical paper logging to maximize screen space for reference tools.
+- **Scenario Inject Manager**:
+  - Interface to schedule, dispatch, and track training injects (`InstructorInject`).
+  - Pre-set scenario templates (CONTACT REPORT, 9-LINE MEDEVAC, SITREP, BARRIER / JAMMING ALERT).
+  - Broadcasts injects to target callsigns or the entire net in real-time.
+- **Net Mode Control (FREE vs. DIRECTED)**:
+  - Toggle between Directed Net mode (permission required to talk to other stations) and Free Net mode.
+- **Master Net Log & Telemetry**:
+  - SUNRAY / Control maintains master transmission logs and monitors real-time station connectivity and voice activity.
 
 ---
 
@@ -78,7 +71,7 @@ Logging is a core skill in Voice Procedure training. Each station maintains thei
 A side-sliding reveal panel (Aide Memoire) contains five tabbed reference tools and image inspection capabilities:
 
 - **1. SHORTHAND Tab**:
-  - Quick reference guide for standard military logging shorthand symbols (`0`/`CS 0`, `R`, `P`, `I`, `F`, `C`, `S`, `Z`, `x`, `RPT`, `OK`/`D`/`U`).
+  - Quick reference guide for standard military logging shorthand symbols (`0`/`CS 0`, `R`, `P`, `I`, `F`, `C`, `S`, `Z`, `x`, `RPT`).
 - **2. BATCO Tab (Interactive SVG BATCO Slider)**:
   - Digital replication of the BATCO cipher sheet featuring an interactive SVG slider (`static/js/svg_batco_slider.js`).
   - Features smooth vertical drag alignment across desktop mouse and mobile touch pointers, row step buttons (Step Up / Step Down) for precise alignment, and viewport drag isolation.
@@ -87,7 +80,7 @@ A side-sliding reveal panel (Aide Memoire) contains five tabbed reference tools 
 - **4. SLATES Tab (Tactical Slate Cards AC-71936)**:
   - High-resolution slate card templates: CFF (Call for Fire), CONTACT Report, MEDEVAC 9-Line, MISTAT (Casualty Report), and SITREP (Situation Report).
 - **5. LOGGING Tab**:
-  - Standardized military radio logsheet format and entry guidelines.
+  - Standardized military radio logsheet format and entry guidelines reference.
 - **Image Pan/Zoom Controls Bar**:
   - All reference card tabs feature an integrated control bar (`Zoom In 🔍+`, `Zoom Out 🔍-`, `Reset Zoom ↺`) with drag-pan capabilities for close inspection on desktop and mobile screens.
 
@@ -120,4 +113,4 @@ All browser native popups (`alert`, `confirm`, `prompt`) are replaced with a cus
 ## 7. Review & Debriefing
 
 - **Server-Side Log & Audio Sync**:
-  - Timestamps all voice transmissions and socket logs for exercise review and student feedback.
+  - Timestamps all voice transmissions and socket events for exercise review and student feedback.

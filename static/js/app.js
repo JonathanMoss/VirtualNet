@@ -1,10 +1,9 @@
-// Main Application Coordinator Module - VirtualNet
-
 import { SocketManager } from './socket.js';
 import { formatDTG } from './utils.js';
 import { AideMemoireManager } from './aide_memoire.js';
 import { WebAudioEngine } from './audio.js';
 import { showAlert, showConfirm, showPrompt } from './dialog.js';
+import { initInstructorDashboard } from './instructor.js';
 
 // Global exception & unhandled rejection handler to catch third-party browser extension errors (e.g. content_chrome.js / cs.js disconnected port errors)
 window.addEventListener('error', (event) => {
@@ -482,13 +481,17 @@ class VirtualNetApp {
       // Transition to Dashboard directly
       document.getElementById('landing-section').classList.add('d-none');
       document.getElementById('dashboard-section').classList.remove('d-none');
-      document.getElementById('instructor-section').classList.remove('d-none');
+      const instSection = document.getElementById('instructor-dashboard-section') || document.getElementById('instructor-section');
+      if (instSection) instSection.classList.remove('d-none');
       document.getElementById('callsign-lock-overlay').classList.add('d-none');
 
       document.getElementById('header-net-pin').textContent = `PIN: ${data.pin}`;
       document.getElementById('header-net-name').textContent = `Net: ${data.netName}`;
       document.getElementById('header-net-name').classList.remove('d-none');
       document.getElementById('header-callsign').textContent = `Callsign: ${this.myCallSign}`;
+
+      initInstructorDashboard(this.socketManager.socket);
+      this.socketManager.socket.emit('request_telemetry', {});
 
       if (WebAudioEngine.isMediaCaptureSupported()) {
         document.getElementById('ptt-btn').disabled = false;
@@ -536,7 +539,11 @@ class VirtualNetApp {
         }
         
         // Show SUNRAY Dashboard controls
-        document.getElementById('instructor-section').classList.remove('d-none');
+        const instSection = document.getElementById('instructor-dashboard-section') || document.getElementById('instructor-section');
+        if (instSection) instSection.classList.remove('d-none');
+
+        initInstructorDashboard(this.socketManager.socket);
+        this.socketManager.socket.emit('request_telemetry', {});
 
 
       } else if (data.status === 'CONNECTED' && data.callSign) {

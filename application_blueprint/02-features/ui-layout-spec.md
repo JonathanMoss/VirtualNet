@@ -63,9 +63,9 @@ Card container for instructors to host a session (`#create-net-card`):
 - **Admissions Queue Table (`#instructor-admissions-queue`)**:
   - Columns: Nickname, Assign Callsign (`.input-assign-cs`), Role Selector (`.select-assign-role`), Action Button (`[Assign Callsign]`).
 - **Active Roster Management Grid (`#instructor-roster`)**:
-  - Columns: Callsign, Nickname, Role, Status (`TALKING`, `ACTIVE`, `UNWORKABLE`), Action Buttons:
-    - **`[CALLSIGN]` (`.btn-change-callsign`)**: Opens custom prompt dialog to dynamically modify callsign/suffix (Issue #26).
-    - **`[KICK]` (`.btn-kick-student`)**: Prompts custom confirmation modal to kick station (Issue #26).
+  - Columns: Callsign, Nickname, Role, Status (`TALKING`, `ACTIVE`, `IDLE`), Action Buttons:
+    - **`[CALLSIGN]` (`.btn-change-callsign`)**: Opens custom prompt dialog to dynamically modify callsign/suffix.
+    - **`[KICK]` (`.btn-kick-student`)**: Prompts custom confirmation modal to kick station.
 - **Session Control (`#btn-end-session`)**:
   - Styled with `.btn .btn-outline-danger`. Triggers custom tactical confirmation modal before terminating session.
 

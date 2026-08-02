@@ -15,8 +15,8 @@ This document outlines the strict business rules, operational constraints, and v
   - Students must supply the correct active PIN and a Nickname to join.
 - **Awaiting Assignment Lock**:
   - Upon joining, the student connection is marked `AWAITING_ASSIGNMENT`.
-  - In this state, the client cannot emit or receive voice streams, view logsheets, or receive the roster updates.
-  - The student gains full client features only after an instructor assigns them a tactical callsign.
+  - In this state, the client cannot emit or receive voice streams or view the net roster.
+  - The student gains full client features (PTT half-duplex voice streaming and reference cards) only after an instructor assigns them a tactical callsign.
 
 ---
 

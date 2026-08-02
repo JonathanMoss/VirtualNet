@@ -10,6 +10,7 @@ from app.services import (
     transmission_service,
     log_service,
     session_service,
+    instructor_service,
 )
 
 # Re-export dictionary mappings and functions for backward compatibility with existing tests
@@ -232,23 +233,88 @@ def handle_sync_log_entry(data):
     emit('sync_response', res)
 
 
-@socketio.on('set_signal_quality')
-def handle_set_signal_quality(data):
-    """SUNRAY alters signal quality for a student station."""
+@socketio.on('create_inject')
+def handle_create_inject(data):
+    """SUNRAY creates a training scenario inject."""
     db = get_db()
     instructor = get_station_from_sid(db, request.sid)
     if not instructor or instructor.role not in ["SUNRAY", "CONTROL", "INSTRUCTOR"]:
-        emit('error', {"reason": "Unauthorized action."})
+        emit('create_inject_response', {"success": False, "reason": "Unauthorized action."})
         return
 
-    station_id = data.get('stationId')
-    quality = data.get('signalQuality', 'OK')
+    res = instructor_service.create_inject(db, instructor.net_id, data or {})
+    emit('create_inject_response', res)
+    if res.get("success"):
+        # Broadcast updated telemetry to instructor
+        session = db.query(session_service.NetSession).filter_by(id=instructor.net_id).first()
+        if session:
+            telemetry = instructor_service.get_net_telemetry(db, session.pin)
+            emit('telemetry_update', telemetry, room=instructor.net_id)
 
-    station = db.query(Station).filter_by(id=station_id).first()
-    if station:
-        station.signal_quality = quality
-        db.commit()
-        broadcast_roster(db, station.net_id)
+
+@socketio.on('dispatch_inject')
+def handle_dispatch_inject(data):
+    """SUNRAY dispatches a training scenario inject to the net."""
+    db = get_db()
+    instructor = get_station_from_sid(db, request.sid)
+    if not instructor or instructor.role not in ["SUNRAY", "CONTROL", "INSTRUCTOR"]:
+        emit('dispatch_inject_response', {"success": False, "reason": "Unauthorized action."})
+        return
+
+    inject_id = data.get('injectId') if data else None
+    res = instructor_service.dispatch_inject(db, inject_id)
+    emit('dispatch_inject_response', res)
+
+    if res.get("success"):
+        # Broadcast inject alert to all stations in the net session
+        emit('inject_dispatched', res.get("inject"), room=instructor.net_id)
+
+
+@socketio.on('delete_inject')
+def handle_delete_inject(data):
+    """SUNRAY deletes an un-dispatched scenario inject."""
+    db = get_db()
+    instructor = get_station_from_sid(db, request.sid)
+    if not instructor or instructor.role not in ["SUNRAY", "CONTROL", "INSTRUCTOR"]:
+        emit('delete_inject_response', {"success": False, "reason": "Unauthorized action."})
+        return
+
+    inject_id = data.get('injectId') if data else None
+    res = instructor_service.delete_inject(db, inject_id)
+    emit('delete_inject_response', res)
+
+
+@socketio.on('set_net_state')
+def handle_set_net_state(data):
+    """SUNRAY toggles net operational mode (FREE vs DIRECTED)."""
+    db = get_db()
+    instructor = get_station_from_sid(db, request.sid)
+    if not instructor or instructor.role not in ["SUNRAY", "CONTROL", "INSTRUCTOR"]:
+        emit('set_net_state_response', {"success": False, "reason": "Unauthorized action."})
+        return
+
+    new_state = data.get('netState', 'DIRECTED') if data else 'DIRECTED'
+    res = instructor_service.set_net_state(db, instructor.net_id, new_state)
+    emit('set_net_state_response', res)
+
+    if res.get("success"):
+        socketio.emit('net_state_changed', {"netState": res.get("netState")}, room=instructor.net_id)
+
+
+@socketio.on('request_telemetry')
+def handle_request_telemetry(data):
+    """SUNRAY requests real-time net telemetry update."""
+    # pylint: disable=unused-argument
+    db = get_db()
+    instructor = get_station_from_sid(db, request.sid)
+    if not instructor or instructor.role not in ["SUNRAY", "CONTROL", "INSTRUCTOR"]:
+        emit('telemetry_update', {"success": False, "reason": "Unauthorized action."})
+        return
+
+    session = db.query(session_service.NetSession).filter_by(id=instructor.net_id).first()
+    if session:
+        telemetry = instructor_service.get_net_telemetry(db, session.pin)
+        emit('telemetry_update', telemetry)
 
 
 @socketio.on('end_session')

@@ -416,41 +416,54 @@ def test_sync_log_entry_draft_and_finalized_locking(app, socket_client):
     student.disconnect()
 
 
-def test_set_signal_quality(app, socket_client):
-    # pylint: disable=redefined-outer-name
-    """Test set_signal_quality authorization and updates."""
+def test_instructor_injects_and_net_state(app, socket_client):
+    # pylint: disable=redefined-outer-name,too-many-locals
+    """Test instructor create_inject, dispatch_inject, delete_inject, and set_net_state socket events."""
     valid_pin = get_today_instructor_pin()
-    socket_client.emit(
-        'create_net',
-        {'name': 'Signal Quality Net', 'callsign_indicator': 'R', 'instructor_pin': valid_pin}
-    )
+    socket_client.emit('create_net', {'name': 'Inject Net', 'callsign_indicator': 'R', 'instructor_pin': valid_pin})
 
     pin = next(item for item in socket_client.get_received() if item['name'] == 'create_response')['args'][0]['pin']
 
     student = socketio.test_client(app)
-    student.emit('join_net', {'pin': pin, 'nickname': 'SigQualStudent'})
-    st_resp = student.get_received()
-    student_id = next(item for item in st_resp if item['name'] == 'join_response')['args'][0]['stationId']
-
-    # Student attempts set_signal_quality -> Unauthorized
-    student.emit('set_signal_quality', {'stationId': student_id, 'signalQuality': 'POOR'})
-    err2 = next(item for item in student.get_received() if item['name'] == 'error')['args'][0]
-    assert err2['reason'] == 'Unauthorized action.'
-
-    # Instructor joins
-    socket_client.emit('join_net', {'pin': pin, 'nickname': 'SigQualInst', 'role': 'INSTRUCTOR'})
-    socket_client.get_received()
-
-    # Assign callsign to student
-    socket_client.emit('assign_callsign', {'stationId': student_id, 'callSign': '05'})
-    socket_client.get_received()
+    student.emit('join_net', {'pin': pin, 'nickname': 'InjectStudent'})
     student.get_received()
 
-    # Instructor alters signal quality
-    socket_client.emit('set_signal_quality', {'stationId': student_id, 'signalQuality': 'POOR'})
-    roster_evt = next(item for item in socket_client.get_received() if item['name'] == 'roster_update')['args'][0]
-    sub_station = next(s for s in roster_evt['stations'] if s['stationId'] == student_id)
-    assert sub_station['status'] == 'CONNECTED'
+    # Student attempts create_inject -> Unauthorized
+    student.emit('create_inject', {'title': 'Unauthorized Inject', 'description': 'Test'})
+    resp_unauth = next(item for item in student.get_received() if item['name'] == 'create_inject_response')['args'][0]
+    assert resp_unauth['success'] is False
+
+    # SUNRAY creates an inject
+    socket_client.emit('create_inject', {
+        'title': 'CONTACT REPORT',
+        'description': 'Enemy squad sighted at Grid 123456',
+        'target_call_sign': '11',
+        'time_offset_seconds': 30
+    })
+    rec = socket_client.get_received()
+    create_res = next(item for item in rec if item['name'] == 'create_inject_response')['args'][0]
+    assert create_res['success'] is True
+    inject_id = create_res['inject']['id']
+
+    # SUNRAY dispatches inject -> Student receives inject_dispatched
+    socket_client.emit('dispatch_inject', {'injectId': inject_id})
+    rec_inst = socket_client.get_received()
+    dispatch_res = next(item for item in rec_inst if item['name'] == 'dispatch_inject_response')['args'][0]
+    assert dispatch_res['success'] is True
+
+    student_events = student.get_received()
+    dispatched_evt = next(item for item in student_events if item['name'] == 'inject_dispatched')['args'][0]
+    assert dispatched_evt['title'] == 'CONTACT REPORT'
+
+    # SUNRAY sets net state to FREE
+    socket_client.emit('set_net_state', {'netState': 'FREE'})
+    res_list = socket_client.get_received()
+    net_state_res = next(item for item in res_list if item['name'] == 'set_net_state_response')['args'][0]
+    assert net_state_res['success'] is True
+    assert net_state_res['netState'] == 'FREE'
+
+    student_net_evt = next(item for item in student.get_received() if item['name'] == 'net_state_changed')['args'][0]
+    assert student_net_evt['netState'] == 'FREE'
 
     student.disconnect()
 
