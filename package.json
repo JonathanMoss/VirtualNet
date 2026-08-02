@@ -1,0 +1,14 @@
+{
+  "name": "virtualnet",
+  "version": "1.0.0",
+  "description": "Tactical Radio Net Simulator",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint:js": "eslint static/js",
+    "test:js": "node --test tests/js/*.test.js"
+  },
+  "devDependencies": {
+    "eslint": "^8.57.0"
+  }
+}

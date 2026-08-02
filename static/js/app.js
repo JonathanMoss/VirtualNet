@@ -633,7 +633,7 @@ class VirtualNetApp {
     }
   }
 
-  handlePTTOverride(data) {
+  handlePTTOverride(_data) {
     // Current transmission was terminated forcibly by NCS Control override
     this.isTransmitting = false;
     this.audioEngine.stopRecording();
@@ -647,7 +647,7 @@ class VirtualNetApp {
     }, 2000);
   }
 
-  handlePTTTimeout(data) {
+  handlePTTTimeout(_data) {
     // 20-second max transmission limit exceeded
     this.isTransmitting = false;
     this.audioEngine.stopRecording();

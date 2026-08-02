@@ -65,7 +65,7 @@ export class WebAudioEngine {
     return;
   }
 
-  makeDistortionCurve(amount = 20) {
+  makeDistortionCurve(_amount = 20) {
     return new Float32Array(0);
   }
 

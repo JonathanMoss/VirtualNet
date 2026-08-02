@@ -81,7 +81,7 @@ export class SocketManager {
       }
     });
 
-    this.socket.on('session_ended', (data) => {
+    this.socket.on('session_ended', (_data) => {
       showAlert("This net session has been ended by SUNRAY.", { title: "SESSION ENDED", titleColor: "var(--color-hot-red)" });
       this.app.resetToLanding();
     });
