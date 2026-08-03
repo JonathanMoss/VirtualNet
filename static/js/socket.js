@@ -13,7 +13,7 @@ export class SocketManager {
     const url = window.location.origin;
     this.socket = io(url, {
       path: '/socket.io',
-      transports: ['polling', 'websocket'],
+      transports: ['websocket', 'polling'],
       upgrade: true,
       secure: url.startsWith('https:'),
       pingInterval: 2000,

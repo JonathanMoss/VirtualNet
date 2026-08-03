@@ -1,4 +1,4 @@
-// Web Audio Engine and Simulated Radio Effects Module - VirtualNet
+// Web Audio Engine and Real-Time Low-Latency Voice Streaming - VirtualNet
 
 export class WebAudioEngine {
   constructor(app) {
@@ -12,36 +12,17 @@ export class WebAudioEngine {
     this.useOpus = false;
     this.currentTxId = null;
     this.packetSequence = 0;
-    this.receiveQueue = [];
-    this.receiveTimer = null;
-    this.receiveLatencyMs = 55;
-    this.expectedReceiveSequence = 0;
+    this.capturedPcmFloats = [];
+    this.isRecording = false;
     
     // Playback scheduling state
     this.nextStartTime = 0;
-    this.bufferQueue = [];
     
     // Audio effects nodes
     this.voiceGainNode = null;
-    this.bypassGainNode = null;
-    this.compressorNode = null;
-    this.bandpassFilterNode = null;
-    this.bandpassGainNode = null;
-    this.noiseGainNode = null;
-    this.noiseSourceNode = null;
-    
-    // Audio fade interval for UNWORKABLE simulation
-    this.dropoutInterval = null;
-    
-    // Squelch click assets & transmitter sidetone
-    this.whiteNoiseBuffer = null;
-    this.sidetoneOsc = null;
-    this.sidetoneGain = null;
   }
 
-
   async init() {
-    // Lazy-initialize AudioContext at 48000Hz hardware standard to prevent mobile Android sample rate mismatch & crackling.
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
     try {
       this.audioContext = new AudioContextClass({ sampleRate: 48000, latencyHint: 'interactive' });
@@ -50,18 +31,11 @@ export class WebAudioEngine {
       this.audioContext = new AudioContextClass({ latencyHint: 'interactive' });
     }
     
-    // Pre-generate a 1-second looping white noise buffer for static simulation
-    this.generateNoiseBuffer();
-    
     // Setup playback effects chain
     this.setupEffectsChain();
-    
-    // Initialize WebCodecs Encoder/Decoder if available
-    this.initCodec();
   }
 
   generateNoiseBuffer() {
-    // Pure audio mode: No noise buffer needed
     return;
   }
 
@@ -70,34 +44,15 @@ export class WebAudioEngine {
   }
 
   setupEffectsChain() {
-    // Pure audio mode: Direct 1:1 voice gain node to destination without filters, distortion, or noise
+    // Pure audio mode: Direct 1:1 voice gain node to destination
     this.voiceGainNode = this.audioContext.createGain();
     this.voiceGainNode.gain.setValueAtTime(1.0, this.audioContext.currentTime);
-
-    // Direct pure audio connection to output destination
     this.voiceGainNode.connect(this.audioContext.destination);
   }
 
   initCodec() {
-    const isWebCodecsSupported = typeof AudioEncoder !== 'undefined' && typeof AudioDecoder !== 'undefined';
-    
-    if (isWebCodecsSupported) {
-      console.log("WebCodecs Opus encoding supported.");
-      
-      // Initialize AudioDecoder
-      this.decoder = new AudioDecoder({
-        output: (audioData) => this.handleDecodedAudio(audioData),
-        error: (e) => console.error("Opus Decoder error:", e)
-      });
-      
-      this.decoder.configure({
-        codec: 'opus',
-        sampleRate: this.audioContext.sampleRate,
-        numberOfChannels: 1
-      });
-    } else {
-      console.warn("WebCodecs not supported. Falling back to raw PCM streaming.");
-    }
+    // Legacy WebCodecs hook placeholder
+    return;
   }
 
   static isMediaCaptureSupported() {
@@ -138,24 +93,19 @@ export class WebAudioEngine {
     return Promise.reject(new Error('Media capture is not supported by this browser.')); 
   }
 
-
   playPTTStartChirp() {
-    // Pure audio mode: No PTT chirp sound effect
     return;
   }
 
   startTransmitterSidetone() {
-    // Pure audio mode: No transmitter sidetone
     return;
   }
 
   stopTransmitterSidetone() {
-    // Pure audio mode: No transmitter sidetone
     return;
   }
 
   playPTTEndSquelchTail() {
-    // Pure audio mode: No squelch tail noise
     return;
   }
 
@@ -174,11 +124,12 @@ export class WebAudioEngine {
         throw new Error(supportError);
       }
 
+      // Enable native hardware echo cancellation, noise suppression & auto gain control for mobile devices
       this.micStream = await this.getUserMedia({
         audio: {
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
           channelCount: 1,
           sampleRate: this.audioContext ? this.audioContext.sampleRate : undefined
         }
@@ -198,6 +149,7 @@ export class WebAudioEngine {
           if (this.isRecording) {
             const floatData = new Float32Array(event.data);
             this.capturedPcmFloats.push(new Float32Array(floatData));
+            this.flushChunkIfReady();
           }
         };
         source.connect(this.workletNode);
@@ -207,6 +159,7 @@ export class WebAudioEngine {
           if (this.isRecording) {
             const inputData = e.inputBuffer.getChannelData(0);
             this.capturedPcmFloats.push(new Float32Array(inputData));
+            this.flushChunkIfReady();
           }
         };
         source.connect(this.scriptNode);
@@ -215,7 +168,7 @@ export class WebAudioEngine {
         this.scriptNode.connect(dummyGain);
         dummyGain.connect(this.audioContext.destination);
       }
-      console.log("🎤 [AUDIO] Microphone stream pre-warmed and active in background.");
+      console.log("🎤 [AUDIO] Microphone stream active with mobile DSP noise/echo cancellation.");
     } catch (e) {
       console.warn("Failed to pre-warm microphone stream:", e);
       throw e;
@@ -234,88 +187,89 @@ export class WebAudioEngine {
     this.currentTxId = txId;
     this.packetSequence = 0;
     this.capturedPcmFloats = [];
+    this.nextStartTime = 0;
 
-    // Pre-pad 100ms of lead-in silence so the first spoken syllable is never clipped
+    // 100ms lead-in silence buffer to prevent syllable clipping
     const silenceSamples = Math.round((this.audioContext ? this.audioContext.sampleRate : 48000) * 0.10);
     this.capturedPcmFloats.push(new Float32Array(silenceSamples));
 
     this.isRecording = true;
-    console.log("🎙️ [AUDIO-TX] PTT Keyed -> Recording active with warm mic stream & 100ms lead silence for TX ID:", txId);
+    console.log("🎙️ [AUDIO-TX] PTT Keyed -> Low-latency streaming recording started for TX ID:", txId);
+  }
+
+  flushChunkIfReady(force = false) {
+    if (!this.isRecording && !force) return;
+    if (!this.capturedPcmFloats || this.capturedPcmFloats.length === 0) return;
+
+    let totalSamples = 0;
+    for (const arr of this.capturedPcmFloats) {
+      totalSamples += arr.length;
+    }
+
+    // Flush every ~85ms chunk (4096 samples at 48kHz) or when forced on PTT release
+    const targetSamples = 4096;
+    if (totalSamples >= targetSamples || (force && totalSamples > 0)) {
+      const combinedPcm = new Float32Array(totalSamples);
+      let offset = 0;
+      for (const arr of this.capturedPcmFloats) {
+        combinedPcm.set(arr, offset);
+        offset += arr.length;
+      }
+      this.capturedPcmFloats = [];
+
+      // Convert Float32 to 16-bit Int16 PCM (50% bandwidth reduction)
+      const int16Data = this.floatToInt16(combinedPcm);
+      this.sendAudioPacket(this.currentTxId, new Uint8Array(int16Data.buffer), true);
+    }
   }
 
   stopRecording() {
-    this.isRecording = false;
     const txId = this.currentTxId;
 
-    // Transmit complete recorded voice message as ONE uncompressed 32-bit Float PCM packet upon PTT release
-    if (this.capturedPcmFloats && this.capturedPcmFloats.length > 0 && txId) {
-      let totalLength = 0;
-      for (const arr of this.capturedPcmFloats) {
-        totalLength += arr.length;
-      }
-
-      if (totalLength > 0) {
-        const combinedPcm = new Float32Array(totalLength);
-        let offset = 0;
-        for (const arr of this.capturedPcmFloats) {
-          combinedPcm.set(arr, offset);
-          offset += arr.length;
-        }
-
-        console.log(`🚀 [AUDIO-TX] PTT Released -> Assembled ${combinedPcm.byteLength} bytes of 32-bit Float PCM audio (${combinedPcm.length} samples) for TX ID: ${txId}`);
-        this.sendAudioPacket(txId, new Uint8Array(combinedPcm.buffer));
-      }
-    } else {
-      console.warn("⚠️ [AUDIO-TX] PTT Released, but no PCM audio floats were captured or TX ID missing.");
+    if (this.isRecording) {
+      this.flushChunkIfReady(true);
     }
 
+    this.isRecording = false;
     this.currentTxId = null;
     this.capturedPcmFloats = [];
+    console.log(`🚀 [AUDIO-TX] PTT Released -> Finished streaming voice chunks for TX ID: ${txId}`);
   }
 
   processCapturedAudio() {
-    // Single-packet mode: audio is accumulated in capturedPcmFloats and sent on PTT release
     return;
   }
 
-  resampleFloat32(inputData, fromSampleRate, toSampleRate) {
-    if (!inputData || !inputData.length) {
-      return new Float32Array(0);
+  floatToInt16(float32Array) {
+    const int16 = new Int16Array(float32Array.length);
+    for (let i = 0; i < float32Array.length; i++) {
+      const s = Math.max(-1, Math.min(1, float32Array[i]));
+      int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
     }
-    if (!fromSampleRate || !toSampleRate || Math.abs(fromSampleRate - toSampleRate) < 5) {
-      return inputData;
-    }
-    const ratio = fromSampleRate / toSampleRate;
-    const newLength = Math.round(inputData.length / ratio);
-    const outputData = new Float32Array(newLength);
-    const len = inputData.length;
-    
-    for (let i = 0; i < newLength; i++) {
-      const originIndex = i * ratio;
-      const idx = Math.floor(originIndex);
-      const t = originIndex - idx;
-      
-      const p0 = inputData[Math.max(0, idx - 1)];
-      const p1 = inputData[Math.min(len - 1, idx)];
-      const p2 = inputData[Math.min(len - 1, idx + 1)];
-      const p3 = inputData[Math.min(len - 1, idx + 2)];
-      
-      // Cubic Hermite interpolation for smooth anti-aliased resampling
-      const a = -0.5 * p0 + 1.5 * p1 - 1.5 * p2 + 0.5 * p3;
-      const b = p0 - 2.5 * p1 + 2 * p2 - 0.5 * p3;
-      const c = -0.5 * p0 + 0.5 * p2;
-      const d = p1;
-      
-      outputData[i] = a * t * t * t + b * t * t + c * t + d;
-    }
-    return outputData;
+    return int16;
   }
 
-  sendAudioPacket(txId, payloadBytes) {
-    // Generate binary buffer: [4 bytes tx hash] + [4 bytes sequence] + [4 bytes sample rate] + payload
+  int16ToFloat32(int16Array) {
+    const float32 = new Float32Array(int16Array.length);
+    for (let i = 0; i < int16Array.length; i++) {
+      float32[i] = int16Array[i] / (int16Array[i] < 0 ? 32768 : 32767);
+    }
+    return float32;
+  }
+
+  resampleFloat32(inputData, _fromSampleRate, _toSampleRate) {
+    // Deprecated manual JS cubic interpolation: WebAudio AudioBuffer handles native hardware C++ resampling automatically
+    return inputData;
+  }
+
+  sendAudioPacket(txId, payloadBytes, isInt16 = true) {
+    if (!txId) return;
+
     const txHash = this.hashCode(txId);
     const sequence = this.packetSequence++ >>> 0;
-    const sampleRate = (this.audioContext ? this.audioContext.sampleRate : 48000) >>> 0;
+    // Set bit 31 of sample rate header to indicate 16-bit Int16 PCM format
+    const baseSampleRate = (this.audioContext ? this.audioContext.sampleRate : 48000) >>> 0;
+    const sampleRateHeader = (baseSampleRate & 0x7FFFFFFF) | (isInt16 ? 0x80000000 : 0);
 
     const buffer = new Uint8Array(12 + payloadBytes.length);
     buffer[0] = (txHash >> 24) & 0xFF;
@@ -326,21 +280,21 @@ export class WebAudioEngine {
     buffer[5] = (sequence >> 16) & 0xFF;
     buffer[6] = (sequence >> 8) & 0xFF;
     buffer[7] = sequence & 0xFF;
-    buffer[8] = (sampleRate >> 24) & 0xFF;
-    buffer[9] = (sampleRate >> 16) & 0xFF;
-    buffer[10] = (sampleRate >> 8) & 0xFF;
-    buffer[11] = sampleRate & 0xFF;
+    buffer[8] = (sampleRateHeader >> 24) & 0xFF;
+    buffer[9] = (sampleRateHeader >> 16) & 0xFF;
+    buffer[10] = (sampleRateHeader >> 8) & 0xFF;
+    buffer[11] = sampleRateHeader & 0xFF;
     buffer.set(payloadBytes, 12);
 
-    console.log(`📡 [AUDIO-TX-SOCKET] Emitting binary 'audio_chunk' packet (${buffer.byteLength} bytes) to server...`);
     this.app.socketManager.sendAudioChunk(buffer);
   }
 
   hashCode(str) {
     let hash = 0;
+    if (!str) return 0;
     for (let i = 0; i < str.length; i++) {
       hash = (hash << 5) - hash + str.charCodeAt(i);
-      hash |= 0; // Convert to 32bit integer
+      hash |= 0;
     }
     return hash;
   }
@@ -364,18 +318,19 @@ export class WebAudioEngine {
       packet = new Uint8Array(packet);
     }
 
-    console.log(`🔊 [AUDIO-RX] Received binary 'audio_chunk' packet (${packet.length} bytes) from server`);
-
     if (packet.length <= 8) {
       console.warn("⚠️ [AUDIO-RX] Packet too short, ignoring.");
       return;
     }
 
     let srcSampleRate = 48000;
+    let isInt16 = false;
     let payload;
 
     if (packet.length >= 12) {
-      const extractedRate = ((packet[8] << 24) | (packet[9] << 16) | (packet[10] << 8) | packet[11]) >>> 0;
+      const rawRate = ((packet[8] << 24) | (packet[9] << 16) | (packet[10] << 8) | packet[11]) >>> 0;
+      isInt16 = (rawRate & 0x80000000) !== 0;
+      const extractedRate = rawRate & 0x7FFFFFFF;
       if (extractedRate >= 8000 && extractedRate <= 192000) {
         srcSampleRate = extractedRate;
         payload = packet.subarray(12);
@@ -387,29 +342,37 @@ export class WebAudioEngine {
     }
 
     if (!payload || payload.length === 0) {
-      console.warn("⚠️ [AUDIO-RX] Payload empty, ignoring.");
       return;
     }
 
-    // Unpack 32-bit Float PCM payload with guaranteed 4-byte alignment for Android ARM CPUs
-    const pcmBuffer = payload.buffer.slice(payload.byteOffset, payload.byteOffset + payload.byteLength);
-    let float32 = new Float32Array(pcmBuffer, 0, Math.floor(pcmBuffer.byteLength / 4));
+    let float32;
+    if (isInt16) {
+      // Decode 16-bit Int16 PCM payload
+      const int16Array = new Int16Array(payload.buffer, payload.byteOffset, Math.floor(payload.byteLength / 2));
+      float32 = this.int16ToFloat32(int16Array);
+    } else {
+      // Decode 32-bit Float PCM payload (backwards compatibility)
+      const pcmBuffer = payload.buffer.slice(payload.byteOffset, payload.byteOffset + payload.byteLength);
+      float32 = new Float32Array(pcmBuffer, 0, Math.floor(pcmBuffer.byteLength / 4));
+    }
 
-    // Resample Float PCM from sender's sample rate to receiver's AudioContext sample rate
-    float32 = this.resampleFloat32(float32, srcSampleRate, this.audioContext.sampleRate);
+    if (!float32 || float32.length === 0) return;
 
-    if (float32.length === 0) return;
-
-    console.log(`▶️ [AUDIO-RX] Playing continuous voice buffer (${float32.length} samples | Sender Rate: ${srcSampleRate}Hz | Receiver Rate: ${this.audioContext.sampleRate}Hz)`);
-
-    // Play pristine continuous audio buffer
-    const audioBuf = this.audioContext.createBuffer(1, float32.length, this.audioContext.sampleRate);
+    // Create AudioBuffer with sender's native sample rate.
+    // WebAudio automatically handles hardware-accelerated resampling to receiver's AudioContext.
+    const audioBuf = this.audioContext.createBuffer(1, float32.length, srcSampleRate);
     audioBuf.getChannelData(0).set(float32);
+
+    const currentTime = this.audioContext.currentTime;
+    if (!this.nextStartTime || this.nextStartTime < currentTime) {
+      this.nextStartTime = currentTime + 0.03; // 30ms jitter buffer for seamless streaming
+    }
 
     const source = this.audioContext.createBufferSource();
     source.buffer = audioBuf;
     source.connect(this.voiceGainNode);
-    source.start(0);
+    source.start(this.nextStartTime);
+    this.nextStartTime += audioBuf.duration;
   }
 
   clearPlaybackQueue() {
