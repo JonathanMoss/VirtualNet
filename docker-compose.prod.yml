@@ -1,0 +1,66 @@
+services:
+  nginx-proxy:
+    image: nginxproxy/nginx-proxy:alpine
+    container_name: nginx-proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - certs:/etc/nginx/certs:ro
+      - vhost:/etc/nginx/vhost.d
+      - html:/usr/share/nginx/html
+      - ./nginx/vhost.d/default:/etc/nginx/vhost.d/default:ro
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+
+  acme-companion:
+    image: nginxproxy/acme-companion
+    container_name: nginx-proxy-acme
+    restart: always
+    depends_on:
+      - nginx-proxy
+    environment:
+      - NGINX_PROXY_CONTAINER=nginx-proxy
+    volumes:
+      - certs:/etc/nginx/certs:rw
+      - vhost:/etc/nginx/vhost.d:rw
+      - html:/usr/share/nginx/html:rw
+      - acme:/etc/acme.sh
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 2s
+      retries: 5
+
+  web-app:
+    build: .
+    restart: always
+    depends_on:
+      redis:
+        condition: service_healthy
+      nginx-proxy:
+        condition: service_started
+    expose:
+      - "5000"
+    environment:
+      - FLASK_ENV=production
+      - DATABASE_URL=${DATABASE_URL:-sqlite:////app/data/virtualnet.db}
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
+      - SECRET_KEY=${SECRET_KEY}
+      - VIRTUAL_HOST=${DOMAIN_NAME:-virtualnet.uk}
+      - VIRTUAL_PORT=5000
+      - LETSENCRYPT_HOST=${DOMAIN_NAME:-virtualnet.uk}
+      - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL:-joth.moss@googlemail.com}
+    volumes:
+      - ./data:/app/data
+
+volumes:
+  certs:
+  vhost:
+  html:
+  acme:

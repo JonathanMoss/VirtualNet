@@ -1,0 +1,25 @@
+services:
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 2s
+      retries: 5
+
+  test:
+    build: .
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - ./data:/app/data
+    environment:
+      - FLASK_ENV=testing
+      - DATABASE_URL=sqlite:////app/data/virtualnet_test.db
+      - REDIS_URL=redis://redis:6379/0
+      - PYTHONPATH=/app
+    working_dir: /app
+    command: ["./run_checks.sh"]
+    restart: "no"
