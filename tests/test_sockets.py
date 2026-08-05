@@ -706,3 +706,75 @@ def test_max_transmission_timeout_enforced(app, socket_client):
     tx.termination_reason = "MAX_DURATION_EXCEEDED"
     db.commit()
     assert tx.termination_reason == "MAX_DURATION_EXCEEDED"
+
+
+def test_rejoin_net_and_heartbeat(app, socket_client):
+    # pylint: disable=redefined-outer-name,too-many-locals
+    """Test rejoin_net socket event and 30s heartbeat updates."""
+    valid_pin = get_today_instructor_pin()
+    socket_client.emit('create_net', {'name': 'Rejoin Net', 'callsign_indicator': 'R', 'instructor_pin': valid_pin})
+    create_resp = next(i for i in socket_client.get_received() if i['name'] == 'create_response')['args'][0]
+    pin = create_resp['pin']
+
+    student = socketio.test_client(app)
+    student.emit('join_net', {'pin': pin, 'nickname': 'RejoinUser', 'role': 'SUB_STATION'})
+    join_resp = next(i for i in student.get_received() if i['name'] == 'join_response')['args'][0]
+    student_id = join_resp['stationId']
+
+    # Simulate socket disconnect (e.g. background tab)
+    student.disconnect()
+
+    # Reconnect under new socket client
+    student_reconnected = socketio.test_client(app)
+    student_reconnected.emit('rejoin_net', {
+        'pin': pin,
+        'nickname': 'RejoinUser',
+        'role': 'SUB_STATION',
+        'stationId': student_id
+    })
+
+    rejoin_resp = next(i for i in student_reconnected.get_received() if i['name'] == 'rejoin_response')['args'][0]
+    assert rejoin_resp['success'] is True
+    assert rejoin_resp['stationId'] == student_id
+
+    # Test Heartbeat emission
+    student_reconnected.emit('heartbeat', {'stationId': student_id, 'pin': pin})
+    hb_ack = next(i for i in student_reconnected.get_received() if i['name'] == 'heartbeat_ack')['args'][0]
+    assert hb_ack['status'] == 'ok'
+
+    student_reconnected.disconnect()
+
+
+def test_sunray_60_minute_inactivity_timeout(socket_client):
+    # pylint: disable=redefined-outer-name,too-many-locals
+    """Test automated session closure when SUNRAY inactivity exceeds 60 minutes."""
+    from datetime import datetime, timedelta  # pylint: disable=import-outside-toplevel
+    from app.database import get_db  # pylint: disable=import-outside-toplevel
+    from app.services import session_service, transmission_service  # pylint: disable=import-outside-toplevel
+    from app.sockets import registry  # pylint: disable=import-outside-toplevel
+
+    valid_pin = get_today_instructor_pin()
+    socket_client.emit('create_net', {'name': 'Timeout Net', 'callsign_indicator': 'T', 'instructor_pin': valid_pin})
+    create_resp = next(i for i in socket_client.get_received() if i['name'] == 'create_response')['args'][0]
+    net_id = create_resp['netId']
+
+    # SUNRAY socket drops
+    socket_client.disconnect()
+
+    db = get_db()
+    sunray = db.query(Station).filter(
+        Station.net_id == net_id,
+        Station.role.in_(["SUNRAY", "CONTROL", "INSTRUCTOR"])
+    ).first()
+    assert sunray is not None
+
+    # Simulate 61 minutes of SUNRAY inactivity
+    sunray.last_seen = datetime.utcnow() - timedelta(minutes=61)
+    db.commit()
+
+    # Trigger expired session cleanup check
+    session_service.check_and_purge_expired_sessions(db, registry, transmission_service)
+
+    # Verify session is now CLOSED/purged
+    closed_session = db.query(NetSession).filter_by(id=net_id).first()
+    assert closed_session is None or closed_session.status == "CLOSED"

@@ -44,9 +44,6 @@ class VirtualNetApp {
     this.activeSpeaker = 'None';
     this.currentTransmissionId = null;
     this.isTransmitting = false;
-
-    // View toggles
-    this.paperMode = false;
   }
 
   init() {
@@ -556,12 +553,9 @@ class VirtualNetApp {
     } else {
       console.warn("Join/Rejoin failed:", data.reason);
       this.clearSavedSession();
-      if (document.getElementById('dashboard-section').classList.contains('d-none')) {
-        showAlert(`Join Failed: ${data.reason}`, { title: "JOIN FAILED", titleColor: "var(--color-hot-red)" });
-      } else {
-        showAlert(`Session Ended: ${data.reason}`, { title: "SESSION ENDED", titleColor: "var(--color-hot-red)" });
-        this.resetToLanding();
-      }
+      this.resetToLanding();
+      const reasonMsg = data.reason || "This net session has been closed or timed out.";
+      showAlert(`SESSION NO LONGER EXISTS: ${reasonMsg}`, { title: "SESSION NO LONGER EXISTS", titleColor: "var(--color-hot-red)" });
     }
   }
 

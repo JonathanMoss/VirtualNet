@@ -89,15 +89,48 @@ The client runs as an interactive web page loaded in standard modern web browser
 - Establishes and maintains the persistent WebSocket link to the Flask server.
 - Automatically handles ping/pong keepalives, transport upgrades, and reconnects.
 
-### Bootstrap 5 UI / View Layer
-- Renders the responsive dashboard layout:
-  - **PTT Display**: Status card indicating station states (`Idle` [gray], `Transmitting` [red], `Receiving` [yellow]).
-  - **Interactive Log sheet**: HTML table styled with Bootstrap classes. Enabled with custom tab-index navigation and event listeners to ensure fast, mouse-free input.
-  - **Roster Panel**: Visual status badge for each online user.
+### Modular Jinja2 Card Component View Layer (`static/templates/cards/`)
+- Renders the responsive dashboard layout through componentized Jinja2 card templates (`header_card.html`, `join_net_card.html`, `create_net_card.html`, `transceiver_card.html`, `roster_card.html`, `sunray_card.html`, `df_alert_banner.html`, `resources_card.html`, `aide_memoire_card.html`).
+- **DOM Contract Integrity**: `tests/test_dom_contract.py` guarantees element ID contracts (`#btn-join-net`, `#join-pin`, etc.) are strictly maintained.
 
-### Web Audio Engine
-- **Mic Capture**: Calls `navigator.mediaDevices.getUserMedia` to receive microphone streams, captures audio frames via an `AudioWorklet` or Script Node, and sends raw data through SocketIO.
+### Web Audio Engine & Mobile DSP Processing (`static/js/audio.js`)
+- **Mic Capture & DSP**: Calls `navigator.mediaDevices.getUserMedia` with mobile DSP constraints (`echoCancellation`, `noiseSuppression`, `autoGainControl`) and Int16 PCM audio chunk compression with WebAudio hardware resampling.
 - **Playback**: Feeds incoming WebSocket audio buffers into dynamic player nodes in the browser's `AudioContext`.
 
-### LocalStorage Cache
-- Automatically saves unsubmitted or draft log sheets locally in the browser to prevent data loss in case of page reload or disconnection.
+### SessionStorage Cache
+- Persists active net session credentials (PIN, station ID, callsign, role) to support automatic socket re-binding upon page refresh or tab focus.
+
+---
+
+## 4. Multi-Environment Deployment Architecture
+
+VirtualNet supports multi-environment container orchestration via Docker Compose:
+
+```
+                  ┌────────────────────────────────────────────────────────┐
+                  │                 INTERNET / CLIENTS                     │
+                  └───────────────────────────┬────────────────────────────┘
+                                              │ HTTPS / WSS
+                                              ▼
+                  ┌────────────────────────────────────────────────────────┐
+                  │                NGINX PROXY CONTAINER                   │
+                  │             (nginxproxy/nginx-proxy)                   │
+                  └─────────────┬──────────────────────────┬───────────────┘
+                                │                          │
+          Auto TLS Renewal      │                          │ Reverse Proxy
+         ┌──────────────────────┴┐                         │ (Port 5000)
+         │ ACME COMPANION        │                         ▼
+         │ (nginxproxy/          │               ┌───────────────────┐
+         │  acme-companion)      │               │ FLASK WEB-APP     │
+         └───────────────────────┘               │ (gunicorn/eventlet│
+                                                 └─────────┬─────────┘
+                                                           │
+                                                           ▼
+                                                 ┌───────────────────┐
+                                                 │ REDIS 7 BROKER    │
+                                                 └───────────────────┘
+```
+
+- **Staging / Pre-Prod (`docker-compose.preprod.yml`)**: Nginx reverse proxy routing to Flask backend.
+- **Production (`docker-compose.prod.yml`)**: Fully automated reverse proxy setup with `acme-companion` monitoring container state for zero-touch SSL certificate provisioning and renewal.
+

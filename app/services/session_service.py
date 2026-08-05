@@ -1,6 +1,7 @@
 """Service module for managing net sessions creation, management, and termination."""
 import random
 import string
+from datetime import datetime
 from flask_socketio import join_room, leave_room
 from pydantic import ValidationError
 from app import socketio
@@ -74,16 +75,13 @@ def create_net_session(db, data: dict, client_info: dict, station_registry, broa
     }
 
 
-def end_net_session(db, instructor_station: Station, station_registry, transmission_service):
-    """End a net session and purge all ephemeral data."""
-    if not instructor_station or instructor_station.role not in ["SUNRAY", "CONTROL", "INSTRUCTOR"]:
-        return {"success": False, "reason": "Unauthorized action."}
-
-    net_id = instructor_station.net_id
+def end_net_session_by_id(db, net_id: str, station_registry, transmission_service,
+                         reason: str = "SESSION_CLOSED_BY_SUNRAY"):
+    """End a net session by ID and purge all ephemeral data."""
     session = db.query(NetSession).filter_by(id=net_id).first()
     if session:
         session.status = "CLOSED"
-        socketio.emit('session_ended', {"reason": "SESSION_CLOSED_BY_SUNRAY"}, room=net_id)
+        socketio.emit('session_ended', {"reason": reason}, room=net_id)
 
         stations = db.query(Station).filter_by(net_id=net_id).all()
         for s in stations:
@@ -100,5 +98,36 @@ def end_net_session(db, instructor_station: Station, station_registry, transmiss
         db.query(Station).filter_by(net_id=net_id).delete()
         db.delete(session)
         db.commit()
-
     return {"success": True}
+
+
+def end_net_session(db, instructor_station: Station, station_registry, transmission_service):
+    """End a net session and purge all ephemeral data."""
+    if not instructor_station or instructor_station.role not in ["SUNRAY", "CONTROL", "INSTRUCTOR"]:
+        return {"success": False, "reason": "Unauthorized action."}
+
+    return end_net_session_by_id(db, instructor_station.net_id, station_registry, transmission_service)
+
+
+def check_and_purge_expired_sessions(db, station_registry, transmission_service):
+    """Check active net sessions; if SUNRAY has been offline/inactive for > 60 mins (3600s), close and purge session."""
+    now = datetime.utcnow()
+    sessions = db.query(NetSession).filter(NetSession.status != "CLOSED").all()
+    for s in sessions:
+        sunray = db.query(Station).filter(
+            Station.net_id == s.id,
+            Station.role.in_(["SUNRAY", "CONTROL", "INSTRUCTOR"])
+        ).first()
+        if sunray:
+            sunray_last_seen = sunray.last_seen or sunray.connected_at
+            inactive_seconds = (now - sunray_last_seen).total_seconds()
+            sunray_sid = station_registry.get_sid(sunray.id)
+            # If SUNRAY has no active socket connection and last_seen > 60 minutes ago
+            if not sunray_sid and inactive_seconds > 3600:
+                end_net_session_by_id(
+                    db,
+                    s.id,
+                    station_registry,
+                    transmission_service,
+                    reason="SESSION_EXPIRED_INACTIVITY"
+                )

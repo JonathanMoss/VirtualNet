@@ -1,4 +1,5 @@
 """WebSocket event handlers and radio net session management for VirtualNet."""
+from datetime import datetime
 from flask import request
 from flask_socketio import emit, join_room
 from app import socketio
@@ -106,6 +107,76 @@ def handle_join_net(data):
     })
 
     broadcast_roster(db, session.id)
+
+
+@socketio.on('rejoin_net')
+def handle_rejoin_net(data):
+    """Re-binds a reconnecting socket (after tab backgrounding/refresh) to an existing station."""
+    db = get_db()
+    pin = data.get('pin', '').upper()
+    nickname = data.get('nickname', '')
+    role = data.get('role', 'SUB_STATION')
+    provided_station_id = data.get('stationId')
+
+    # Check for 60-minute expired SUNRAY sessions
+    session_service.check_and_purge_expired_sessions(db, registry, transmission_service)
+
+    session = db.query(session_service.NetSession).filter_by(pin=pin).first()
+    if not session or session.status == "CLOSED":
+        emit('rejoin_response', {"success": False, "reason": "This net session has been closed or timed out."})
+        return
+
+    station = station_service.find_existing_station(db, session.id, nickname, role, provided_station_id)
+    if not station or station.status in ["LEFT", "DISCONNECTED"]:
+        emit('rejoin_response', {"success": False, "reason": "Station session no longer active."})
+        return
+
+    is_control = station.role in ["SUNRAY", "CONTROL", "INSTRUCTOR"]
+    station.status = "CONNECTED" if (is_control or station.call_sign) else "AWAITING_ASSIGNMENT"
+    station.ip_address = request.remote_addr
+    station.last_seen = datetime.utcnow()
+    db.commit()
+
+    registry.register(request.sid, station.id, session.id)
+    join_room(session.id)
+
+    emit('rejoin_response', {
+        "success": True,
+        "stationId": station.id,
+        "status": station.status,
+        "callSign": station.call_sign,
+        "role": station.role,
+        "netId": session.id,
+        "netName": session.name,
+        "netState": session.net_state,
+        "callsignIndicator": session.callsign_indicator,
+        "pin": session.pin
+    })
+
+    broadcast_roster(db, session.id)
+
+
+@socketio.on('heartbeat')
+def handle_heartbeat(data):
+    """Processes 30-second client heartbeat ping, updating station.last_seen."""
+    db = get_db()
+    station = get_station_from_sid(db, request.sid)
+    if not station and data:
+        station_id = data.get('stationId')
+        if station_id:
+            station = db.query(Station).filter_by(id=station_id).first()
+            if station and station.status not in ["LEFT", "DISCONNECTED"]:
+                registry.register(request.sid, station.id, station.net_id)
+                join_room(station.net_id)
+
+    if station:
+        station.last_seen = datetime.utcnow()
+        db.commit()
+        session_service.check_and_purge_expired_sessions(db, registry, transmission_service)
+        emit('heartbeat_ack', {"status": "ok", "timestamp": station.last_seen.isoformat()})
+    else:
+        emit('heartbeat_ack', {"status": "unknown_station"})
+
 
 
 @socketio.on('assign_callsign')
