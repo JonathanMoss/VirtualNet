@@ -151,8 +151,7 @@ export class TelemetryManager {
     console.groupEnd();
   }
 
-  resetTxStats() {
-    this.logTxSummary();
+  startTxSession() {
     this.txChunksSent = 0;
     this.txBytesSent = 0;
     this.txAcksReceived = 0;
@@ -160,13 +159,36 @@ export class TelemetryManager {
     this.updateStatsText();
   }
 
-  resetRxStats() {
-    this.logRxSummary();
+  finishTxSession() {
+    if (this.txChunksSent > 0) {
+      this.logTxSummary();
+    }
+  }
+
+  startRxSession() {
     this.rxChunksReceived = 0;
     this.rxBytesReceived = 0;
     this.rxDropReasons = [];
     this.history = this.history.filter(item => item.type !== 'rx');
     this.updateStatsText();
+  }
+
+  finishRxSession() {
+    if (this.rxChunksReceived > 0 || this.rxDropReasons.length > 0) {
+      setTimeout(() => {
+        this.logRxSummary();
+      }, 150);
+    }
+  }
+
+  resetTxStats() {
+    this.finishTxSession();
+    this.startTxSession();
+  }
+
+  resetRxStats() {
+    this.finishRxSession();
+    this.startRxSession();
   }
 
   updateStatsText() {

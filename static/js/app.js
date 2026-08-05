@@ -890,6 +890,10 @@ class VirtualNetApp {
         headerBadge.textContent = "STANDBY";
         headerBadge.className = "badge bg-secondary text-white ms-1";
       }
+      if (this.telemetryManager) {
+        this.telemetryManager.finishTxSession();
+        this.telemetryManager.finishRxSession();
+      }
       this.audioEngine.clearPlaybackQueue();
       const speakerBox = document.getElementById('active-speaker-box');
       if (speakerBox) speakerBox.classList.add('d-none');
@@ -907,8 +911,8 @@ class VirtualNetApp {
         headerBadge.className = "badge bg-warning text-dark ms-1";
       }
       if (this.telemetryManager) {
-        this.telemetryManager.resetRxStats();
-        this.telemetryManager.resetTxStats();
+        this.telemetryManager.finishRxSession();
+        this.telemetryManager.startTxSession();
       }
 
     } else if (state === 'TRANSMITTING') {
@@ -937,8 +941,8 @@ class VirtualNetApp {
         headerBadge.className = "badge bg-warning text-dark ms-1";
       }
       if (this.telemetryManager) {
-        this.telemetryManager.resetTxStats();
-        this.telemetryManager.resetRxStats();
+        this.telemetryManager.finishTxSession();
+        this.telemetryManager.startRxSession();
       }
       
     } else if (state === 'OVERRIDDEN') {
