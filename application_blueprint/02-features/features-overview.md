@@ -46,6 +46,13 @@ Simulates the physical behavior of a half-duplex radio transceiver.
     - The client blocks transmission, provides visual feedback ("Channel Busy"), and plays an auditory warning tone.
 - **PTT Start/End Squelch Tones**:
   - Plays short click/beep squelch tail audio when PTT is engaged and released.
+- **Audio Telemetry HUD & Dual LED VU Meter**:
+  - Real-time 10-segment phosphor green/amber/red LED VU meter displaying microphone RMS volume during transmission (TX) and speaker output volume during reception (RX).
+- **Phosphor CRT Packet Sparkline & RX Playback Tracking**:
+  - 24px CRT sparkline canvas rendering chunk byte spikes, server ACKs (`audio_ack`), and chunk playback status.
+  - On receiving clients, chunks are displayed as **Yellow/Amber** upon WebSocket arrival and transition to **Phosphor Green** the moment WebAudio `AudioBufferSourceNode.onended` physically finishes playing the chunk out the speaker.
+- **Mobile AudioContext Tap-to-Unmute Guard Banner**:
+  - Automatically detects mobile browser WebAudio autoplay throttling (`AudioContext.state === 'suspended'`) during incoming traffic (`RECEIVING`) and presents a glowing banner (`🔊 TAP TO UNMUTE AUDIO`) with tap listeners across the PTT card to instantly restore voice output.
 - **Enemy Direction Finding (DF) Alert Banner**:
   - Continuous transmissions exceeding 20 seconds trigger an immediate high-visibility Enemy Direction Finding warning banner across active clients, warning operators of potential location compromise.
 - **Net Discipline Override (Break-In)**:

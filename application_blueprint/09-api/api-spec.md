@@ -190,6 +190,16 @@ Contains a binary audio fragment.
 - **Payload**: Binary WebSocket frame containing `[4 bytes: Transmission ID]` + `[Remaining bytes: Raw PCM/compressed audio data]`.
 - **Flow**: Transmitting client emits `audio_chunk` -> Server broadcasts `audio_chunk` -> Receiving clients play buffer. If a client's `signalQuality` is `DIFFICULT`, the receiving clients or the server will apply static degradation to this stream.
 
+### Event: `audio_ack` (Server -> Client)
+Sent back to the transmitting station to acknowledge receipt of an emitted audio chunk.
+
+**Payload**:
+```json
+{
+  "bytes": 4108
+}
+```
+
 ---
 
 ## 6. Log Synchronization
