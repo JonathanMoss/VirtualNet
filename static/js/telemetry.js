@@ -123,12 +123,11 @@ export class TelemetryManager {
 
     if (this.app.isTransmitting) {
       const ackPct = this.txChunksSent > 0 ? Math.round((this.txAcksReceived / this.txChunksSent) * 100) : 100;
-      const kbStr = (this.txBytesSent / 1024).toFixed(1);
-      this.statsText.textContent = `TX: ${kbStr}KB | ACK: ${ackPct}%`;
-    } else if (this.app.audioEngine && this.app.audioEngine.getQueuedBufferMs() > 0) {
-      const bufMs = this.app.audioEngine.getQueuedBufferMs();
-      const kbStr = (this.rxBytesReceived / 1024).toFixed(1);
-      this.statsText.textContent = `RX: ${kbStr}KB | ${bufMs}ms buf`;
+      this.statsText.textContent = `TX: ${this.txAcksReceived}/${this.txChunksSent} ACK (${ackPct}%)`;
+    } else if (this.rxChunksReceived > 0) {
+      const playedCount = this.history.filter(item => item.type === 'rx' && item.isPlayed).length;
+      const playedPct = Math.round((playedCount / this.rxChunksReceived) * 100);
+      this.statsText.textContent = `RX: ${playedCount}/${this.rxChunksReceived} Played (${playedPct}%)`;
     } else {
       const state = this.app.audioEngine ? this.app.audioEngine.getAudioContextState().toUpperCase() : 'READY';
       this.statsText.textContent = `STATUS: ${state}`;
@@ -175,10 +174,9 @@ export class TelemetryManager {
     if (!this.vuSegments || this.vuSegments.length === 0) return;
 
     let volume = 0;
+    // User Directive: Audio level meter is animated ONLY during TX
     if (this.app.isTransmitting && this.app.audioEngine) {
       volume = this.app.audioEngine.getTxVolumeRMS();
-    } else if (this.app.audioEngine) {
-      volume = this.app.audioEngine.getRxVolumeRMS();
     }
 
     const activeCount = Math.round(volume * this.vuSegments.length * 2.5); // Scaled multiplier for responsive visual movement
@@ -201,40 +199,57 @@ export class TelemetryManager {
 
     ctx.clearRect(0, 0, width, height);
 
+    // Draw dark CRT canvas background
+    ctx.fillStyle = '#040d07';
+    ctx.fillRect(0, 0, width, height);
+
     // Draw dark CRT grid lines
-    ctx.strokeStyle = 'rgba(0, 255, 65, 0.08)';
+    ctx.strokeStyle = 'rgba(0, 255, 65, 0.12)';
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(0, height / 2);
     ctx.lineTo(width, height / 2);
     ctx.stroke();
 
-    if (this.history.length === 0) return;
+    const padding = 2;
+    const barHeight = height - (padding * 2);
 
-    const barWidth = 3;
-    const gap = 1;
-    const step = barWidth + gap;
-    const startX = width - (this.history.length * step);
+    if (this.app.isTransmitting) {
+      // TX Dynamic Scale: Green = ACKed chunks ratio, Yellow/Amber = Un-ACKed chunks ratio
+      if (this.txChunksSent > 0) {
+        const ackRatio = Math.min(1.0, this.txAcksReceived / this.txChunksSent);
+        const greenWidth = Math.round((width - (padding * 2)) * ackRatio);
+        const yellowWidth = (width - (padding * 2)) - greenWidth;
 
-    this.history.forEach((item, index) => {
-      const x = startX + (index * step);
-      const barHeight = Math.max(3, Math.round(item.val * (height - 4)));
-      const y = height - barHeight;
-
-      if (item.type === 'tx') {
-        ctx.fillStyle = '#00ff41'; // Phosphor green for TX
-      } else {
-        // RX Mode: Green = Played through speaker, Yellow/Amber = Received but buffered/not yet played
-        ctx.fillStyle = item.isPlayed ? '#00ff41' : '#ffb000';
+        if (greenWidth > 0) {
+          ctx.fillStyle = '#00ff41'; // Solid Phosphor Green for ACKed chunks
+          ctx.fillRect(padding, padding, greenWidth, barHeight);
+        }
+        if (yellowWidth > 0) {
+          ctx.fillStyle = '#ffb000'; // Yellow/Amber for un-ACKed chunks
+          ctx.fillRect(padding + greenWidth, padding, yellowWidth, barHeight);
+        }
       }
+    } else if (this.rxChunksReceived > 0) {
+      // RX Dynamic Scale: Green = Played chunks ratio, Yellow/Amber = Unplayed/Queued chunks ratio
+      const playedCount = this.history.filter(item => item.type === 'rx' && item.isPlayed).length;
+      const playedRatio = Math.min(1.0, playedCount / this.rxChunksReceived);
+      const greenWidth = Math.round((width - (padding * 2)) * playedRatio);
+      const yellowWidth = (width - (padding * 2)) - greenWidth;
 
-      ctx.fillRect(x, y, barWidth, barHeight);
-
-      // Draw glowing ACK dot at top of bar for TX if acknowledged
-      if (item.type === 'tx' && item.isAck) {
-        ctx.fillStyle = '#ffb000'; // Amber ACK dot
-        ctx.fillRect(x, y - 2, barWidth, 2);
+      if (greenWidth > 0) {
+        ctx.fillStyle = '#00ff41'; // Solid Phosphor Green for physically played chunks
+        ctx.fillRect(padding, padding, greenWidth, barHeight);
       }
-    });
+      if (yellowWidth > 0) {
+        ctx.fillStyle = '#ffb000'; // Yellow/Amber for unplayed chunks in buffer
+        ctx.fillRect(padding + greenWidth, padding, yellowWidth, barHeight);
+      }
+    }
+
+    // Outer CRT scale border
+    ctx.strokeStyle = 'rgba(0, 255, 65, 0.4)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(0, 0, width, height);
   }
 }
