@@ -17,6 +17,7 @@ export class TelemetryManager {
     this.txAcksReceived = 0;
     this.rxChunksReceived = 0;
     this.rxBytesReceived = 0;
+    this.rxDropReasons = [];
 
     this.animFrameId = null;
     this.isMonitoring = false;
@@ -98,6 +99,12 @@ export class TelemetryManager {
     }
   }
 
+  recordRxDrop(reason) {
+    if (reason && !this.rxDropReasons.includes(reason)) {
+      this.rxDropReasons.push(reason);
+    }
+  }
+
   pushHistory(item) {
     this.history.push(item);
     if (this.history.length > this.maxHistory) {
@@ -105,7 +112,47 @@ export class TelemetryManager {
     }
   }
 
+  logTxSummary() {
+    if (this.txChunksSent === 0) return;
+    const ackPct = ((this.txAcksReceived / this.txChunksSent) * 100).toFixed(1);
+    const kbSent = (this.txBytesSent / 1024).toFixed(1);
+    const unacked = this.txChunksSent - this.txAcksReceived;
+
+    console.group('%c📡 [TX TELEMETRY SUMMARY]', 'color: #00ff41; font-weight: bold; background: #040d07; padding: 2px 6px;');
+    console.log(`- Chunks Sent: ${this.txChunksSent}`);
+    console.log(`- Server ACKs Received: ${this.txAcksReceived} (${ackPct}%)`);
+    console.log(`- Total Bytes Transmitted: ${kbSent} KB`);
+    if (unacked > 0) {
+      console.warn(`- Unacknowledged Chunks (In-Flight / Lost): ${unacked}`);
+    } else {
+      console.log(`- Unacknowledged Chunks: 0 (100% Delivery Confirmed)`);
+    }
+    console.groupEnd();
+  }
+
+  logRxSummary() {
+    if (this.rxChunksReceived === 0 && this.rxDropReasons.length === 0) return;
+    const playedCount = this.history.filter(item => item.type === 'rx' && item.isPlayed).length;
+    const playedPct = this.rxChunksReceived > 0 ? ((playedCount / this.rxChunksReceived) * 100).toFixed(1) : '0.0';
+    const kbReceived = (this.rxBytesReceived / 1024).toFixed(1);
+    const unplayedCount = Math.max(0, this.rxChunksReceived - playedCount);
+
+    console.group('%c🔊 [RX TELEMETRY SUMMARY]', 'color: #00e5ff; font-weight: bold; background: #040d07; padding: 2px 6px;');
+    console.log(`- Chunks Received over Socket: ${this.rxChunksReceived}`);
+    console.log(`- Chunks Played via WebAudio: ${playedCount} (${playedPct}%)`);
+    console.log(`- Total Bytes Received: ${kbReceived} KB`);
+
+    if (unplayedCount > 0 || this.rxDropReasons.length > 0) {
+      console.warn(`- Unplayed / Dropped Chunks: ${unplayedCount}`);
+      console.warn(`- Drop / Unplayed Reasons:`, this.rxDropReasons.length > 0 ? this.rxDropReasons : ['Buffered chunks remaining on transmission end']);
+    } else {
+      console.log(`- Unplayed / Dropped Chunks: 0 (100% Playback Complete)`);
+    }
+    console.groupEnd();
+  }
+
   resetTxStats() {
+    this.logTxSummary();
     this.txChunksSent = 0;
     this.txBytesSent = 0;
     this.txAcksReceived = 0;
@@ -114,8 +161,10 @@ export class TelemetryManager {
   }
 
   resetRxStats() {
+    this.logRxSummary();
     this.rxChunksReceived = 0;
     this.rxBytesReceived = 0;
+    this.rxDropReasons = [];
     this.history = this.history.filter(item => item.type !== 'rx');
     this.updateStatsText();
   }

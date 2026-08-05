@@ -369,7 +369,18 @@ export class WebAudioEngine {
       float32 = new Float32Array(pcmBuffer, 0, Math.floor(pcmBuffer.byteLength / 4));
     }
 
-    if (!float32 || float32.length === 0) return;
+    if (!float32 || float32.length === 0) {
+      if (this.app.telemetryManager) {
+        this.app.telemetryManager.recordRxDrop('Decode Failure: Empty or corrupted PCM payload');
+      }
+      return;
+    }
+
+    if (this.audioContext && (this.audioContext.state === 'suspended' || this.audioContext.state === 'interrupted')) {
+      if (this.app.telemetryManager) {
+        this.app.telemetryManager.recordRxDrop(`AudioContext State: ${this.audioContext.state.toUpperCase()} (Browser autoplay restriction)`);
+      }
+    }
 
     // Create AudioBuffer with sender's native sample rate.
     // WebAudio automatically handles hardware-accelerated resampling to receiver's AudioContext.
