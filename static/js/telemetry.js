@@ -173,23 +173,25 @@ export class TelemetryManager {
   }
 
   renderVuMeter() {
-    if (!this.vuSegments || this.vuSegments.length === 0) return;
+    const vuContainer = document.getElementById('vu-meter-bar');
 
-    let volume = 0;
-    // User Directive: Audio level meter is animated ONLY during TX
-    if (this.app.isTransmitting && this.app.audioEngine) {
-      volume = this.app.audioEngine.getTxVolumeRMS();
+    if (this.app.isTransmitting) {
+      if (vuContainer) vuContainer.style.display = 'flex';
+      if (!this.vuSegments || this.vuSegments.length === 0) return;
+
+      const volume = this.app.audioEngine ? this.app.audioEngine.getTxVolumeRMS() : 0;
+      const activeCount = Math.round(volume * this.vuSegments.length * 2.5); // Scaled multiplier for responsive visual movement
+
+      this.vuSegments.forEach((segment, index) => {
+        if (index < activeCount) {
+          segment.classList.add('active');
+        } else {
+          segment.classList.remove('active');
+        }
+      });
+    } else {
+      if (vuContainer) vuContainer.style.display = 'none';
     }
-
-    const activeCount = Math.round(volume * this.vuSegments.length * 2.5); // Scaled multiplier for responsive visual movement
-
-    this.vuSegments.forEach((segment, index) => {
-      if (index < activeCount) {
-        segment.classList.add('active');
-      } else {
-        segment.classList.remove('active');
-      }
-    });
   }
 
   renderSparkline() {
