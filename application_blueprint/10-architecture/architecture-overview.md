@@ -97,6 +97,11 @@ The client runs as an interactive web page loaded in standard modern web browser
 - **Mic Capture & DSP**: Calls `navigator.mediaDevices.getUserMedia` with mobile DSP constraints (`echoCancellation`, `noiseSuppression`, `autoGainControl`) and Int16 PCM audio chunk compression with WebAudio hardware resampling.
 - **Playback**: Feeds incoming WebSocket audio buffers into dynamic player nodes in the browser's `AudioContext`.
 
+### Real-Time Audio Telemetry HUD (`static/js/telemetry.js`)
+- **Dual LED VU Meter**: Uses WebAudio `AnalyserNode` connected to mic input (TX) and speaker output (RX) to drive a 10-segment phosphor green/amber/red LED VU meter.
+- **Phosphor CRT Sparkline Canvas**: Renders real-time chunk spikes, server ACKs (`audio_ack`), and chunk playback status. On receiving clients, chunks are displayed as **Yellow/Amber** upon arrival and turn **Phosphor Green** when WebAudio `AudioBufferSourceNode.onended` physically finishes playing the chunk out the speaker.
+- **Mobile AudioContext Guard**: Detects suspended/interrupted WebAudio states during incoming traffic and renders a glowing banner (`🔊 TAP TO UNMUTE AUDIO`) with tap listeners to unlock mobile audio output.
+
 ### SessionStorage Cache
 - Persists active net session credentials (PIN, station ID, callsign, role) to support automatic socket re-binding upon page refresh or tab focus.
 

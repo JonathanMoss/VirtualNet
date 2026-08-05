@@ -91,8 +91,17 @@ export class SocketManager {
 
     this.socket.on('audio_chunk', (data) => {
       console.log("🌐 [SOCKET-RX] Received 'audio_chunk' event from Socket.IO", data ? (data.byteLength || data.length) : 0, "bytes");
+      if (this.app.telemetryManager && data) {
+        this.app.telemetryManager.recordRxChunk(data.byteLength || data.length || 0);
+      }
       // Decode binary chunk and play back
       this.app.audioEngine.receiveAudioChunk(data);
+    });
+
+    this.socket.on('audio_ack', (data) => {
+      if (this.app.telemetryManager && data) {
+        this.app.telemetryManager.recordTxAck(data.bytes || 0);
+      }
     });
 
     this.socket.on('sync_response', (data) => {
@@ -179,6 +188,9 @@ export class SocketManager {
 
   sendAudioChunk(binaryData) {
     if (this.socket && this.socket.connected) {
+      if (this.app.telemetryManager && binaryData) {
+        this.app.telemetryManager.recordTxChunk(binaryData.byteLength || binaryData.length || 0);
+      }
       this.socket.volatile.emit('audio_chunk', binaryData);
     }
   }

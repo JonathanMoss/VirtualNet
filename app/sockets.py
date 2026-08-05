@@ -279,15 +279,16 @@ def handle_ptt_release(data):
 
 @socketio.on('audio_chunk')
 def handle_audio_chunk(data):
-    """Broadcasts a binary audio chunk from speaker to all other stations."""
+    """Broadcasts a binary audio chunk from speaker to all other stations and ACKs sender."""
     if not isinstance(data, (bytes, bytearray)) or len(data) < 4:
         return
 
-    net_id = transmission_service.get_audio_net_id(request.sid, registry)
+    net_id = transmission_service.transmitting_sids.get(request.sid)
     if not net_id:
         return
 
     emit('audio_chunk', data, room=net_id, include_self=False, binary=True)
+    emit('audio_ack', {'bytes': len(data)})
 
 
 @socketio.on('sync_log_entry')
