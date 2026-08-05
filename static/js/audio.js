@@ -384,6 +384,18 @@ export class WebAudioEngine {
     const source = this.audioContext.createBufferSource();
     source.buffer = audioBuf;
     source.connect(this.voiceGainNode);
+
+    const chunkId = Symbol('rxChunk');
+    if (this.app.telemetryManager) {
+      this.app.telemetryManager.recordRxChunk(payload.byteLength, chunkId);
+    }
+
+    source.onended = () => {
+      if (this.app.telemetryManager) {
+        this.app.telemetryManager.markRxChunkPlayed(chunkId);
+      }
+    };
+
     source.start(this.nextStartTime);
     this.nextStartTime += audioBuf.duration;
   }

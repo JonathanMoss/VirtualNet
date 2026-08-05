@@ -83,11 +83,19 @@ export class TelemetryManager {
     this.updateStatsText();
   }
 
-  recordRxChunk(byteSize) {
+  recordRxChunk(byteSize, chunkId) {
     this.rxChunksReceived++;
     this.rxBytesReceived += byteSize;
-    this.pushHistory({ val: Math.min(1.0, byteSize / 4096), isAck: true, type: 'rx' });
+    this.pushHistory({ id: chunkId, val: Math.min(1.0, byteSize / 4096), isPlayed: false, type: 'rx' });
     this.updateStatsText();
+  }
+
+  markRxChunkPlayed(chunkId) {
+    if (!chunkId) return;
+    const match = this.history.find(item => item.id === chunkId);
+    if (match) {
+      match.isPlayed = true;
+    }
   }
 
   pushHistory(item) {
@@ -214,15 +222,16 @@ export class TelemetryManager {
       const y = height - barHeight;
 
       if (item.type === 'tx') {
-        ctx.fillStyle = '#00ff41'; // Phosphor green
+        ctx.fillStyle = '#00ff41'; // Phosphor green for TX
       } else {
-        ctx.fillStyle = '#00e5ff'; // Tactical cyan for RX
+        // RX Mode: Green = Played through speaker, Yellow/Amber = Received but buffered/not yet played
+        ctx.fillStyle = item.isPlayed ? '#00ff41' : '#ffb000';
       }
 
       ctx.fillRect(x, y, barWidth, barHeight);
 
-      // Draw glowing ACK dot at top of bar if acknowledged
-      if (item.isAck) {
+      // Draw glowing ACK dot at top of bar for TX if acknowledged
+      if (item.type === 'tx' && item.isAck) {
         ctx.fillStyle = '#ffb000'; // Amber ACK dot
         ctx.fillRect(x, y - 2, barWidth, 2);
       }
