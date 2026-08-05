@@ -109,12 +109,14 @@ export class TelemetryManager {
     this.txChunksSent = 0;
     this.txBytesSent = 0;
     this.txAcksReceived = 0;
+    this.history = this.history.filter(item => item.type !== 'tx');
     this.updateStatsText();
   }
 
   resetRxStats() {
     this.rxChunksReceived = 0;
     this.rxBytesReceived = 0;
+    this.history = this.history.filter(item => item.type !== 'rx');
     this.updateStatsText();
   }
 

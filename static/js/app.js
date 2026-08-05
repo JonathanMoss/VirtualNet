@@ -906,7 +906,10 @@ class VirtualNetApp {
         headerBadge.textContent = "KEYING";
         headerBadge.className = "badge bg-warning text-dark ms-1";
       }
-      if (this.telemetryManager) this.telemetryManager.resetTxStats();
+      if (this.telemetryManager) {
+        this.telemetryManager.resetRxStats();
+        this.telemetryManager.resetTxStats();
+      }
 
     } else if (state === 'TRANSMITTING') {
       if (container) container.classList.add('ptt-card-transmitting');
@@ -933,7 +936,10 @@ class VirtualNetApp {
         headerBadge.textContent = `RECEIVING ${infoText.toUpperCase()}`;
         headerBadge.className = "badge bg-warning text-dark ms-1";
       }
-      if (this.telemetryManager) this.telemetryManager.resetRxStats();
+      if (this.telemetryManager) {
+        this.telemetryManager.resetTxStats();
+        this.telemetryManager.resetRxStats();
+      }
       
     } else if (state === 'OVERRIDDEN') {
       if (container) container.classList.add('ptt-card-overridden');
