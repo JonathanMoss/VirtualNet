@@ -911,7 +911,7 @@ class VirtualNetApp {
         headerBadge.className = "badge bg-warning text-dark ms-1";
       }
       if (this.telemetryManager) {
-        this.telemetryManager.finishRxSession();
+        this.telemetryManager.finishRxSession(true);
         this.telemetryManager.startTxSession();
       }
 

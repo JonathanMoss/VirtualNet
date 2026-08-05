@@ -169,25 +169,41 @@ export class TelemetryManager {
     }
   }
 
-  startRxSession() {
+  resetRxStatsState() {
     this.rxChunksReceived = 0;
     this.rxChunksPlayed = 0;
     this.rxBytesReceived = 0;
     this.rxDropReasons = [];
+    if (this.rxTimerId) {
+      clearTimeout(this.rxTimerId);
+      this.rxTimerId = null;
+    }
+  }
+
+  startRxSession() {
+    this.resetRxStatsState();
     this.history = this.history.filter(item => item.type !== 'rx');
     this.updateStatsText();
   }
 
-  finishRxSession() {
-    if (this.rxChunksReceived > 0 || this.rxDropReasons.length > 0) {
-      setTimeout(() => {
-        this.logRxSummary();
-        this.rxChunksReceived = 0;
-        this.rxChunksPlayed = 0;
-        this.rxBytesReceived = 0;
-        this.rxDropReasons = [];
-      }, 150);
+  finishRxSession(isInterruptedByPtt = false) {
+    if (this.rxChunksReceived === 0 && this.rxDropReasons.length === 0) return;
+
+    if (isInterruptedByPtt) {
+      this.recordRxDrop('Truncated by station keying PTT');
+      this.logRxSummary();
+      this.resetRxStatsState();
+      return;
     }
+
+    const remainingMs = this.app.audioEngine ? this.app.audioEngine.getRemainingPlaybackMs() : 0;
+    const delayMs = Math.max(150, remainingMs + 100);
+
+    if (this.rxTimerId) clearTimeout(this.rxTimerId);
+    this.rxTimerId = setTimeout(() => {
+      this.logRxSummary();
+      this.resetRxStatsState();
+    }, delayMs);
   }
 
   resetTxStats() {

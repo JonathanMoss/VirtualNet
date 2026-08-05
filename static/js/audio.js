@@ -409,6 +409,13 @@ export class WebAudioEngine {
 
     source.start(this.nextStartTime);
     this.nextStartTime += audioBuf.duration;
+    this.lastScheduledEndTime = this.nextStartTime;
+  }
+
+  getRemainingPlaybackMs() {
+    if (!this.audioContext || !this.lastScheduledEndTime) return 0;
+    const remainingSec = this.lastScheduledEndTime - this.audioContext.currentTime;
+    return Math.max(0, Math.round(remainingSec * 1000));
   }
 
   clearPlaybackQueue() {
