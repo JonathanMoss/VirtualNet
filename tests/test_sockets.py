@@ -778,3 +778,28 @@ def test_sunray_60_minute_inactivity_timeout(socket_client):
     # Verify session is now CLOSED/purged
     closed_session = db.query(NetSession).filter_by(id=net_id).first()
     assert closed_session is None or closed_session.status == "CLOSED"
+
+
+def test_audio_chunk_ack_emission(socket_client):
+    # pylint: disable=redefined-outer-name
+    """Test that server emits audio_ack to sender when receiving an audio_chunk."""
+    valid_pin = get_today_instructor_pin()
+    socket_client.emit('create_net', {'name': 'ACK Net', 'callsign_indicator': 'A', 'instructor_pin': valid_pin})
+    create_resp = next(i for i in socket_client.get_received() if i['name'] == 'create_response')['args'][0]
+    pin = create_resp['pin']
+
+    socket_client.emit('join_net', {'pin': pin, 'nickname': 'ACKUser', 'role': 'INSTRUCTOR'})
+    socket_client.get_received()
+
+    # Request PTT to obtain transmitting lock
+    socket_client.emit('ptt_request', {})
+    ptt_res = next(i for i in socket_client.get_received() if i['name'] == 'ptt_response')['args'][0]
+    assert ptt_res['allowed'] is True
+
+    dummy_pcm = b'\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f'
+    socket_client.emit('audio_chunk', dummy_pcm)
+
+    received = socket_client.get_received()
+    ack = next((i for i in received if i['name'] == 'audio_ack'), None)
+    assert ack is not None
+    assert ack['args'][0]['bytes'] == len(dummy_pcm)

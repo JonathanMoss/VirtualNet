@@ -4,6 +4,7 @@ import { SocketManager } from './socket.js';
 import { formatDTG } from './utils.js';
 import { AideMemoireManager } from './aide_memoire.js';
 import { WebAudioEngine } from './audio.js';
+import { TelemetryManager } from './telemetry.js';
 import { showAlert, showConfirm, showPrompt } from './dialog.js';
 
 // Global exception & unhandled rejection handler to catch third-party browser extension errors (e.g. content_chrome.js / cs.js disconnected port errors)
@@ -30,6 +31,7 @@ class VirtualNetApp {
     this.socketManager = new SocketManager(this);
     this.aideMemoireManager = new AideMemoireManager();
     this.audioEngine = new WebAudioEngine(this);
+    this.telemetryManager = new TelemetryManager(this);
 
     // Global session variables
     this.netId = null;
@@ -59,6 +61,9 @@ class VirtualNetApp {
 
     // 4. Setup PTT UI Handlers & Mobile triggers
     this.setupPTTHandlers();
+
+    // 4b. Setup Audio Telemetry HUD & VU Meter
+    this.telemetryManager.init();
     
     // 5. Setup NET Roster sidebar fold/unfold trigger
     this.setupRosterFoldToggle();
@@ -901,6 +906,7 @@ class VirtualNetApp {
         headerBadge.textContent = "KEYING";
         headerBadge.className = "badge bg-warning text-dark ms-1";
       }
+      if (this.telemetryManager) this.telemetryManager.resetTxStats();
 
     } else if (state === 'TRANSMITTING') {
       if (container) container.classList.add('ptt-card-transmitting');
@@ -927,6 +933,7 @@ class VirtualNetApp {
         headerBadge.textContent = `RECEIVING ${infoText.toUpperCase()}`;
         headerBadge.className = "badge bg-warning text-dark ms-1";
       }
+      if (this.telemetryManager) this.telemetryManager.resetRxStats();
       
     } else if (state === 'OVERRIDDEN') {
       if (container) container.classList.add('ptt-card-overridden');

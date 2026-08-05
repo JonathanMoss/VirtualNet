@@ -18,8 +18,12 @@ export class WebAudioEngine {
     // Playback scheduling state
     this.nextStartTime = 0;
     
-    // Audio effects nodes
+    // Audio effects & analyzer nodes
     this.voiceGainNode = null;
+    this.txAnalyser = null;
+    this.rxAnalyser = null;
+    this.txDataArray = new Uint8Array(16);
+    this.rxDataArray = new Uint8Array(16);
   }
 
   async init() {
@@ -44,10 +48,15 @@ export class WebAudioEngine {
   }
 
   setupEffectsChain() {
-    // Pure audio mode: Direct 1:1 voice gain node to destination
+    // Pure audio mode: Direct 1:1 voice gain node -> RX Analyser -> destination
     this.voiceGainNode = this.audioContext.createGain();
     this.voiceGainNode.gain.setValueAtTime(1.0, this.audioContext.currentTime);
-    this.voiceGainNode.connect(this.audioContext.destination);
+
+    this.rxAnalyser = this.audioContext.createAnalyser();
+    this.rxAnalyser.fftSize = 32;
+    
+    this.voiceGainNode.connect(this.rxAnalyser);
+    this.rxAnalyser.connect(this.audioContext.destination);
   }
 
   initCodec() {
@@ -137,6 +146,10 @@ export class WebAudioEngine {
       
       const source = this.audioContext.createMediaStreamSource(this.micStream);
       this.capturedPcmFloats = [];
+
+      this.txAnalyser = this.audioContext.createAnalyser();
+      this.txAnalyser.fftSize = 32;
+      source.connect(this.txAnalyser);
 
       if (this.audioContext.audioWorklet && typeof AudioWorkletNode !== 'undefined') {
         await this.audioContext.audioWorklet.addModule(new URL('./audio-worklet-processor.js', import.meta.url));
@@ -377,5 +390,42 @@ export class WebAudioEngine {
 
   clearPlaybackQueue() {
     this.nextStartTime = 0;
+  }
+
+  getTxVolumeRMS() {
+    if (!this.txAnalyser || !this.isRecording) return 0;
+    this.txAnalyser.getByteFrequencyData(this.txDataArray);
+    let sum = 0;
+    for (let i = 0; i < this.txDataArray.length; i++) {
+      sum += this.txDataArray[i];
+    }
+    return sum / (this.txDataArray.length * 255);
+  }
+
+  getRxVolumeRMS() {
+    if (!this.rxAnalyser || !this.audioContext) return 0;
+    this.rxAnalyser.getByteFrequencyData(this.rxDataArray);
+    let sum = 0;
+    for (let i = 0; i < this.rxDataArray.length; i++) {
+      sum += this.rxDataArray[i];
+    }
+    return sum / (this.rxDataArray.length * 255);
+  }
+
+  getQueuedBufferMs() {
+    if (!this.audioContext || !this.nextStartTime) return 0;
+    const diff = (this.nextStartTime - this.audioContext.currentTime) * 1000;
+    return Math.max(0, Math.round(diff));
+  }
+
+  getAudioContextState() {
+    return this.audioContext ? this.audioContext.state : 'uninitialized';
+  }
+
+  async resumeAudioContext() {
+    if (this.audioContext && (this.audioContext.state === 'suspended' || this.audioContext.state === 'interrupted')) {
+      await this.audioContext.resume();
+      console.log("🔊 [AUDIO] WebAudio AudioContext successfully resumed via user tap.");
+    }
   }
 }

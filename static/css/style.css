@@ -502,5 +502,67 @@ h1, h2, h3, h4, h5, h6, .tactical-header {
   }
 }
 
+/* Audio Telemetry HUD & VU Meter Styles */
+.style-tiny {
+  font-size: 0.7rem !important;
+  letter-spacing: 0.05em;
+}
+
+.vu-meter-container {
+  background: rgba(0, 0, 0, 0.4);
+  padding: 3px 6px;
+  border: 1px solid rgba(0, 255, 65, 0.2);
+  border-radius: 2px;
+}
+
+.vu-segment {
+  width: 6px;
+  height: 12px;
+  background: rgba(0, 255, 65, 0.15);
+  border-radius: 1px;
+  transition: background 0.05s ease;
+}
+
+.vu-segment.active {
+  background: #00ff41;
+  box-shadow: 0 0 4px rgba(0, 255, 65, 0.8);
+}
+
+.vu-segment.vu-amber {
+  background: rgba(255, 176, 0, 0.15);
+}
+
+.vu-segment.vu-amber.active {
+  background: #ffb000;
+  box-shadow: 0 0 4px rgba(255, 176, 0, 0.8);
+}
+
+.vu-segment.vu-red {
+  background: rgba(255, 51, 51, 0.15);
+}
+
+.vu-segment.vu-red.active {
+  background: #ff3333;
+  box-shadow: 0 0 4px rgba(255, 51, 51, 0.8);
+}
+
+.telemetry-sparkline-canvas {
+  background: #040d07;
+  border: 1px solid rgba(0, 255, 65, 0.3);
+  border-radius: 2px;
+  display: block;
+}
+
+#audio-unmute-banner {
+  background-color: var(--color-tactical-amber);
+  color: #000;
+  animation: pulse-unmute-banner 1.5s infinite alternate;
+}
+
+@keyframes pulse-unmute-banner {
+  from { opacity: 0.85; }
+  to { opacity: 1.0; box-shadow: 0 0 8px var(--color-tactical-amber); }
+}
+
 
 
