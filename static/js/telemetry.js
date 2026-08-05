@@ -92,6 +92,7 @@ export class TelemetryManager {
   }
 
   markRxChunkPlayed(chunkId) {
+    this.rxChunksPlayed++;
     if (!chunkId) return;
     const match = this.history.find(item => item.id === chunkId);
     if (match) {
@@ -116,7 +117,7 @@ export class TelemetryManager {
     if (this.txChunksSent === 0) return;
     const ackPct = ((this.txAcksReceived / this.txChunksSent) * 100).toFixed(1);
     const kbSent = (this.txBytesSent / 1024).toFixed(1);
-    const unacked = this.txChunksSent - this.txAcksReceived;
+    const unacked = Math.max(0, this.txChunksSent - this.txAcksReceived);
 
     console.group('%c📡 [TX TELEMETRY SUMMARY]', 'color: #00ff41; font-weight: bold; background: #040d07; padding: 2px 6px;');
     console.log(`- Chunks Sent: ${this.txChunksSent}`);
@@ -132,7 +133,7 @@ export class TelemetryManager {
 
   logRxSummary() {
     if (this.rxChunksReceived === 0 && this.rxDropReasons.length === 0) return;
-    const playedCount = this.history.filter(item => item.type === 'rx' && item.isPlayed).length;
+    const playedCount = Math.min(this.rxChunksReceived, this.rxChunksPlayed);
     const playedPct = this.rxChunksReceived > 0 ? ((playedCount / this.rxChunksReceived) * 100).toFixed(1) : '0.0';
     const kbReceived = (this.rxBytesReceived / 1024).toFixed(1);
     const unplayedCount = Math.max(0, this.rxChunksReceived - playedCount);
@@ -162,11 +163,15 @@ export class TelemetryManager {
   finishTxSession() {
     if (this.txChunksSent > 0) {
       this.logTxSummary();
+      this.txChunksSent = 0;
+      this.txBytesSent = 0;
+      this.txAcksReceived = 0;
     }
   }
 
   startRxSession() {
     this.rxChunksReceived = 0;
+    this.rxChunksPlayed = 0;
     this.rxBytesReceived = 0;
     this.rxDropReasons = [];
     this.history = this.history.filter(item => item.type !== 'rx');
@@ -177,6 +182,10 @@ export class TelemetryManager {
     if (this.rxChunksReceived > 0 || this.rxDropReasons.length > 0) {
       setTimeout(() => {
         this.logRxSummary();
+        this.rxChunksReceived = 0;
+        this.rxChunksPlayed = 0;
+        this.rxBytesReceived = 0;
+        this.rxDropReasons = [];
       }, 150);
     }
   }
