@@ -24,12 +24,17 @@ export class SocketManager {
     // Register event listeners
     this.socket.on('connect', () => {
       console.log("Socket.IO connected to server.");
+      this.triggerAutoRebind();
     });
     this.socket.on('connect_error', (err) => {
       console.error('Socket.IO connect_error:', err);
     });
     this.socket.on('connect_timeout', () => {
       console.warn('Socket.IO connection timed out');
+    });
+    this.socket.on('reconnect', () => {
+      console.log("Socket.IO reconnected to server.");
+      this.triggerAutoRebind();
     });
     this.socket.on('reconnect_error', (err) => {
       console.error('Socket.IO reconnect_error:', err);
@@ -41,7 +46,22 @@ export class SocketManager {
       console.warn('Socket.IO disconnected:', reason);
     });
 
+    // Auto-rebind when tab regains focus/visibility
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        console.log("Tab visibility restored — checking session auto-rebind...");
+        this.triggerAutoRebind();
+      }
+    });
+
+    // Setup 30-second heartbeat interval to update server station.last_seen
+    setInterval(() => this.sendHeartbeat(), 30000);
+
     this.socket.on('join_response', (data) => {
+      this.app.handleJoinResponse(data);
+    });
+
+    this.socket.on('rejoin_response', (data) => {
       this.app.handleJoinResponse(data);
     });
 
@@ -83,6 +103,7 @@ export class SocketManager {
 
     this.socket.on('session_ended', (_data) => {
       showAlert("This net session has been ended by SUNRAY.", { title: "SESSION ENDED", titleColor: "var(--color-hot-red)" });
+      this.app.clearSavedSession();
       this.app.resetToLanding();
     });
 
@@ -97,8 +118,34 @@ export class SocketManager {
     });
   }
 
+  triggerAutoRebind() {
+    const saved = this.app.loadSavedSession();
+    if (saved && saved.pin && saved.nickname && this.socket && this.socket.connected) {
+      console.log("Emitting rejoin_net to rebind socket SID to station:", saved.stationId);
+      this.socket.emit('rejoin_net', {
+        pin: saved.pin,
+        nickname: saved.nickname,
+        role: saved.role || 'SUB_STATION',
+        stationId: saved.stationId || null
+      });
+    }
+  }
+
+  sendHeartbeat() {
+    if (this.socket && this.socket.connected) {
+      this.socket.emit('heartbeat', {
+        stationId: this.app.myStationId,
+        pin: this.app.netPin
+      });
+    }
+  }
+
   joinNet(pin, nickname, role = 'SUB_STATION', stationId = null) {
     this.socket.emit('join_net', { pin, nickname, role, stationId });
+  }
+
+  rejoinNet(pin, nickname, role = 'SUB_STATION', stationId = null) {
+    this.socket.emit('rejoin_net', { pin, nickname, role, stationId });
   }
 
   leaveNet() {

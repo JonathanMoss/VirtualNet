@@ -195,3 +195,25 @@ All popups and dialogs use a custom-rendered, night-ops tactical CRT modal syste
 ### 5.2 Hardware Design Rules
 - **No Rounded Corners**: `.card, .btn, .form-control, .form-select, .list-group-item, .modal-content, .badge { border-radius: 0 !important; }`
 - **Monospace Typography**: `font-family: 'Roboto Mono', Courier, monospace;`
+
+---
+
+## 6. Modular Jinja2 Card Templates & DOM Contract Verification
+
+To improve maintainability and component isolation, `static/templates/index.html` is refactored into modular Jinja2 card templates located in `static/templates/cards/`:
+
+- **`header_card.html`**: Command navbar, PIN badge, system DTG clock, and disconnect action.
+- **`join_net_card.html`**: PIN entry and nickname landing page view.
+- **`create_net_card.html`**: SUNRAY session creation portal.
+- **`transceiver_card.html`**: PTT state indicator and virtual radio transceiver.
+- **`roster_card.html`**: Active sub-station roster view.
+- **`sunray_card.html`**: Instructor dashboard, admissions queue, callsign assignment, and session management.
+- **`df_alert_banner.html`**: Tactical Direction Finding warning banner component.
+- **`resources_card.html`**: Main reference resources tab container.
+- **`aide_memoire_card.html`**: Side-sliding reveal drawer containing SHORTHAND, BATCO slider, VOCAB, SLATES, and LOGGING panels.
+
+### DOM Contract Verification (`tests/test_dom_contract.py`)
+Because JavaScript handlers rely on specific element IDs and CSS selectors, the automated test suite executes a DOM contract suite (`test_dom_contract.py`) that parses Jinja2 card templates to guarantee:
+1. All required DOM IDs (`#btn-join-net`, `#join-pin`, `#df-alert-banner`, etc.) remain present in the rendered HTML.
+2. Element attributes and structural contracts match JavaScript listener expectations.
+

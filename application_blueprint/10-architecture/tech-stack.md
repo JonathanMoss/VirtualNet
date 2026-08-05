@@ -7,10 +7,11 @@ VirtualNet is built as a containerized web application using a Python Flask back
 ## 1. Core Technologies
 
 ### Frontend (Client)
-- **UI Framework**: **Bootstrap 5** (CSS framework for clean, responsive, military-themed interface design).
+- **UI Framework**: **Bootstrap 5** & **Jinja2 Card Templates** (Modular component card templates in `static/templates/cards/`).
 - **Logic**: **Vanilla JavaScript (ES6+)** (Zero framework overhead, handling real-time DOM updates, WebSocket connection lifecycle, and Web Audio API stream capturing/playback).
+- **Static Analysis & Testing**: **ESLint** (`eslint static/js`) and **Node.js Test Runner** (`node --test tests/js/*.test.js`).
 - **Audio Capture & Playback**: **Web Audio API & Client-Side DSP Engine**
-  - Capture microphone streams using `getUserMedia` and send raw PCM or Opus packet chunks.
+  - Capture microphone streams using `getUserMedia` with mobile DSP processing (`echoCancellation`, `noiseSuppression`, `autoGainControl`), 16-bit Int16 PCM chunk compression, and WebAudio hardware resampling.
   - Play back incoming streams using `AudioContext` with hardware-accelerated DSP nodes: dual Biquad filters for tactical VHF/UHF radio bandpass (300 Hz – 3400 Hz), `WaveShaperNode` non-linear clipping distortion, static noise generator, and squelch tail effects.
 
 
@@ -27,21 +28,27 @@ VirtualNet is built as a containerized web application using a Python Flask back
 
 ---
 
-## 2. CI/CD & Quality Assurance
+## 2. CI/CD & Quality Assurance (Unified 5-Stage Runner)
 
-To ensure code quality and prevent regressions, every git push must trigger a CI runner executing the following steps:
+To ensure code quality and prevent regressions, every push and pull request executes `run_checks.sh` running five distinct quality gates:
 
-- **Linting**: **pylint** runs on all Python source files. Any syntax or stylistic violations must be resolved.
-- **Unit Testing**: **pytest** executes unit, integration, and real-time audio latency benchmarking tests.
-- **Coverage**: Code coverage is tracked during pytest runs. The build **must fail** if coverage drops below **90%** (`pytest-cov`).
-- **BDD Testing**: **behave** runs the Gherkin feature files (`.feature`) to verify system behavior against end-to-end user scenarios.
+- **1. Python Static Analysis**: **pylint** runs on all Python source files (`pylint --fail-under=10.0 app tests`).
+- **2. Unit & Integration Testing**: **pytest** executes unit/integration tests with a mandatory 90% coverage target (`pytest --cov=app --cov-fail-under=90`).
+- **3. BDD Scenario Verification**: **behave** runs Cucumber-style Gherkin feature scenarios (`behave tests/features`).
+- **4. JavaScript Linting**: **ESLint** runs static analysis on JavaScript modules (`npm run lint:js`).
+- **5. JavaScript Unit Testing**: **Node.js** runs JS unit tests (`npm run test:js`).
+- **DOM & E2E Testing**:
+  - **DOM Contract Tests**: `tests/test_dom_contract.py` ensures Jinja2 card templates render required DOM IDs and attributes.
+  - **Playwright Headless E2E Browser Tests**: `tests/test_e2e_browser.py` verifies full end-to-end browser journeys.
 
 ---
 
-## 3. Deployment & Containerization
+## 3. Deployment & Multi-Environment Containerization
 
-- **Containerization**: The entire application is containerized using **Docker**.
-- **Compose**: A `docker-compose.yml` file defines services for local development and staging:
-  - `redis`: Redis 7 Alpine message broker and state cache.
-  - `web-app`: Flask application serving HTTP and SocketIO.
-  - SQLite database is persisted using a Docker volume mount.
+- **Containerization**: The application is containerized using Docker (`Dockerfile`) with Python 3.11-slim and Node.js toolchains.
+- **Multi-Environment Compose Setup**:
+  - `docker-compose.yml`: Development composition mounting live source volumes.
+  - `docker-compose.test.yml`: Testing environment composition.
+  - `docker-compose.preprod.yml`: Pre-production staging configuration with Nginx reverse proxy.
+  - `docker-compose.prod.yml`: Production configuration deploying `nginxproxy/nginx-proxy` and `nginxproxy/acme-companion` for zero-downtime automated Let's Encrypt TLS certificate generation and renewal.
+

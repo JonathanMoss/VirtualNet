@@ -37,6 +37,33 @@ Sent back to the requesting client to acknowledge or reject the join request.
 }
 ```
 
+### Event: `rejoin_net` (Client -> Server)
+Sent by a client upon Socket.IO reconnection or tab visibility restoration to re-bind their socket session.
+
+**Payload**:
+```json
+{
+  "pin": "A3F9",
+  "nickname": "John",
+  "role": "SUB_STATION",
+  "stationId": "d3b07384-d113-4ec2-a5d6-8e50b73c4d72"
+}
+```
+
+### Event: `rejoin_response` (Server -> Client)
+Acknowledges socket re-binding or returns failure if session is closed/expired.
+
+### Event: `heartbeat` (Client -> Server)
+Emitted every 30 seconds by active clients to update `station.last_seen` and prevent session timeout.
+
+**Payload**:
+```json
+{
+  "stationId": "d3b07384-d113-4ec2-a5d6-8e50b73c4d72",
+  "pin": "A3F9"
+}
+```
+
 ---
 
 ## 2. Callsign & Link Quality Control (Instructor Control)

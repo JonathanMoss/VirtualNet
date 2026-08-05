@@ -38,6 +38,8 @@ Simulates the physical behavior of a half-duplex radio transceiver.
 - **Push-to-Talk (PTT)**:
   - Key-down spacebar hotkey or touch-hold UI button to initiate voice transmission.
   - Audio is captured from the user's default microphone, encoded, and streamed via WebSockets/Socket.IO in real-time.
+- **Mobile DSP Audio Optimizations & Hardware Resampling**:
+  - Android/Chrome mobile optimizations feature streaming Int16 PCM chunk compression, WebAudio hardware resampling, and native mobile DSP audio processing (`echoCancellation`, `noiseSuppression`, `autoGainControl`).
 - **Half-Duplex Enforcement (Single Speaker)**:
   - Only **one** station can transmit on a frequency at any given time.
   - If a student attempts to transmit while another station is speaking:
@@ -68,8 +70,6 @@ Logging is a core skill in Voice Procedure training. Each station maintains thei
   - <kbd>Ctrl+N</kbd> hotkey appends a new entry row instantly.
 - **Log Export**:
   - Export radio logs as local JSON or text files for submission to instructors.
-- **Optional Screen Logsheet (Paper Mode)**:
-  - Toggle digital logsheet on/off. When hidden ("Paper Mode"), the interface encourages physical paper logging to maximize screen space for reference tools.
 
 ---
 
@@ -117,7 +117,19 @@ All browser native popups (`alert`, `confirm`, `prompt`) are replaced with a cus
 
 ---
 
-## 7. Review & Debriefing
+## 7. Modular Jinja2 Card Templates & UI Testing
+
+- **Modular Jinja2 Card Component Architecture**:
+  - Application views are refactored into modular Jinja2 component templates located in `static/templates/cards/`: `header_card.html`, `join_net_card.html`, `create_net_card.html`, `transceiver_card.html`, `roster_card.html`, `sunray_card.html`, `df_alert_banner.html`, `resources_card.html`, `aide_memoire_card.html`.
+- **Automated DOM Contract Verification**:
+  - `tests/test_dom_contract.py` guarantees that all Jinja2 component templates strictly maintain necessary DOM element IDs, classes, and attributes consumed by JavaScript modules and CSS selectors.
+- **Playwright Headless E2E Browser Testing**:
+  - `tests/test_e2e_browser.py` provides end-to-end browser user journey validation using Playwright to test station login, callsign assignment, transceiver UI interactions, and session teardown.
+
+---
+
+## 8. Review & Debriefing
 
 - **Server-Side Log & Audio Sync**:
   - Timestamps all voice transmissions and socket logs for exercise review and student feedback.
+
