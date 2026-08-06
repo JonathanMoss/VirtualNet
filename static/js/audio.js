@@ -17,6 +17,8 @@ export class WebAudioEngine {
     
     // Playback scheduling state
     this.nextStartTime = 0;
+    this.lastScheduledEndTime = 0;
+    this.activeRxSources = [];
     
     // Audio effects & analyzer nodes
     this.voiceGainNode = null;
@@ -359,14 +361,14 @@ export class WebAudioEngine {
     }
 
     let float32;
+    const sliced = payload.buffer.slice(payload.byteOffset, payload.byteOffset + payload.byteLength);
     if (isInt16) {
       // Decode 16-bit Int16 PCM payload
-      const int16Array = new Int16Array(payload.buffer, payload.byteOffset, Math.floor(payload.byteLength / 2));
+      const int16Array = new Int16Array(sliced);
       float32 = this.int16ToFloat32(int16Array);
     } else {
       // Decode 32-bit Float PCM payload (backwards compatibility)
-      const pcmBuffer = payload.buffer.slice(payload.byteOffset, payload.byteOffset + payload.byteLength);
-      float32 = new Float32Array(pcmBuffer, 0, Math.floor(pcmBuffer.byteLength / 4));
+      float32 = new Float32Array(sliced);
     }
 
     if (!float32 || float32.length === 0) {
@@ -388,13 +390,16 @@ export class WebAudioEngine {
     audioBuf.getChannelData(0).set(float32);
 
     const currentTime = this.audioContext.currentTime;
-    if (!this.nextStartTime || this.nextStartTime < currentTime) {
-      this.nextStartTime = currentTime + 0.03; // 30ms jitter buffer for seamless streaming
+    if (!this.nextStartTime || this.nextStartTime < currentTime || (this.nextStartTime - currentTime) > 0.15) {
+      this.nextStartTime = currentTime + 0.03; // Clamp jitter buffer to 30ms for real-time low latency
     }
 
     const source = this.audioContext.createBufferSource();
     source.buffer = audioBuf;
     source.connect(this.voiceGainNode);
+
+    if (!this.activeRxSources) this.activeRxSources = [];
+    this.activeRxSources.push(source);
 
     const chunkId = Symbol('rxChunk');
     if (this.app.telemetryManager) {
@@ -402,6 +407,8 @@ export class WebAudioEngine {
     }
 
     source.onended = () => {
+      const idx = this.activeRxSources.indexOf(source);
+      if (idx !== -1) this.activeRxSources.splice(idx, 1);
       if (this.app.telemetryManager) {
         this.app.telemetryManager.markRxChunkPlayed(chunkId);
       }
@@ -420,6 +427,18 @@ export class WebAudioEngine {
 
   clearPlaybackQueue() {
     this.nextStartTime = 0;
+    this.lastScheduledEndTime = 0;
+    if (this.activeRxSources) {
+      for (const src of this.activeRxSources) {
+        try {
+          src.stop();
+          src.disconnect();
+        } catch (_e) {
+          // Ignore if already stopped
+        }
+      }
+      this.activeRxSources = [];
+    }
   }
 
   getTxVolumeRMS() {
