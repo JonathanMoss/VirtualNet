@@ -7,19 +7,19 @@ Welcome to the **Sunray Portal Guide**. As Net Control Station (NCS) / Sunray, y
 ## 📌 Daily Net Access PIN Sheet
 
 > **IMPORTANT INSTRUCTOR NOTICE:**
-> The **Daily PIN Sheet** containing official net access codes for training sessions is provided directly by the application owner:
+> The **Daily Instructor 6-Digit PIN sheet** containing official net access codes for training sessions is provided directly by the application owner:
 > **📩 Application Owner:** `joth.moss@googlemail.com`
 >
-> Contact **`joth.moss@googlemail.com`** if you require new daily PIN allocations, custom net session configurations, or exercise PIN sheets.
+> Contact **`joth.moss@googlemail.com`** if you require new daily PIN allocations.
 
 ---
 
 ## 1. 🚀 Hosting a Net Session
 
-1. On the VirtualNet landing page, click **SUNRAY Portal** (or switch to the Create Net view).
-2. Enter the **Net Session Name** (e.g., `ALPHA NET 1`).
-3. Enter or generate a **4-character Net Access PIN** (e.g., `A3F9`).
-4. Click **CREATE & HOST NET**.
+1. On the VirtualNet landing page, click **SUNRAY Portal**.
+2. Enter the **Net Session Name** (e.g., `Exercise Grey Fox`).
+3. Enter the **Daily Instructor 6-Digit PIN**
+4. Click **CREATE NET SESSION**.
 5. Once created, your Sunray Control Console will initialize, giving you full control over the net roster and active session.
 
 ---
@@ -31,9 +31,9 @@ When students connect using your exercise PIN, they enter a waiting queue in `AW
 ### Assigning Callsigns:
 - Look at the **Sunray Control Panel** on your dashboard.
 - Locate student nicknames listed under **Waiting Stations**.
-- Enter the designated tactical callsign for each student (e.g., `R11`, `R12`, `H10`, `CONTROL`).
-- Click **ASSIGN CALLSIGN**.
-- The student's dashboard will instantly unlock, allowing them to view the active roster, transmit audio, and log transmissions.
+- Enter the designated tactical callsign for each student (e.g., `R11`, `R12`, `H10`).
+- Click **ASSIGN**.
+- The student's dashboard will instantly unlock, allowing them to transmit audio.
 
 ---
 
