@@ -2,7 +2,7 @@
 
 Welcome to the **Sunray Portal Guide**. As Net Control Station (NCS) / Sunray, you oversee tactical radio net exercises, manage student callsign assignments and enforce net discipline.
 
-** Note: VirtualNet.uk does not require any PII, nor does it save/store or process any voice messages. **
+Note: VirtualNet.uk does not require any PII, nor does it save/store or process any voice messages.
 
 ---
 
@@ -10,7 +10,7 @@ Welcome to the **Sunray Portal Guide**. As Net Control Station (NCS) / Sunray, y
 
 > **IMPORTANT INSTRUCTOR NOTICE:**
 > Authorised access to VirtualNet.uk is safeguarded by use of a **Daily Instructor 6-Digit PIN**.
-> A list of valid pinnumbers for each day is available on request from the application owner: 
+> A list of valid pin numbers for each day is available on request from the application owner: 
 >
 > Contact **`joth.moss@googlemail.com`**.
 
