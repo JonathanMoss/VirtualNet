@@ -209,13 +209,15 @@ export class TelemetryManager {
     }
 
     const remainingMs = this.app.audioEngine ? this.app.audioEngine.getRemainingPlaybackMs() : 0;
-    const delayMs = Math.max(150, remainingMs + 100);
+    const delayMs = Math.max(200, remainingMs + 150);
 
     if (this.rxTimerId) clearTimeout(this.rxTimerId);
     this.rxTimerId = setTimeout(() => {
-      // Re-check remaining playback ms in case trailing audio chunks arrived after timer was scheduled
-      const actualRemainingMs = this.app.audioEngine ? this.app.audioEngine.getRemainingPlaybackMs() : 0;
-      if (actualRemainingMs > 50) {
+      // Re-check remaining playback ms and active sources in case trailing audio chunks arrived or are still playing
+      const currentRemaining = this.app.audioEngine ? this.app.audioEngine.getRemainingPlaybackMs() : 0;
+      const currentSources = (this.app.audioEngine && this.app.audioEngine.activeRxSources) ? this.app.audioEngine.activeRxSources.length : 0;
+
+      if (currentRemaining > 0 || currentSources > 0) {
         this.rxTimerId = null;
         this.finishRxSession();
         return;
