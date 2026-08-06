@@ -1,19 +1,19 @@
-# 📟 VirtualNet - Student User Guide
+## 📟 VirtualNet - Student User Guide
 
-Welcome to **VirtualNet**! This guide will help you get up and running on your simulated tactical radio net. VirtualNet lets you practice military voice communications (VP), callsign procedure, and radio logsheet keeping just like operating real field radios.
+Welcome to **VirtualNet**! This guide will help you get up and running on your simulated radio net. VirtualNet lets you practice military voice procedure (VP) by sending and receving messages to other students.
 
 ---
 
-## 🎯 Quick Start Checklist
+### 🎯 Quick Start Checklist
 
-1. Get the **4-character Net Access PIN** from your instructor (Sunray).
+1. Enter the **4-character Net Access PIN** that your instructor (Sunray) has given you.
 2. Enter your **Nickname** and click **CONNECT TO NET**.
-3. Wait until Sunray assigns your **Callsign** (e.g., `R11` or `H10`).
-4. Once assigned, practice your radio procedure!
+3. Wait until Sunray assigns your **Callsign**.
+4. Once assigned, practice your voice procedure!
 
 ---
 
-## 1. 🌐 Joining a Radio Net
+### 1. 🌐 Joining a Radio Net
 
 - When you launch VirtualNet, you'll see the **Join Radio Net** screen.
 - Type in the **Net Access PIN** provided for your training exercise (for example: `A3F9`).
@@ -24,14 +24,14 @@ Welcome to **VirtualNet**! This guide will help you get up and running on your s
 
 ---
 
-## 2. 🎙️ How to Transmit (Push-to-Talk)
+### 2. 🎙️ How to Transmit (Push-to-Talk)
 
 VirtualNet works like a real two-way radio: **only one person can speak at a time**.
 
 ### To Speak:
 - **Press and hold the SPACEBAR** on your keyboard (or click and hold the red **PTT** button on screen).
 - Wait a second, then
-- Speak clearly into your microphone.
+- Speak clearly into your microphone, remembering *RSVP*.
 - Release the key/button as soon as you finish your message.
 
 ### Channel Discipline:
@@ -40,9 +40,9 @@ VirtualNet works like a real two-way radio: **only one person can speak at a tim
 
 ---
 
-## 3. 📻 Reference material
+### 3. 📻 Reference material
 
-You are provided with several reference document you can use during your VP exercise:
+You are provided with several reference documents you can use during your VP exercise:
 - BATCO sheet (with slider)
 - BATCO sheet without slider
 - VOCAB cards
@@ -51,16 +51,16 @@ You are provided with several reference document you can use during your VP exer
 
 ---
 
-## 4. 🎛️ Radio Controls
+### 4. 🎛️ Radio Controls
 
 - **VU Meter**: Monitors your mic input level. Speak so the green segments light up cleanly without clipping red.
 
 ---
 
-## 🚀 Summary Checklist for Good Net Operators
+### 🚀 Summary Checklist for Good Net Operators
 
 - ✅ Always wait for the channel to be clear (`IDLE`).
-- ✅ Hold PTT, wait for the start beep, then speak.
+- ✅ Hold PTT, pause, then speak.
 - ✅ End transmissions with **OVER** or **OUT**.
-- ✅ Keep logsheet entries accurate and up to date.
-- ✅ Have fun and practice clear communications!
+- ✅ Keep any logsheet entries accurate and up to date.
+- ✅ Have fun!

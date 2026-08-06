@@ -1,43 +1,46 @@
-# 👑 VirtualNet - Sunray (Instructor) User Guide
+## 👑 VirtualNet - Sunray (Instructor) User Guide
 
-Welcome to the **Sunray Portal Guide**. As Net Control Station (NCS) / Sunray, you oversee tactical radio net exercises, manage student callsign assignments, enforce net discipline, and monitor logsheet accuracy.
+Welcome to the **Sunray Portal Guide**. As Net Control Station (NCS) / Sunray, you oversee tactical radio net exercises, manage student callsign assignments and enforce net discipline.
+
+** Note: VirtualNet.uk does not require any PII, nor does it save/store or process any voice messages. **
 
 ---
 
-## 📌 Daily Net Access PIN Sheet
+### Daily Net Access PIN Sheet
 
 > **IMPORTANT INSTRUCTOR NOTICE:**
-> The **Daily Instructor 6-Digit PIN sheet** containing official net access codes for training sessions is provided directly by the application owner:
-> **📩 Application Owner:** `joth.moss@googlemail.com`
+> Authorised access to VirtualNet.uk is safeguarded by use of a **Daily Instructor 6-Digit PIN**.
+> A list of valid pinnumbers for each day is available on request from the application owner: 
 >
-> Contact **`joth.moss@googlemail.com`** if you require new daily PIN allocations.
+> Contact **`joth.moss@googlemail.com`**.
 
 ---
 
-## 1. 🚀 Hosting a Net Session
+### 1. 🚀 Hosting a Net Session
 
 1. On the VirtualNet landing page, click **SUNRAY Portal**.
 2. Enter the **Net Session Name** (e.g., `Exercise Grey Fox`).
 3. Enter the **Daily Instructor 6-Digit PIN**
 4. Click **CREATE NET SESSION**.
 5. Once created, your Sunray Control Console will initialize, giving you full control over the net roster and active session.
+6. The 4-character Exercise Pin is displayed at the top of the screen, you need to issue this to students wishing to join your net.
 
 ---
 
-## 2. 📋 Callsign Assignment & Student Queue Management
+### 2. 📋 Callsign Assignment & Student Queue
 
 When students connect using your exercise PIN, they enter a waiting queue in `AWAITING CALLSIGN ASSIGNMENT` status.
 
 ### Assigning Callsigns:
 - Look at the **Sunray Control Panel** on your dashboard.
 - Locate student nicknames listed under **Waiting Stations**.
-- Enter the designated tactical callsign for each student (e.g., `R11`, `R12`, `H10`).
+- Enter the designated callsign for each student (e.g., `R11`, `R12`, `H10`).
 - Click **ASSIGN**.
 - The student's dashboard will instantly unlock, allowing them to transmit audio.
 
 ---
 
-## 3. 📡 Net Roster & Live Status Monitoring
+### 3. 📡 Net Roster & Live Status Monitoring
 
 The **Net Roster** panel provides real-time visibility across all connected stations:
 
@@ -49,23 +52,13 @@ The **Net Roster** panel provides real-time visibility across all connected stat
 
 ---
 
-## 4. ⚡ Sunray Priority Break-In (Override)
+### 4. ⚡ Sunray Priority Break-In (Override)
 
 As Sunray / Net Control, your station has **highest net priority**:
 
 - If a student is transmitting and you need to intervene, correct procedure, or broadcast an urgent order, **press and hold PTT**.
 - VirtualNet's **Break-In System** immediately overrides the current transmission, cuts off the student stream, and broadcasts your audio to all connected net members.
 - The student UIs will immediately display **`RECEIVING: CONTROL`** (or your Sunray callsign).
-
----
-
-## 5. 🔍 Student Logsheet Review & Real-Time Inspection
-
-Maintaining accurate radio logs is a core exercise objective.
-
-- Sunray can inspect all student log entries in real time.
-- Review submitted **DTG**, **From/To Callsigns**, **Precedence** (`ROUTINE`, `PRIORITY`, `IMMEDIATE`, `FLASH`), and **Event Text**.
-- Instructors can export or review session logs via the API endpoints (`/api/session/<PIN>/logs`) for post-exercise debriefs and assessment scoring.
 
 ---
 
@@ -85,5 +78,4 @@ When training completes:
 | **Get Daily PINs** | Email application owner at `joth.moss@googlemail.com` |
 | **Unlock Student Radio** | Enter callsign (`R11`) and click **Assign Callsign** |
 | **Interrupt Student Speech** | Press PTT to execute Sunray Break-In Override |
-| **Check Student Accuracy** | Inspect live net log entries & roster status |
 | **Close Training Net** | Click **End Net Session** |
