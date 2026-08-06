@@ -255,3 +255,22 @@ def test_socketio_station_join_and_callsign_assignment(app, db):
 
     inst.disconnect()
     stud.disconnect()
+
+
+def test_guide_routes(app):
+    # pylint: disable=redefined-outer-name
+    """Test HTTP GET routes for student and sunray markdown user guides."""
+    client = app.test_client()
+
+    # Test Student Guide route
+    res_student = client.get('/guide/student')
+    assert res_student.status_code == 200
+    assert b"VirtualNet - Student User Guide" in res_student.data
+    assert b"Push-to-Talk" in res_student.data
+    assert b"OVER" in res_student.data
+
+    # Test Sunray Guide route
+    res_sunray = client.get('/guide/sunray')
+    assert res_sunray.status_code == 200
+    assert b"Sunray (Instructor) User Guide" in res_sunray.data
+    assert b"joth.moss@googlemail.com" in res_sunray.data
