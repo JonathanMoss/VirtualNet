@@ -213,6 +213,13 @@ export class TelemetryManager {
 
     if (this.rxTimerId) clearTimeout(this.rxTimerId);
     this.rxTimerId = setTimeout(() => {
+      // Re-check remaining playback ms in case trailing audio chunks arrived after timer was scheduled
+      const actualRemainingMs = this.app.audioEngine ? this.app.audioEngine.getRemainingPlaybackMs() : 0;
+      if (actualRemainingMs > 50) {
+        this.rxTimerId = null;
+        this.finishRxSession();
+        return;
+      }
       this.logRxSummary();
       this.resetRxStatsState();
     }, delayMs);
