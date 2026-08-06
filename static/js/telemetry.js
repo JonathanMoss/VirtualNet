@@ -16,6 +16,7 @@ export class TelemetryManager {
     this.txBytesSent = 0;
     this.txAcksReceived = 0;
     this.rxChunksReceived = 0;
+    this.rxChunksPlayed = 0;
     this.rxBytesReceived = 0;
     this.rxDropReasons = [];
 

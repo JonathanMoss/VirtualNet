@@ -28,3 +28,24 @@ test('TelemetryManager - finishTxSession defers summary logging via timer', (t, 
     done();
   }, 300);
 });
+
+test('TelemetryManager - recordRxChunk and markRxChunkPlayed match played count accurately', () => {
+  const dummyApp = { isTransmitting: false, audioEngine: null };
+  const manager = new TelemetryManager(dummyApp);
+
+  const chunkId1 = Symbol('chunk1');
+  const chunkId2 = Symbol('chunk2');
+
+  manager.recordRxChunk(4096, chunkId1);
+  manager.recordRxChunk(4096, chunkId2);
+
+  assert.equal(manager.rxChunksReceived, 2);
+  assert.equal(manager.rxChunksPlayed, 0);
+
+  manager.markRxChunkPlayed(chunkId1);
+  manager.markRxChunkPlayed(chunkId2);
+
+  assert.equal(manager.rxChunksPlayed, 2);
+  const unplayed = Math.max(0, manager.rxChunksReceived - Math.min(manager.rxChunksReceived, manager.rxChunksPlayed));
+  assert.equal(unplayed, 0);
+});
