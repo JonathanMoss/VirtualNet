@@ -1,15 +1,55 @@
 """HTTP routes and API endpoints for VirtualNet."""
+import os
+import markdown
 from flask import Blueprint, jsonify, render_template
 from app.database import get_db
 from app.models import NetSession, LogEntry, Station
 
 bp = Blueprint('routes', __name__)
+DOCS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'docs'))
+
+
+def render_guide_markdown(filename, title, guide_id, guide_type):
+    """Reads a markdown guide file and renders it using guide_layout.html."""
+    filepath = os.path.join(DOCS_DIR, filename)
+    if not os.path.exists(filepath):
+        return render_template(
+            'guide_layout.html',
+            title=title,
+            guide_id=guide_id,
+            guide_type=guide_type,
+            content="<p>Guide documentation file not found.</p>"
+        ), 404
+
+    with open(filepath, 'r', encoding='utf-8') as f:
+        md_text = f.read()
+
+    html_content = markdown.markdown(md_text, extensions=['fenced_code', 'tables', 'nl2br'])
+    return render_template(
+        'guide_layout.html',
+        title=title,
+        guide_id=guide_id,
+        guide_type=guide_type,
+        content=html_content
+    )
 
 
 @bp.route('/')
 def index():
     """Serves the main application page."""
     return render_template('index.html')
+
+
+@bp.route('/guide/student')
+def student_guide():
+    """Serves the Student User Guide rendered from Markdown."""
+    return render_guide_markdown('student_guide.md', 'Student User Guide', 'student', 'STUDENT GUIDE')
+
+
+@bp.route('/guide/sunray')
+def sunray_guide():
+    """Serves the Sunray (Instructor) User Guide rendered from Markdown."""
+    return render_guide_markdown('sunray_guide.md', 'Sunray User Guide', 'sunray', 'SUNRAY GUIDE')
 
 
 @bp.route('/favicon.ico')

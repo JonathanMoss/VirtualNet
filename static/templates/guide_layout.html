@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en" class="h-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ title }} - VirtualNet User Guide</title>
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Custom Monospace Tactical CRT Styles -->
+  <link href="/static/css/style.css" rel="stylesheet">
+  <style>
+    .guide-container {
+      max-width: 960px;
+    }
+    .guide-content {
+      line-height: 1.7;
+    }
+    .guide-content h1, .guide-content h2, .guide-content h3 {
+      margin-top: 1.8rem;
+    }
+    .guide-content blockquote {
+      border-left: 4px solid var(--color-tactical-amber);
+      background-color: rgba(255, 176, 0, 0.05);
+      padding: 0.8rem 1.2rem;
+      margin: 1.2rem 0;
+    }
+    .guide-content table {
+      width: 100%;
+      margin: 1.2rem 0;
+      border-collapse: collapse;
+      border: 1px solid var(--border-color-tactical);
+    }
+    .guide-content th, .guide-content td {
+      border: 1px solid var(--border-color-tactical);
+      padding: 0.6rem 0.8rem;
+    }
+    .guide-content th {
+      background-color: rgba(51, 255, 51, 0.1);
+      color: var(--color-phosphor-green);
+    }
+    .guide-content code {
+      color: var(--color-phosphor-green);
+      background-color: rgba(0, 0, 0, 0.4);
+      padding: 0.2rem 0.4rem;
+      border: 1px solid var(--border-color-tactical);
+    }
+    .guide-content pre {
+      background-color: rgba(0, 0, 0, 0.6);
+      border: 1px solid var(--border-color-tactical);
+      padding: 1rem;
+      color: var(--color-phosphor-green);
+      overflow-x: auto;
+    }
+    .guide-nav-btn {
+      border: 1px solid var(--color-phosphor-green);
+      color: var(--color-phosphor-green);
+      text-decoration: none;
+      padding: 0.25rem 0.75rem;
+      font-weight: 700;
+      transition: all 0.2s ease;
+    }
+    .guide-nav-btn:hover {
+      background-color: rgba(51, 255, 51, 0.15);
+      color: var(--color-phosphor-green);
+      box-shadow: 0 0 8px rgba(51, 255, 51, 0.4);
+    }
+  </style>
+</head>
+<body class="d-flex flex-column h-100">
+
+  <!-- Header Bar -->
+  <header class="navbar navbar-dark bg-dark border-bottom border-secondary px-3 py-2 shadow-sm">
+    <div class="container-fluid flex-nowrap align-items-center">
+      <a class="navbar-brand font-weight-bold text-uppercase d-flex align-items-center" href="/" style="color: var(--color-phosphor-green);">
+        📟 VIRTUALNET
+      </a>
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-outline-secondary text-warning border border-warning px-2 py-1">{{ guide_type }}</span>
+        <a href="/" class="guide-nav-btn small-mobile">⬅️ RETURN TO APP</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <main class="container guide-container flex-grow-1 py-4">
+    <div class="card shadow-lg border-secondary">
+      <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span class="fs-5 text-uppercase">📖 USER DOCUMENTATION</span>
+        <div class="d-flex gap-2">
+          <a href="/guide/student" class="btn btn-sm {% if guide_id == 'student' %}btn-tactical{% else %}btn-outline-tactical{% endif %}">📖 STUDENT GUIDE</a>
+          <a href="/guide/sunray" class="btn btn-sm {% if guide_id == 'sunray' %}btn-tactical{% else %}btn-outline-tactical{% endif %}">👑 SUNRAY GUIDE</a>
+        </div>
+      </div>
+      <div class="card-body p-4 guide-content">
+        {{ content|safe }}
+      </div>
+      <div class="card-footer text-center py-3 border-top border-secondary">
+        <a href="/" class="btn btn-outline-tactical px-4">⬅️ RETURN TO VIRTUALNET APP</a>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="footer mt-auto py-2 bg-dark border-top border-secondary text-center">
+    <div class="container">
+      <span class="text-muted small">VIRTUALNET TACTICAL RADIO SIMULATOR &bull; USER GUIDES &bull; CONFIDENTIAL / TRAINING USE ONLY</span>
+    </div>
+  </footer>
+
+</body>
+</html>
