@@ -24,6 +24,7 @@ Represents an active virtual radio network frequency.
 - `port`: `Integer`, Not Null
 - `status`: `String(15)`, Not Null (default `"OPEN"`)
 - `net_state`: `String(15)`, Not Null (default `"DIRECTED"`)
+- `callsign_indicator`: `String(1)`, Not Null (default `"R"`)
 - `start_time`: `DateTime`, Not Null
 
 ---
@@ -50,7 +51,10 @@ Represents an active connection in a NetSession. Holds no personal information.
 - `role`: `String(15)`, Not Null (default `"SUB_STATION"`)
 - `ip_address`: `String(45)`
 - `status`: `String(20)`, Not Null (default `"AWAITING_ASSIGNMENT"`)
+- `transmission_status`: `String(20)`, Not Null (default `"IDLE"`)
+- `signal_quality`: `String(15)`, Not Null (default `"OK"`)
 - `connected_at`: `DateTime`, Not Null
+- `last_seen`: `DateTime`, Not Null
 
 ---
 

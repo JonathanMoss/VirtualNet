@@ -172,9 +172,11 @@ Detailed architectural and functional specifications are maintained in the [`app
 - [`03-roles/roles.md`](file:///home/jmoss2/VirtualNet/application_blueprint/03-roles/roles.md): User roles, responsibilities, and permissions.
 - [`04-scenarios/core-scenarios.feature`](file:///home/jmoss2/VirtualNet/application_blueprint/04-scenarios/core-scenarios.feature): Gherkin feature scenarios.
 - [`05-domain-model/entities.md`](file:///home/jmoss2/VirtualNet/application_blueprint/05-domain-model/entities.md): Database schemas and Pydantic validation models.
+- [`05-domain-model/relationships.md`](file:///home/jmoss2/VirtualNet/application_blueprint/05-domain-model/relationships.md): Entity relationship diagram and rules.
 - [`06-rules/business-rules.md`](file:///home/jmoss2/VirtualNet/application_blueprint/06-rules/business-rules.md): Business rules, callsign structure, and prowords.
 - [`07-states/lifecycle.md`](file:///home/jmoss2/VirtualNet/application_blueprint/07-states/lifecycle.md): Net Session, Station, and Transmission lifecycles.
 - [`08-nfr/non-functional-requirements.md`](file:///home/jmoss2/VirtualNet/application_blueprint/08-nfr/non-functional-requirements.md): NFRs, performance, security, and quality gates.
 - [`09-api/api-spec.md`](file:///home/jmoss2/VirtualNet/application_blueprint/09-api/api-spec.md): WebSocket API protocol and event payloads.
+- [`09-api/events.md`](file:///home/jmoss2/VirtualNet/application_blueprint/09-api/events.md): System pub/sub domain events specification.
 - [`10-architecture/architecture-overview.md`](file:///home/jmoss2/VirtualNet/application_blueprint/10-architecture/architecture-overview.md): High-level system architecture and module design.
 - [`10-architecture/tech-stack.md`](file:///home/jmoss2/VirtualNet/application_blueprint/10-architecture/tech-stack.md): Core technology stack specification.
