@@ -16,6 +16,7 @@ RUN pip install --no-cache-dir -r requirements.txt && npm install --no-audit
 # Copy source code
 COPY app/ app/
 COPY static/ static/
+COPY docs/ docs/
 COPY tests/ tests/
 
 EXPOSE 5000
