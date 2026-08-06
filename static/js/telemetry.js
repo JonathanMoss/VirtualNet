@@ -19,6 +19,8 @@ export class TelemetryManager {
     this.rxBytesReceived = 0;
     this.rxDropReasons = [];
 
+    this.txTimerId = null;
+    this.rxTimerId = null;
     this.animFrameId = null;
     this.isMonitoring = false;
   }
@@ -153,6 +155,10 @@ export class TelemetryManager {
   }
 
   startTxSession() {
+    if (this.txTimerId) {
+      clearTimeout(this.txTimerId);
+      this.txTimerId = null;
+    }
     this.txChunksSent = 0;
     this.txBytesSent = 0;
     this.txAcksReceived = 0;
@@ -161,12 +167,18 @@ export class TelemetryManager {
   }
 
   finishTxSession() {
-    if (this.txChunksSent > 0) {
-      this.logTxSummary();
-      this.txChunksSent = 0;
-      this.txBytesSent = 0;
-      this.txAcksReceived = 0;
-    }
+    if (this.txChunksSent === 0) return;
+
+    if (this.txTimerId) clearTimeout(this.txTimerId);
+    this.txTimerId = setTimeout(() => {
+      if (this.txChunksSent > 0) {
+        this.logTxSummary();
+        this.txChunksSent = 0;
+        this.txBytesSent = 0;
+        this.txAcksReceived = 0;
+      }
+      this.txTimerId = null;
+    }, 250);
   }
 
   resetRxStatsState() {
