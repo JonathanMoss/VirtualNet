@@ -91,9 +91,6 @@ export class SocketManager {
 
     this.socket.on('audio_chunk', (data) => {
       console.log("🌐 [SOCKET-RX] Received 'audio_chunk' event from Socket.IO", data ? (data.byteLength || data.length) : 0, "bytes");
-      if (this.app.telemetryManager && data) {
-        this.app.telemetryManager.recordRxChunk(data.byteLength || data.length || 0);
-      }
       // Decode binary chunk and play back
       this.app.audioEngine.receiveAudioChunk(data);
     });

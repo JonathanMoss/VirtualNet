@@ -16,9 +16,12 @@ export class TelemetryManager {
     this.txBytesSent = 0;
     this.txAcksReceived = 0;
     this.rxChunksReceived = 0;
+    this.rxChunksPlayed = 0;
     this.rxBytesReceived = 0;
     this.rxDropReasons = [];
 
+    this.txTimerId = null;
+    this.rxTimerId = null;
     this.animFrameId = null;
     this.isMonitoring = false;
   }
@@ -153,6 +156,10 @@ export class TelemetryManager {
   }
 
   startTxSession() {
+    if (this.txTimerId) {
+      clearTimeout(this.txTimerId);
+      this.txTimerId = null;
+    }
     this.txChunksSent = 0;
     this.txBytesSent = 0;
     this.txAcksReceived = 0;
@@ -161,12 +168,18 @@ export class TelemetryManager {
   }
 
   finishTxSession() {
-    if (this.txChunksSent > 0) {
-      this.logTxSummary();
-      this.txChunksSent = 0;
-      this.txBytesSent = 0;
-      this.txAcksReceived = 0;
-    }
+    if (this.txChunksSent === 0) return;
+
+    if (this.txTimerId) clearTimeout(this.txTimerId);
+    this.txTimerId = setTimeout(() => {
+      if (this.txChunksSent > 0) {
+        this.logTxSummary();
+        this.txChunksSent = 0;
+        this.txBytesSent = 0;
+        this.txAcksReceived = 0;
+      }
+      this.txTimerId = null;
+    }, 250);
   }
 
   resetRxStatsState() {
@@ -197,10 +210,19 @@ export class TelemetryManager {
     }
 
     const remainingMs = this.app.audioEngine ? this.app.audioEngine.getRemainingPlaybackMs() : 0;
-    const delayMs = Math.max(150, remainingMs + 100);
+    const delayMs = Math.max(200, remainingMs + 150);
 
     if (this.rxTimerId) clearTimeout(this.rxTimerId);
     this.rxTimerId = setTimeout(() => {
+      // Re-check remaining playback ms and active sources in case trailing audio chunks arrived or are still playing
+      const currentRemaining = this.app.audioEngine ? this.app.audioEngine.getRemainingPlaybackMs() : 0;
+      const currentSources = (this.app.audioEngine && this.app.audioEngine.activeRxSources) ? this.app.audioEngine.activeRxSources.length : 0;
+
+      if (currentRemaining > 0 || currentSources > 0) {
+        this.rxTimerId = null;
+        this.finishRxSession();
+        return;
+      }
       this.logRxSummary();
       this.resetRxStatsState();
     }, delayMs);

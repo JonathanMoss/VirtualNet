@@ -803,3 +803,34 @@ def test_audio_chunk_ack_emission(socket_client):
     ack = next((i for i in received if i['name'] == 'audio_ack'), None)
     assert ack is not None
     assert ack['args'][0]['bytes'] == len(dummy_pcm)
+
+
+def test_audio_chunk_grace_period_after_ptt_release(socket_client):
+    # pylint: disable=redefined-outer-name
+    """Test that server acknowledges audio_chunks emitted immediately after ptt_release during 500ms grace window."""
+    valid_pin = get_today_instructor_pin()
+    socket_client.emit('create_net', {'name': 'Grace Net', 'callsign_indicator': 'G', 'instructor_pin': valid_pin})
+    create_resp = next(i for i in socket_client.get_received() if i['name'] == 'create_response')['args'][0]
+    pin = create_resp['pin']
+
+    socket_client.emit('join_net', {'pin': pin, 'nickname': 'GraceUser', 'role': 'INSTRUCTOR'})
+    socket_client.get_received()
+
+    # Request PTT
+    socket_client.emit('ptt_request', {})
+    ptt_res = next(i for i in socket_client.get_received() if i['name'] == 'ptt_response')['args'][0]
+    assert ptt_res['allowed'] is True
+    tx_id = ptt_res['transmissionId']
+
+    # Release PTT
+    socket_client.emit('ptt_release', {'transmissionId': tx_id})
+    socket_client.get_received()
+
+    # Immediately emit trailing audio chunk right after release (within 500ms grace window)
+    trailing_pcm = b'\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f'
+    socket_client.emit('audio_chunk', trailing_pcm)
+
+    received = socket_client.get_received()
+    ack = next((i for i in received if i['name'] == 'audio_ack'), None)
+    assert ack is not None
+    assert ack['args'][0]['bytes'] == len(trailing_pcm)

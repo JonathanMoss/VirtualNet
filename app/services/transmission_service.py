@@ -1,4 +1,5 @@
 """Service module for managing voice PTT transmissions and audio routing."""
+import time
 from datetime import datetime
 import eventlet
 from app import socketio
@@ -9,21 +10,37 @@ MAX_TRANSMISSION_SECONDS = 20
 
 # Fast-path in-memory mapping of transmitting SIDs to net_id (Zero-DB audio streaming)
 transmitting_sids = {}
+grace_sids = {}  # {sid: (net_id, expiry_timestamp)}
 
 
 def unregister_transmitting_sid(sid: str):
-    """Remove SID from transmitting fast-path mapping."""
-    transmitting_sids.pop(sid, None)
+    """Remove SID from transmitting fast-path mapping and enter 500ms grace window for trailing chunks."""
+    net_id = transmitting_sids.pop(sid, None)
+    if net_id:
+        grace_sids[sid] = (net_id, time.time() + 0.5)
 
 
 def register_transmitting_sid(sid: str, net_id: str):
     """Register SID in transmitting fast-path mapping."""
+    grace_sids.pop(sid, None)
     transmitting_sids[sid] = net_id
 
 
-def get_audio_net_id(sid: str, station_registry):
-    """Get net ID for audio streaming using fast path O(1) lookup or registry fallback."""
-    return transmitting_sids.get(sid) or station_registry.get_net_id(sid)
+def get_audio_net_id(sid: str, station_registry=None):
+    """Get net ID for audio streaming using fast path O(1) lookup, 500ms grace window, or registry fallback."""
+    if sid in transmitting_sids:
+        return transmitting_sids[sid]
+
+    if sid in grace_sids:
+        net_id, expiry = grace_sids[sid]
+        if time.time() < expiry:
+            return net_id
+        grace_sids.pop(sid, None)
+
+    if station_registry:
+        return station_registry.get_net_id(sid)
+
+    return None
 
 
 def transmission_timeout_timer(tx_id: str, net_id: str, sid: str, broadcast_roster):

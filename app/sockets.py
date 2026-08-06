@@ -283,7 +283,7 @@ def handle_audio_chunk(data):
     if not isinstance(data, (bytes, bytearray)) or len(data) < 4:
         return
 
-    net_id = transmission_service.transmitting_sids.get(request.sid)
+    net_id = transmission_service.get_audio_net_id(request.sid)
     if not net_id:
         return
 

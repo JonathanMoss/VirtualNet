@@ -894,7 +894,6 @@ class VirtualNetApp {
         this.telemetryManager.finishTxSession();
         this.telemetryManager.finishRxSession();
       }
-      this.audioEngine.clearPlaybackQueue();
       const speakerBox = document.getElementById('active-speaker-box');
       if (speakerBox) speakerBox.classList.add('d-none');
       
@@ -914,6 +913,7 @@ class VirtualNetApp {
         this.telemetryManager.finishRxSession(true);
         this.telemetryManager.startTxSession();
       }
+      this.audioEngine.clearPlaybackQueue();
 
     } else if (state === 'TRANSMITTING') {
       if (container) container.classList.add('ptt-card-transmitting');
