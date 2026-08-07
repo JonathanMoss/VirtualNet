@@ -13,3 +13,5 @@ pylint>=3.0.0
 playwright>=1.40.0
 pytest-playwright>=0.4.0
 markdown>=3.5.0
+pip-audit>=2.7.0
+locust>=2.20.0
