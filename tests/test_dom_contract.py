@@ -98,3 +98,40 @@ def test_all_html_data_zoom_targets_exist_in_html():
         "in template HTML files that DO NOT exist as HTML element IDs:\n"
         + "\n".join(f"  - {target}" for target in missing_targets)
     )
+
+
+def test_no_inline_styles_in_html_templates():
+    """Verify that zero inline style attributes (style="...") exist in HTML template files."""
+    assert TEMPLATES_DIR_PATH.exists(), f"Templates directory not found at {TEMPLATES_DIR_PATH}"
+    inline_style_pattern = re.compile(r'style\s*=\s*["\'][^"\']+["\']', re.IGNORECASE)
+
+    violations = []
+    for html_file in TEMPLATES_DIR_PATH.rglob("*.html"):
+        with open(html_file, "r", encoding="utf-8") as f:
+            for line_no, line in enumerate(f, start=1):
+                if inline_style_pattern.search(line):
+                    violations.append(f"{html_file.relative_to(BASE_DIR)}:L{line_no} -> {line.strip()}")
+
+    assert not violations, (
+        f"Found {len(violations)} inline style attribute(s) in HTML templates. "
+        "All CSS must be modularized into external CSS files:\n"
+        + "\n".join(f"  - {v}" for v in violations)
+    )
+
+
+def test_no_embedded_style_blocks_in_html_templates():
+    """Verify that no embedded <style> tags exist in HTML template files."""
+    assert TEMPLATES_DIR_PATH.exists(), f"Templates directory not found at {TEMPLATES_DIR_PATH}"
+    style_block_pattern = re.compile(r'<style[\s>]', re.IGNORECASE)
+
+    style_blocks = []
+    for html_file in TEMPLATES_DIR_PATH.rglob("*.html"):
+        with open(html_file, "r", encoding="utf-8") as f:
+            for line_no, line in enumerate(f, start=1):
+                if style_block_pattern.search(line):
+                    style_blocks.append(f"{html_file.relative_to(BASE_DIR)}:L{line_no}")
+
+    assert not style_blocks, (
+        f"Found {len(style_blocks)} embedded <style> block(s) in HTML templates:\n"
+        + "\n".join(f"  - {sb}" for sb in style_blocks)
+    )

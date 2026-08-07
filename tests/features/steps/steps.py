@@ -374,3 +374,40 @@ def step_then_session_variables_wiped(context):
     # Check that net session is deleted or closed
     session = db.query(NetSession).filter_by(id=context.net_id).first()
     assert session is None
+
+
+# User Guide BDD Step Definitions
+
+@when('a user requests the Student User Guide at "{url}"')
+@when('a user requests the Sunray User Guide at "{url}"')
+@when('a user requests a guide at "{url}"')
+def step_when_user_requests_guide(context, url):
+    client = context.app.test_client()
+    context.response = client.get(url)
+
+
+@then('the response status code should be {status_code:d}')
+def step_then_status_code_should_be(context, status_code):
+    assert context.response.status_code == status_code, (
+        f"Expected status {status_code}, got {context.response.status_code}"
+    )
+
+
+@then('the page title should contain "{text}"')
+def step_then_page_title_contains(context, text):
+    assert text in context.response.get_data(as_text=True), (
+        f"Expected text '{text}' in page content."
+    )
+
+
+@then('the page content should include "{text1}" and "{text2}"')
+def step_then_page_content_includes_two(context, text1, text2):
+    html = context.response.get_data(as_text=True)
+    assert text1 in html, f"Expected '{text1}' in HTML response."
+    assert text2 in html, f"Expected '{text2}' in HTML response."
+
+
+@then('the page content should display "{text}"')
+def step_then_page_content_displays(context, text):
+    html = context.response.get_data(as_text=True)
+    assert text in html, f"Expected '{text}' in HTML response."

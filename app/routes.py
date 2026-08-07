@@ -24,7 +24,10 @@ def render_guide_markdown(filename, title, guide_id, guide_type):
     with open(filepath, 'r', encoding='utf-8') as f:
         md_text = f.read()
 
-    html_content = markdown.markdown(md_text, extensions=['fenced_code', 'tables', 'nl2br'])
+    html_content = markdown.markdown(
+        md_text,
+        extensions=['fenced_code', 'tables', 'nl2br', 'toc', 'attr_list']
+    )
     return render_template(
         'guide_layout.html',
         title=title,
@@ -50,6 +53,26 @@ def student_guide():
 def sunray_guide():
     """Serves the Sunray (Instructor) User Guide rendered from Markdown."""
     return render_guide_markdown('sunray_guide.md', 'Sunray User Guide', 'sunray', 'SUNRAY GUIDE')
+
+
+@bp.route('/guide/<guide_id>')
+def custom_guide(guide_id):
+    """Serves user guides dynamically or returns 404 if guide is invalid."""
+    guides = {
+        'student': ('student_guide.md', 'Student User Guide', 'STUDENT GUIDE'),
+        'sunray': ('sunray_guide.md', 'Sunray User Guide', 'SUNRAY GUIDE')
+    }
+    if guide_id in guides:
+        filename, title, guide_type = guides[guide_id]
+        return render_guide_markdown(filename, title, guide_id, guide_type)
+
+    return render_template(
+        'guide_layout.html',
+        title='Guide Not Found',
+        guide_id=guide_id,
+        guide_type='NOT FOUND',
+        content='<h2>404 - Guide Not Found</h2><p>The requested guide documentation does not exist.</p>'
+    ), 404
 
 
 @bp.route('/favicon.ico')

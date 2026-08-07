@@ -1,0 +1,84 @@
+/* VirtualNet User Guides Stylesheet */
+
+.guide-container {
+  max-width: 960px;
+}
+
+.guide-content {
+  line-height: 1.7;
+}
+
+.guide-content h1,
+.guide-content h2,
+.guide-content h3 {
+  margin-top: 1.8rem;
+}
+
+.guide-content blockquote {
+  border-left: 4px solid var(--color-tactical-amber);
+  background-color: rgba(255, 176, 0, 0.05);
+  padding: 0.8rem 1.2rem;
+  margin: 1.2rem 0;
+}
+
+.guide-content table {
+  width: 100%;
+  margin: 1.2rem 0;
+  border-collapse: collapse;
+  border: 1px solid var(--border-color-tactical);
+}
+
+.guide-content th,
+.guide-content td {
+  border: 1px solid var(--border-color-tactical);
+  padding: 0.6rem 0.8rem;
+}
+
+.guide-content th {
+  background-color: rgba(51, 255, 51, 0.1);
+  color: var(--color-phosphor-green);
+}
+
+.guide-content code {
+  color: var(--color-phosphor-green);
+  background-color: rgba(0, 0, 0, 0.4);
+  padding: 0.2rem 0.4rem;
+  border: 1px solid var(--border-color-tactical);
+}
+
+.guide-content pre {
+  background-color: rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--border-color-tactical);
+  padding: 1rem;
+  color: var(--color-phosphor-green);
+  overflow-x: auto;
+}
+
+.guide-nav-btn {
+  border: 1px solid var(--color-phosphor-green);
+  color: var(--color-phosphor-green);
+  text-decoration: none;
+  padding: 0.25rem 0.75rem;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.guide-nav-btn:hover {
+  background-color: rgba(51, 255, 51, 0.15);
+  color: var(--color-phosphor-green);
+  box-shadow: 0 0 8px rgba(51, 255, 51, 0.4);
+}
+
+.btn-back-to-top {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  z-index: 999;
+  border-radius: 50%;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}

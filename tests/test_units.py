@@ -259,7 +259,7 @@ def test_socketio_station_join_and_callsign_assignment(app, db):
 
 def test_guide_routes(app):
     # pylint: disable=redefined-outer-name
-    """Test HTTP GET routes for student and sunray markdown user guides."""
+    """Test HTTP GET routes for student and sunray markdown user guides, CSS linkage, and 404 handling."""
     client = app.test_client()
 
     # Test Student Guide route
@@ -268,9 +268,18 @@ def test_guide_routes(app):
     assert b"VirtualNet - Student User Guide" in res_student.data
     assert b"Push-to-Talk" in res_student.data
     assert b"OVER" in res_student.data
+    assert b"/static/css/guides.css" in res_student.data
 
     # Test Sunray Guide route
     res_sunray = client.get('/guide/sunray')
     assert res_sunray.status_code == 200
     assert b"Sunray (Instructor) User Guide" in res_sunray.data
     assert b"joth.moss@googlemail.com" in res_sunray.data
+    assert b"<table>" in res_sunray.data or b"th>" in res_sunray.data
+    assert b"/static/css/guides.css" in res_sunray.data
+
+    # Test Non-existent guide route (404)
+    res_invalid = client.get('/guide/nonexistent_guide')
+    assert res_invalid.status_code == 404
+    assert b"404 - Guide Not Found" in res_invalid.data
+    assert b"NOT FOUND" in res_invalid.data

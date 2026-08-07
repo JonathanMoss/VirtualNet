@@ -2,7 +2,7 @@
 <section id="ptt-container" class="card mb-3 ptt-card-idle shadow-sm position-relative">
   
   <!-- PTT Card Header with Minimise Toggle -->
-  <div id="ptt-card-header" class="card-header bg-dark text-uppercase d-flex justify-content-between align-items-center py-1 px-3" style="cursor: pointer; user-select: none;">
+  <div id="ptt-card-header" class="card-header bg-dark text-uppercase d-flex justify-content-between align-items-center py-1 px-3 cursor-pointer-select-none">
     <span class="font-weight-bold d-flex align-items-center gap-2 small">
       <span>📻</span>
       <span>RADIO CONTROLS</span>
@@ -19,12 +19,12 @@
     <h4 class="text-success text-center">AWAITING CALLSIGN ASSIGNMENT...</h4>
     <p class="text-muted text-center max-width-75">SUNRAY must assign your call sign before you can enter the active frequency.</p>
     <div class="border border-secondary p-2 bg-black text-center font-weight-bold">
-      Operator NICK: <span id="overlay-nickname" style="color: var(--color-tactical-amber);">-</span>
+      Operator NICK: <span id="overlay-nickname" class="text-tactical-amber">-</span>
     </div>
   </div>
 
   <!-- AudioContext Tap-to-Unmute Guard Banner (Mobile WebAudio Autoplay) -->
-  <div id="audio-unmute-banner" class="alert alert-warning m-0 py-1 px-3 rounded-0 text-center font-weight-bold small d-none" style="cursor: pointer; letter-spacing: 0.05em;">
+  <div id="audio-unmute-banner" class="alert alert-warning m-0 py-1 px-3 rounded-0 text-center font-weight-bold small d-none alert-audio-unmute-interactive">
     🔊 TAP TO UNMUTE AUDIO (Browser Audio Throttled)
   </div>
 
@@ -39,7 +39,7 @@
 
       <!-- Tactical Audio Level VU Meter & TX/RX Telemetry Scale Row -->
       <div class="d-flex align-items-center gap-2 mt-2 flex-wrap">
-        <div id="vu-meter-bar" class="vu-meter-container gap-1 align-items-center" style="display: none;" title="Audio Level VU Meter">
+        <div id="vu-meter-bar" class="vu-meter-container gap-1 align-items-center d-none" title="Audio Level VU Meter">
           <span class="text-muted font-mono style-tiny me-1">VU</span>
           <div class="vu-segment"></div>
           <div class="vu-segment"></div>

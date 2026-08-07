@@ -564,5 +564,74 @@ h1, h2, h3, h4, h5, h6, .tactical-header {
   to { opacity: 1.0; box-shadow: 0 0 8px var(--color-tactical-amber); }
 }
 
+/* Modular Utility & Component Classes */
+.text-phosphor-green {
+  color: var(--color-phosphor-green) !important;
+}
+
+.text-tactical-amber {
+  color: var(--color-tactical-amber) !important;
+}
+
+.input-pin-masked {
+  -webkit-text-security: disc;
+  text-security: disc;
+}
+
+.cursor-pointer-select-none {
+  cursor: pointer;
+  user-select: none;
+}
+
+.alert-audio-unmute-interactive {
+  cursor: pointer;
+  letter-spacing: 0.05em;
+}
+
+.aide-memoire-btn-tab {
+  right: 0;
+  top: 30%;
+  transform: rotate(-90deg) translate(0, 100%);
+  transform-origin: right bottom;
+  z-index: 1000;
+  padding: 0.5rem 1.2rem;
+}
+
+.aide-memoire-offcanvas {
+  width: 380px;
+}
+
+.main-content-panel {
+  max-height: calc(100vh - 120px);
+}
+
+.df-alert-banner-custom {
+  background-color: #3f0000;
+  color: #ff3333;
+  font-size: 1.25rem;
+}
+
+.table-scrollable-sm {
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.table-scrollable-md {
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.img-fit-contain {
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.net-sidebar-responsive {
+  width: 25%;
+  min-width: 250px;
+  max-height: calc(100vh - 120px);
+}
+
+
 
 
