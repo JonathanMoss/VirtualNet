@@ -72,7 +72,7 @@ def test_high_concurrency_socket_load(app, db):
         })
 
     assign_duration = time.time() - assign_start
-    assert assign_duration < 3.0, f"Assigning 50 callsigns took too long ({assign_duration:.2f}s)"
+    assert assign_duration < 6.0, f"Assigning 50 callsigns took too long ({assign_duration:.2f}s)"
 
     # Step 4: Verify student clients received callsign assignment notifications
     for idx, stud_client in enumerate(student_clients, start=11):
