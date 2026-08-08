@@ -611,6 +611,11 @@ h1, h2, h3, h4, h5, h6, .tactical-header {
   font-size: 1.25rem;
 }
 
+.sunray-panel-body {
+  max-height: 75vh;
+  overflow-y: auto;
+}
+
 .table-scrollable-sm {
   max-height: 180px;
   overflow-y: auto;
@@ -619,6 +624,21 @@ h1, h2, h3, h4, h5, h6, .tactical-header {
 .table-scrollable-md {
   max-height: 220px;
   overflow-y: auto;
+}
+
+.table-scrollable-lg {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.table-scrollable-sm table thead th,
+.table-scrollable-md table thead th,
+.table-scrollable-lg table thead th {
+  position: sticky;
+  top: 0;
+  background-color: #111111;
+  z-index: 2;
+  box-shadow: inset 0 -1px 0 #444444;
 }
 
 .img-fit-contain {
