@@ -2,7 +2,6 @@
 <section id="instructor-section" class="card border-warning mb-3 d-none">
   <div id="sunray-card-header" class="card-header bg-dark text-warning d-flex justify-content-between align-items-center py-2 px-3 cursor-pointer-select-none">
     <span class="font-weight-bold d-flex align-items-center gap-2">
-      <span>📡</span>
       <span>SUNRAY CONTROL PANEL</span>
       <span id="sunray-queue-badge" class="badge bg-warning text-dark d-none">0 WAITING</span>
     </span>
@@ -15,7 +14,7 @@
       
       <!-- Admissions Queue: Full Width (col-12) -->
       <div class="col-12 mb-3">
-        <h6 class="text-warning">📥 Callsign Assignment Queue (Awaiting Admissions)</h6>
+        <h6 class="text-warning">Callsign Assignment Queue (Awaiting Admissions)</h6>
         <div class="table-responsive border border-secondary bg-black table-scrollable-sm">
           <table class="table table-dark table-sm m-0 align-middle">
             <thead>
@@ -38,8 +37,8 @@
     
     <!-- Roster manager with signal controls -->
     <div class="row mt-2">
-      <div class="col-12">
-        <h6 class="text-warning">📋 Roster and Channel Control</h6>
+      <div class="col-12 mb-3">
+        <h6 class="text-warning">Roster and Channel Control</h6>
         <div class="table-responsive border border-secondary bg-black table-scrollable-md">
           <table class="table table-dark table-sm m-0 align-middle">
             <thead>
@@ -53,6 +52,28 @@
             </thead>
             <tbody id="instructor-roster-tbody">
               <tr><td colspan="5" class="text-center text-muted py-3">No active roster items.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transmission Activity Log (Sunray Only) -->
+    <div class="row mt-2">
+      <div class="col-12">
+        <h6 class="text-warning">Transmission Activity Log (Sunray Only)</h6>
+        <div class="table-responsive border border-secondary bg-black table-scrollable-sm">
+          <table class="table table-dark table-sm m-0 align-middle">
+            <thead>
+              <tr>
+                <th>DTG</th>
+                <th>Call Sign</th>
+                <th>Duration</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="sunray-tx-log-tbody">
+              <tr><td colspan="4" class="text-center text-muted py-3">No transmission records logged yet.</td></tr>
             </tbody>
           </table>
         </div>

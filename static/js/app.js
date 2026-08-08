@@ -708,10 +708,10 @@ class VirtualNetApp {
           activeSpeakerFound = true;
         }
 
-        const roleIcon = (s.role === 'SUNRAY' || s.role === 'CONTROL') ? '⭐ ' : '';
+        const roleTag = (s.role === 'SUNRAY' || s.role === 'CONTROL') ? '[NCS] ' : '';
         const nameHtml = isSunrayView
-          ? `<b>${roleIcon}${s.callSign}</b> <span class="text-muted">(${s.nickname})</span>`
-          : `<b>${roleIcon}${s.callSign}</b>`;
+          ? `<b>${roleTag}${s.callSign}</b> <span class="text-muted">(${s.nickname})</span>`
+          : `<b>${roleTag}${s.callSign}</b>`;
 
         item.innerHTML = `
           <div>

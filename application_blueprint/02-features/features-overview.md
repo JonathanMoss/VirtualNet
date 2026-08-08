@@ -96,7 +96,7 @@ A side-sliding reveal panel (Aide Memoire) contains five tabbed reference tools 
 - **5. LOGGING Tab**:
   - Standardized military radio logsheet format and entry guidelines.
 - **Image Pan/Zoom Controls Bar**:
-  - All reference card tabs feature an integrated control bar (`Zoom In 🔍+`, `Zoom Out 🔍-`, `Reset Zoom ↺`) with drag-pan capabilities for close inspection on desktop and mobile screens.
+  - All reference card tabs feature an integrated control bar (`Zoom In +`, `Zoom Out -`, `Reset Zoom Reset`) with drag-pan capabilities for close inspection on desktop and mobile screens.
 
 ---
 

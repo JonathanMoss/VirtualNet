@@ -1,4 +1,4 @@
-## 👑 VirtualNet - Sunray (Instructor) User Guide
+## VirtualNet - Sunray (Instructor) User Guide
 
 Welcome to the **Sunray Portal Guide**. As Net Control Station (NCS) / Sunray, you oversee tactical radio net exercises, manage student callsign assignments and enforce net discipline.
 
@@ -16,7 +16,7 @@ Note: VirtualNet.uk does not require any PII, nor does it save/store or process 
 
 ---
 
-### 1. 🚀 Hosting a Net Session
+### 1. Hosting a Net Session
 
 1. On the VirtualNet landing page, click **SUNRAY Portal**.
 2. Enter the **Net Session Name** (e.g., `Exercise Grey Fox`).
@@ -27,7 +27,7 @@ Note: VirtualNet.uk does not require any PII, nor does it save/store or process 
 
 ---
 
-### 2. 📋 Callsign Assignment & Student Queue
+### 2. Callsign Assignment & Student Queue
 
 When students connect using your exercise PIN, they enter a waiting queue in `AWAITING CALLSIGN ASSIGNMENT` status.
 
@@ -40,7 +40,7 @@ When students connect using your exercise PIN, they enter a waiting queue in `AW
 
 ---
 
-### 3. 📡 Net Roster & Live Status Monitoring
+### 3. Net Roster & Live Status Monitoring
 
 The **Net Roster** panel provides real-time visibility across all connected stations:
 
@@ -52,7 +52,7 @@ The **Net Roster** panel provides real-time visibility across all connected stat
 
 ---
 
-### 4. ⚡ Sunray Priority Break-In (Override)
+### 4. Sunray Priority Break-In (Override)
 
 As Sunray / Net Control, your station has **highest net priority**:
 
@@ -62,7 +62,14 @@ As Sunray / Net Control, your station has **highest net priority**:
 
 ---
 
-## 6. 🚪 Ending a Net Session
+## 5. Transmission Activity Log (Sunray Only)
+
+The **Transmission Activity Log** automatically records all station transmissions:
+- Displays **DTG**, **Call Sign**, **Duration** ($s$), and **Status** (`COMPLETED`, `DF ALERT`, `OVERRIDDEN`) in real-time for Sunray evaluation.
+
+---
+
+## 6. Ending a Net Session
 
 When training completes:
 - Click **END NET SESSION** on your Sunray Control Console.
@@ -71,11 +78,12 @@ When training completes:
 
 ---
 
-## 🛠️ Summary for Sunray / Net Control
+## Summary for Sunray / Net Control
 
 | Action | Sunray Control Method |
 | :--- | :--- |
 | **Get Daily PINs** | Email application owner at `joth.moss@googlemail.com` |
 | **Unlock Student Radio** | Enter callsign (`R11`) and click **Assign Callsign** |
 | **Interrupt Student Speech** | Press PTT to execute Sunray Break-In Override |
+| **Review Transmissions** | View **Transmission Activity Log** in Sunray Control Panel |
 | **Close Training Net** | Click **End Net Session** |
