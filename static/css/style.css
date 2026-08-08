@@ -613,22 +613,62 @@ h1, h2, h3, h4, h5, h6, .tactical-header {
 
 .sunray-panel-body {
   max-height: 75vh;
-  overflow-y: auto;
+  overflow-y: auto !important;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-phosphor-green) #111111;
+}
+
+.sunray-panel-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sunray-panel-body::-webkit-scrollbar-track {
+  background: #111111;
+}
+
+.sunray-panel-body::-webkit-scrollbar-thumb {
+  background: var(--color-phosphor-green);
+  border-radius: 4px;
 }
 
 .table-scrollable-sm {
   max-height: 180px;
-  overflow-y: auto;
+  overflow-y: auto !important;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-tactical-amber) #111111;
 }
 
 .table-scrollable-md {
   max-height: 220px;
-  overflow-y: auto;
+  overflow-y: auto !important;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-tactical-amber) #111111;
 }
 
 .table-scrollable-lg {
-  max-height: 260px;
-  overflow-y: auto;
+  max-height: 240px;
+  overflow-y: auto !important;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-tactical-amber) #111111;
+}
+
+.table-scrollable-sm::-webkit-scrollbar,
+.table-scrollable-md::-webkit-scrollbar,
+.table-scrollable-lg::-webkit-scrollbar {
+  width: 8px;
+}
+
+.table-scrollable-sm::-webkit-scrollbar-track,
+.table-scrollable-md::-webkit-scrollbar-track,
+.table-scrollable-lg::-webkit-scrollbar-track {
+  background: #111111;
+}
+
+.table-scrollable-sm::-webkit-scrollbar-thumb,
+.table-scrollable-md::-webkit-scrollbar-thumb,
+.table-scrollable-lg::-webkit-scrollbar-thumb {
+  background: var(--color-tactical-amber);
+  border-radius: 4px;
 }
 
 .table-scrollable-sm table thead th,
