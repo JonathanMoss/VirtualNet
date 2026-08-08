@@ -1,10 +1,10 @@
-# VirtualNet 📟
+# VirtualNet
 
 VirtualNet is a Client/Server web application designed to provide military, emergency response, and search & rescue students and instructors with a simulated environment to practice Communication and Information Systems (CIS) and Voice Procedure (VP) rules without physical radio equipment.
 
 ---
 
-## 📋 Table of Contents
+## Table of Contents
 
 - [Overview](#overview)
 - [Tech Stack](#tech-stack)
@@ -16,18 +16,18 @@ VirtualNet is a Client/Server web application designed to provide military, emer
 
 ---
 
-## 🎯 Overview
+## Overview
 
 VirtualNet simulates a multi-station VHF/UHF tactical radio net over standard IP networks (local Wi-Fi or Internet):
 - **Half-Duplex Transceiver**: Single speaker per frequency with PTT keying, start chirps, squelch tails, and Enemy Direction Finding (DF) alerts for > 20s transmissions.
-- **SUNRAY Net Control Dashboard**: Admission queue, dynamic callsign assignment, break-in discipline override, station muting/kicking, and 60-minute inactivity timeouts.
+- **SUNRAY Net Control Dashboard**: Admission queue, dynamic callsign assignment, break-in discipline override, station muting/kicking, transmission activity log, and 60-minute inactivity timeouts.
 - **Connection Resilience**: 30-second client heartbeat pings and automatic socket re-binding (`rejoin_net`) on reconnection or tab focus to prevent background tab disconnection errors ("TRANSMISSION BLOCKED").
 - **Aide Memoire Drawer**: Side-sliding panel with military logging shorthand, interactive SVG BATCO cipher slider, vocabulary cards (OPS, FIRE SP, LOG, etc.), tactical report slates (CFF, CONTACT, MEDEVAC, SITREP), and log guidelines.
 - **Tactical CRT Design System**: Accessible night-ops theme with custom CRT alert/confirm/prompt modals.
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 - **Backend**: Python 3.11+, Flask 3.0, Flask-SocketIO 5.3, Pydantic v2, SQLAlchemy 2.0, Eventlet / Gunicorn.
 - **Database & Cache**: SQLite embedded database, Redis 7 (Pub/Sub message broker & fast-path audio packet routing).
@@ -105,7 +105,7 @@ Whenever `git commit` is executed, the pre-commit hook automatically runs the fu
 #!/bin/bash
 set -e
 
-echo "🔍 Running pre-commit test battery in Docker container..."
+echo "Running pre-commit test battery in Docker container..."
 docker compose -f docker-compose.test.yml run --rm test
 ```
 

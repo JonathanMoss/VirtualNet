@@ -122,7 +122,7 @@ export class TelemetryManager {
     const kbSent = (this.txBytesSent / 1024).toFixed(1);
     const unacked = Math.max(0, this.txChunksSent - this.txAcksReceived);
 
-    console.group('%c📡 [TX TELEMETRY SUMMARY]', 'color: #00ff41; font-weight: bold; background: #040d07; padding: 2px 6px;');
+    console.group('%c[TX TELEMETRY SUMMARY]', 'color: #00ff41; font-weight: bold; background: #040d07; padding: 2px 6px;');
     console.log(`- Chunks Sent: ${this.txChunksSent}`);
     console.log(`- Server ACKs Received: ${this.txAcksReceived} (${ackPct}%)`);
     console.log(`- Total Bytes Transmitted: ${kbSent} KB`);

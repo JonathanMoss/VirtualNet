@@ -1,10 +1,10 @@
-## 📟 VirtualNet - Student User Guide
+## VirtualNet - Student User Guide
 
-Welcome to **VirtualNet**! This guide will help you get up and running on your simulated radio net. VirtualNet lets you practice military voice procedure (VP) by sending and receving messages to other students.
+Welcome to **VirtualNet**! This guide will help you get up and running on your simulated radio net. VirtualNet lets you practice military voice procedure (VP) by sending and receiving messages to other students.
 
 ---
 
-### 🎯 Quick Start Checklist
+### Quick Start Checklist
 
 1. Enter the **4-character Net Access PIN** that your instructor (Sunray) has given you.
 2. Enter your **Nickname** and click **CONNECT TO NET**.
@@ -13,7 +13,7 @@ Welcome to **VirtualNet**! This guide will help you get up and running on your s
 
 ---
 
-### 1. 🌐 Joining a Radio Net
+### 1. Joining a Radio Net
 
 - When you launch VirtualNet, you'll see the **Join Radio Net** screen.
 - Type in the **Net Access PIN** provided for your training exercise (for example: `A3F9`).
@@ -24,7 +24,7 @@ Welcome to **VirtualNet**! This guide will help you get up and running on your s
 
 ---
 
-### 2. 🎙️ How to Transmit (Push-to-Talk)
+### 2. How to Transmit (Push-to-Talk)
 
 VirtualNet works like a real two-way radio: **only one person can speak at a time**.
 
@@ -40,7 +40,7 @@ VirtualNet works like a real two-way radio: **only one person can speak at a tim
 
 ---
 
-### 3. 📻 Reference material
+### 3. Reference Material
 
 You are provided with several reference documents you can use during your VP exercise:
 - BATCO sheet (with slider)
@@ -51,16 +51,16 @@ You are provided with several reference documents you can use during your VP exe
 
 ---
 
-### 4. 🎛️ Radio Controls
+### 4. Radio Controls
 
 - **VU Meter**: Monitors your mic input level. Speak so the green segments light up cleanly without clipping red.
 
 ---
 
-### 🚀 Summary Checklist for Good Net Operators
+### Summary Checklist for Good Net Operators
 
-- ✅ Always wait for the channel to be clear (`IDLE`).
-- ✅ Hold PTT, pause, then speak.
-- ✅ End transmissions with **OVER** or **OUT**.
-- ✅ Keep any logsheet entries accurate and up to date.
-- ✅ Have fun!
+- Always wait for the channel to be clear (`IDLE`).
+- Hold PTT, pause, then speak.
+- End transmissions with **OVER** or **OUT**.
+- Keep any logsheet entries accurate and up to date.
+- Have fun!

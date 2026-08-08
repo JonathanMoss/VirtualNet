@@ -14,7 +14,7 @@ The user dashboard uses a two-column Bootstrap layout with a slide-out drawer:
 ### ASCII Wireframe Mockup (Student view after Callsign Assignment)
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-│ VirtualNet 🌐 [Net: Drill Alpha]         [State: DIRECTED NET (Badge)] │
+│ VirtualNet [Net: Drill Alpha]            [State: DIRECTED NET (Badge)] │
 ├──────────────────────────────────────┬─────────────────────────────────┤
 │ ONLINE ROSTER (col-md-3)             │ PTT RADIO CONTROLS (col-md-9)   │
 │                                      │ ┌─────────────────────────────┐ │
@@ -73,12 +73,12 @@ Card container for instructors to host a session (`#create-net-card`):
 Top navigation bar styled as a military command header:
 - Layout classes: `navbar navbar-dark bg-dark border-bottom border-secondary px-3 py-2 shadow-sm`
 - Content elements:
-  - Branding: `📟 VIRTUALNET` (Phonetic spelling reference toggle on hover).
+  - Branding: `VIRTUALNET` (Phonetic spelling reference toggle on hover).
   - Header PIN: `#header-net-pin` (`PIN: ----`).
   - Net Name: `#header-net-name` (`Net: -`).
   - Callsign Badge: `#header-callsign` (`Callsign: AWAITING`).
   - System Clock: Real-time Date-Time-Group text display (`000000Z UTC`, updated via `formatDTG`).
-  - Leave Button: `#btn-leave-net` (`🚪 LEAVE NET`).
+  - Leave Button: `#btn-leave-net` (`LEAVE`).
 
 ### 2.5 Enemy Direction Finding (DF) Alert Banner
 - Layout ID: `#df-alert-banner`

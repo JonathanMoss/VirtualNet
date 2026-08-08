@@ -209,7 +209,7 @@ export class WebAudioEngine {
     this.capturedPcmFloats.push(new Float32Array(silenceSamples));
 
     this.isRecording = true;
-    console.log("🎙️ [AUDIO-TX] PTT Keyed -> Low-latency streaming recording started for TX ID:", txId);
+    console.log("[AUDIO-TX] PTT Keyed -> Low-latency streaming recording started for TX ID:", txId);
   }
 
   flushChunkIfReady(force = false) {
@@ -248,7 +248,7 @@ export class WebAudioEngine {
     this.isRecording = false;
     this.currentTxId = null;
     this.capturedPcmFloats = [];
-    console.log(`🚀 [AUDIO-TX] PTT Released -> Finished streaming voice chunks for TX ID: ${txId}`);
+    console.log(`[AUDIO-TX] PTT Released -> Finished streaming voice chunks for TX ID: ${txId}`);
   }
 
   processCapturedAudio() {

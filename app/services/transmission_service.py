@@ -13,6 +13,43 @@ transmitting_sids = {}
 grace_sids = {}  # {sid: (net_id, expiry_timestamp)}
 
 
+def format_transmission_dtg(dt: datetime) -> str:
+    """Format datetime into military DTG string: DDHHMMZ MON YY."""
+    if not dt:
+        dt = datetime.utcnow()
+    months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"]
+    return f"{dt.strftime('%d%H%M')}Z {months[dt.month - 1]} {dt.strftime('%y')}"
+
+
+def notify_sunray_transmission_log(db, net_id: str, tx: Transmission, station_registry=None):
+    """Emits completed transmission log event to all SUNRAY/INSTRUCTOR stations in the net room."""
+    if not tx or not tx.start_time or not tx.end_time:
+        return
+
+    duration_sec = round((tx.end_time - tx.start_time).total_seconds(), 1)
+    dtg_str = format_transmission_dtg(tx.start_time)
+    log_data = {
+        "transmissionId": tx.id,
+        "callSign": tx.sender_call_sign,
+        "dtg": dtg_str,
+        "duration": f"{duration_sec}s",
+        "reason": tx.termination_reason or "COMPLETED"
+    }
+
+    if station_registry:
+        sunray_stations = db.query(Station).filter(
+            Station.net_id == net_id,
+            Station.role.in_(["SUNRAY", "CONTROL", "INSTRUCTOR"]),
+            Station.status != "DISCONNECTED"
+        ).all()
+        for s in sunray_stations:
+            sid = station_registry.get_sid(s.id)
+            if sid:
+                socketio.emit('sunray_tx_log', log_data, to=sid)
+    else:
+        socketio.emit('sunray_tx_log', log_data, room=net_id)
+
+
 def unregister_transmitting_sid(sid: str):
     """Remove SID from transmitting fast-path mapping and enter 500ms grace window for trailing chunks."""
     net_id = transmitting_sids.pop(sid, None)
@@ -56,6 +93,7 @@ def transmission_timeout_timer(tx_id: str, net_id: str, sid: str, broadcast_rost
             if sender:
                 sender.transmission_status = "IDLE"
             db.commit()
+            notify_sunray_transmission_log(db, net_id, tx)
 
             unregister_transmitting_sid(sid)
             socketio.emit('ptt_timeout', {
@@ -116,6 +154,7 @@ def handle_ptt_request(db, station: Station, sid: str, station_registry, broadca
         active_tx.end_time = datetime.utcnow()
         active_tx.termination_reason = "OVERRIDDEN"
         db.commit()
+        notify_sunray_transmission_log(db, net_id, active_tx, station_registry)
 
         return grant_ptt_lock(db, station, sid, net_id, broadcast_roster)
 
@@ -138,4 +177,5 @@ def handle_ptt_release(db, station: Station, tx_id: str, sid: str, broadcast_ros
         tx.termination_reason = "PTT_RELEASED"
         station.transmission_status = "IDLE"
         db.commit()
+        notify_sunray_transmission_log(db, net_id, tx)
         broadcast_roster(db, net_id)
