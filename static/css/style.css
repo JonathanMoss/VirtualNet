@@ -612,62 +612,72 @@ h1, h2, h3, h4, h5, h6, .tactical-header {
 }
 
 .sunray-panel-body {
-  max-height: 75vh;
-  overflow-y: auto !important;
-  scrollbar-width: thin;
+  max-height: 70vh;
+  overflow-y: scroll !important;
+  scrollbar-gutter: stable;
+  scrollbar-width: auto;
   scrollbar-color: var(--color-phosphor-green) #111111;
 }
 
 .sunray-panel-body::-webkit-scrollbar {
-  width: 8px;
+  width: 10px;
+  display: block !important;
 }
 
 .sunray-panel-body::-webkit-scrollbar-track {
   background: #111111;
+  border-left: 1px solid #333333;
 }
 
 .sunray-panel-body::-webkit-scrollbar-thumb {
   background: var(--color-phosphor-green);
+  border: 1px solid #004400;
   border-radius: 4px;
 }
 
 .table-scrollable-sm {
   max-height: 180px;
-  overflow-y: auto !important;
-  scrollbar-width: thin;
+  overflow-y: scroll !important;
+  scrollbar-gutter: stable;
+  scrollbar-width: auto;
   scrollbar-color: var(--color-tactical-amber) #111111;
 }
 
 .table-scrollable-md {
   max-height: 220px;
-  overflow-y: auto !important;
-  scrollbar-width: thin;
+  overflow-y: scroll !important;
+  scrollbar-gutter: stable;
+  scrollbar-width: auto;
   scrollbar-color: var(--color-tactical-amber) #111111;
 }
 
 .table-scrollable-lg {
   max-height: 240px;
-  overflow-y: auto !important;
-  scrollbar-width: thin;
+  overflow-y: scroll !important;
+  scrollbar-gutter: stable;
+  scrollbar-width: auto;
   scrollbar-color: var(--color-tactical-amber) #111111;
 }
 
 .table-scrollable-sm::-webkit-scrollbar,
 .table-scrollable-md::-webkit-scrollbar,
 .table-scrollable-lg::-webkit-scrollbar {
-  width: 8px;
+  width: 10px;
+  display: block !important;
 }
 
 .table-scrollable-sm::-webkit-scrollbar-track,
 .table-scrollable-md::-webkit-scrollbar-track,
 .table-scrollable-lg::-webkit-scrollbar-track {
   background: #111111;
+  border-left: 1px solid #333333;
 }
 
 .table-scrollable-sm::-webkit-scrollbar-thumb,
 .table-scrollable-md::-webkit-scrollbar-thumb,
 .table-scrollable-lg::-webkit-scrollbar-thumb {
   background: var(--color-tactical-amber);
+  border: 1px solid #553300;
   border-radius: 4px;
 }
 
