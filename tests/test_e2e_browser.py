@@ -11,8 +11,7 @@ import socket
 import threading
 import time
 import pytest
-from werkzeug.serving import run_simple
-from app import create_app
+from app import create_app, socketio
 
 try:
     from playwright.sync_api import sync_playwright
@@ -41,11 +40,11 @@ def live_server():
     app.config["SECRET_KEY"] = "test-secret"
 
     server_thread = threading.Thread(
-        target=lambda: run_simple(HOST, port, app, threaded=True, use_reloader=False),
+        target=lambda: socketio.run(app, host=HOST, port=port, use_reloader=False, log_output=False),
         daemon=True
     )
     server_thread.start()
-    time.sleep(0.4)
+    time.sleep(0.5)
 
     base_url = f"http://{HOST}:{port}"
     yield base_url, app
@@ -61,7 +60,10 @@ def page_trap(live_server):
         pytest.skip("Playwright is not installed")
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(headless=True)
+        browser = p.chromium.launch(
+            headless=True,
+            args=["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
+        )
         context = browser.new_context()
         page = context.new_page()
 
