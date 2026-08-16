@@ -648,6 +648,11 @@ h1, h2, h3, h4, h5, h6, .tactical-header {
   overflow: visible;
 }
 
+.table-scrollable-tx-log {
+  max-height: 350px !important;
+  overflow-y: auto !important;
+}
+
 .img-fit-contain {
   max-height: 100%;
   object-fit: contain;

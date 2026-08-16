@@ -1,5 +1,5 @@
 """Unit tests for models, validation schemas, database access, and HTTP routes."""
-from datetime import datetime
+from datetime import datetime, timedelta
 from pydantic import ValidationError
 import pytest
 from conftest import get_today_instructor_pin
@@ -265,14 +265,22 @@ def test_session_transmissions_api(app, db):
     db.add(session)
     db.commit()
 
+    now = datetime.utcnow()
     tx1 = Transmission(
         net_id=session.id,
         sender_call_sign="R11",
-        start_time=datetime.utcnow(),
-        end_time=datetime.utcnow(),
+        start_time=now,
+        end_time=now,
         termination_reason="PTT_RELEASED"
     )
-    db.add(tx1)
+    tx2 = Transmission(
+        net_id=session.id,
+        sender_call_sign="H10",
+        start_time=now + timedelta(seconds=5),
+        end_time=now + timedelta(seconds=10),
+        termination_reason="PTT_RELEASED"
+    )
+    db.add_all([tx1, tx2])
     db.commit()
 
     client = app.test_client()
@@ -280,9 +288,9 @@ def test_session_transmissions_api(app, db):
     assert res.status_code == 200
     json_data = res.get_json()
     assert json_data['pin'] == 'TX99'
-    assert len(json_data['transmissions']) == 1
-    assert json_data['transmissions'][0]['callSign'] == 'R11'
-    assert json_data['transmissions'][0]['reason'] == 'PTT_RELEASED'
+    assert len(json_data['transmissions']) == 2
+    assert json_data['transmissions'][0]['callSign'] == 'H10'
+    assert json_data['transmissions'][1]['callSign'] == 'R11'
 
 
 def test_guide_routes(app):

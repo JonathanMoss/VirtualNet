@@ -144,7 +144,7 @@ def get_session_transmissions(pin):
     transmissions = db.query(Transmission).filter(
         Transmission.net_id == session.id,
         Transmission.end_time.isnot(None)
-    ).order_by(Transmission.start_time.asc()).all()
+    ).order_by(Transmission.start_time.desc()).all()
 
     tx_data = []
     for tx in transmissions:
