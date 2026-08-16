@@ -429,17 +429,21 @@ class VirtualNetApp {
 
     // Keyboard Spacebar PTT events
     document.addEventListener('keydown', (e) => {
-      if (e.code === 'Space' && !mediaCaptureSupported) return;
-      if (e.code === 'Space' && !this.isTransmitting && !this.isEditingInput(e.target)) {
+      if (e.code === 'Space' && !this.isEditingInput(e.target)) {
         e.preventDefault();
-        startAudioContext().then(() => this.triggerPTTOff());
+        if (!mediaCaptureSupported) return;
+        if (!this.isTransmitting) {
+          startAudioContext().then(() => this.triggerPTTOff());
+        }
       }
     });
 
     document.addEventListener('keyup', (e) => {
-      if (e.code === 'Space' && this.isTransmitting) {
+      if (e.code === 'Space' && !this.isEditingInput(e.target)) {
         e.preventDefault();
-        this.triggerPTTOn();
+        if (this.isTransmitting) {
+          this.triggerPTTOn();
+        }
       }
     });
 
