@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="h-100">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,7 +9,7 @@
   <!-- Custom Monospace Tactical CRT Styles -->
   <link href="/static/css/style.css" rel="stylesheet">
 </head>
-<body class="d-flex flex-column h-100">
+<body class="d-flex flex-column min-vh-100">
 
   <!-- ==================== LANDING / LOGIN SCREEN ==================== -->
   <div id="landing-section" class="container d-flex align-items-center justify-content-center flex-grow-1 min-vh-100 py-4">
@@ -20,7 +20,7 @@
   </div>
 
   <!-- ==================== MAIN DASHBOARD ==================== -->
-  <div id="dashboard-section" class="d-flex flex-column h-100 d-none">
+  <div id="dashboard-section" class="d-flex flex-column min-vh-100 d-none">
     
     {% include 'cards/header_card.html' %}
 
@@ -29,12 +29,12 @@
       
       {% include 'cards/df_alert_banner.html' %}
 
-      <div class="row h-100 flex-wrap flex-md-nowrap g-3">
+      <div class="row min-vh-100 flex-wrap flex-md-nowrap g-3">
         
         {% include 'cards/roster_card.html' %}
 
         <!-- Main Panel: Transceiver and Reference Resources -->
-        <main id="main-content-panel" class="col flex-grow-1 mb-3 d-flex flex-column overflow-hidden main-content-panel">
+        <main id="main-content-panel" class="col flex-grow-1 mb-3 d-flex flex-column main-content-panel">
           
           {% include 'cards/transceiver_card.html' %}
           {% include 'cards/sunray_card.html' %}

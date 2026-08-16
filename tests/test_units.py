@@ -1,11 +1,12 @@
 """Unit tests for models, validation schemas, database access, and HTTP routes."""
+from datetime import datetime
 from pydantic import ValidationError
 import pytest
 from conftest import get_today_instructor_pin
 
 from app import socketio
 from app.database import db_session
-from app.models import NetSession, Station, LogEntry
+from app.models import NetSession, Station, LogEntry, Transmission
 from app.schemas import NetSessionCreate, StationCreate, LogEntryCreate
 
 
@@ -255,6 +256,33 @@ def test_socketio_station_join_and_callsign_assignment(app, db):
 
     inst.disconnect()
     stud.disconnect()
+
+
+def test_session_transmissions_api(app, db):
+    # pylint: disable=redefined-outer-name
+    """Test /api/session/<pin>/transmissions endpoint returns completed transmissions."""
+    session = NetSession(name="Tx API Test Net", pin="TX99")
+    db.add(session)
+    db.commit()
+
+    tx1 = Transmission(
+        net_id=session.id,
+        sender_call_sign="R11",
+        start_time=datetime.utcnow(),
+        end_time=datetime.utcnow(),
+        termination_reason="PTT_RELEASED"
+    )
+    db.add(tx1)
+    db.commit()
+
+    client = app.test_client()
+    res = client.get('/api/session/TX99/transmissions')
+    assert res.status_code == 200
+    json_data = res.get_json()
+    assert json_data['pin'] == 'TX99'
+    assert len(json_data['transmissions']) == 1
+    assert json_data['transmissions'][0]['callSign'] == 'R11'
+    assert json_data['transmissions'][0]['reason'] == 'PTT_RELEASED'
 
 
 def test_guide_routes(app):

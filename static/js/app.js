@@ -539,6 +539,7 @@ class VirtualNetApp {
         
         // Show SUNRAY Dashboard controls
         document.getElementById('instructor-section').classList.remove('d-none');
+        this.loadSunrayTransmissionHistory(data.pin);
 
 
       } else if (data.status === 'CONNECTED' && data.callSign) {
@@ -708,10 +709,10 @@ class VirtualNetApp {
           activeSpeakerFound = true;
         }
 
-        const roleIcon = (s.role === 'SUNRAY' || s.role === 'CONTROL') ? '⭐ ' : '';
+        const roleTag = (s.role === 'SUNRAY' || s.role === 'CONTROL') ? '[NCS] ' : '';
         const nameHtml = isSunrayView
-          ? `<b>${roleIcon}${s.callSign}</b> <span class="text-muted">(${s.nickname})</span>`
-          : `<b>${roleIcon}${s.callSign}</b>`;
+          ? `<b>${roleTag}${s.callSign}</b> <span class="text-muted">(${s.nickname})</span>`
+          : `<b>${roleTag}${s.callSign}</b>`;
 
         item.innerHTML = `
           <div>
@@ -980,6 +981,62 @@ class VirtualNetApp {
 
   updateDTGClock() {
     document.getElementById('system-clock').textContent = formatDTG(new Date());
+  }
+
+  async loadSunrayTransmissionHistory(pin) {
+    if (!pin) return;
+    try {
+      const res = await fetch(`/api/session/${pin}/transmissions`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const txLogTbody = document.getElementById('sunray-tx-log-tbody');
+      if (!txLogTbody || !data.transmissions) return;
+
+      txLogTbody.innerHTML = '';
+      if (data.transmissions.length === 0) {
+        txLogTbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">No transmission records logged yet.</td></tr>';
+        return;
+      }
+
+      data.transmissions.forEach(tx => {
+        const tr = document.createElement('tr');
+        let statusClass = 'text-success';
+        if (tx.reason === 'MAX_DURATION_EXCEEDED') statusClass = 'text-danger';
+        else if (tx.reason === 'OVERRIDDEN') statusClass = 'text-warning';
+
+        tr.innerHTML = `
+          <td>${tx.dtg || '-'}</td>
+          <td class="font-weight-bold text-phosphor-green">${tx.callSign || '-'}</td>
+          <td>${tx.duration || '-'}</td>
+          <td class="${statusClass}">${tx.reason || 'COMPLETED'}</td>
+        `;
+        txLogTbody.appendChild(tr);
+      });
+    } catch (err) {
+      console.warn("Error loading transmission history:", err);
+    }
+  }
+
+  handleSunrayTxLog(data) {
+    const txLogTbody = document.getElementById('sunray-tx-log-tbody');
+    if (!txLogTbody || !data) return;
+
+    if (txLogTbody.children.length === 1 && txLogTbody.children[0].textContent.includes('No transmission records')) {
+      txLogTbody.innerHTML = '';
+    }
+
+    const tr = document.createElement('tr');
+    let statusClass = 'text-success';
+    if (data.reason === 'MAX_DURATION_EXCEEDED') statusClass = 'text-danger';
+    else if (data.reason === 'OVERRIDDEN') statusClass = 'text-warning';
+
+    tr.innerHTML = `
+      <td>${data.dtg || '-'}</td>
+      <td class="font-weight-bold text-phosphor-green">${data.callSign || '-'}</td>
+      <td>${data.duration || '-'}</td>
+      <td class="${statusClass}">${data.reason || 'COMPLETED'}</td>
+    `;
+    txLogTbody.insertBefore(tr, txLogTbody.firstChild);
   }
 
   resetToLanding() {

@@ -3,7 +3,8 @@ import os
 import markdown
 from flask import Blueprint, jsonify, render_template
 from app.database import get_db
-from app.models import NetSession, LogEntry, Station
+from app.models import NetSession, LogEntry, Station, Transmission
+from app.services.transmission_service import format_transmission_dtg
 
 bp = Blueprint('routes', __name__)
 DOCS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'docs'))
@@ -130,3 +131,32 @@ def get_session_roster(pin):
     } for s in stations]
 
     return jsonify({"pin": pin, "roster": roster_data})
+
+
+@bp.route('/api/session/<pin>/transmissions')
+def get_session_transmissions(pin):
+    """API endpoint to get completed transmission log for Sunray review."""
+    db = get_db()
+    session = db.query(NetSession).filter_by(pin=pin.upper()).first()
+    if not session:
+        return jsonify({"error": "Session not found"}), 404
+
+    transmissions = db.query(Transmission).filter(
+        Transmission.net_id == session.id,
+        Transmission.end_time.isnot(None)
+    ).order_by(Transmission.start_time.asc()).all()
+
+    tx_data = []
+    for tx in transmissions:
+        duration_sec = round((tx.end_time - tx.start_time).total_seconds(), 1)
+        tx_data.append({
+            "id": tx.id,
+            "callSign": tx.sender_call_sign,
+            "dtg": format_transmission_dtg(tx.start_time),
+            "duration": f"{duration_sec}s",
+            "reason": tx.termination_reason or "COMPLETED",
+            "startTime": tx.start_time.isoformat(),
+            "endTime": tx.end_time.isoformat()
+        })
+
+    return jsonify({"pin": pin, "transmissions": tx_data})

@@ -624,7 +624,7 @@ def test_realtime_audio_transmission_latency_benchmark(app, db):
     p99_latency = sorted_latencies[int(len(sorted_latencies) * 0.99) - 1]
 
     print("\n" + "=" * 50)
-    print(" 🚀 REAL-TIME ZERO-DB AUDIO LATENCY BENCHMARK RESULT")
+    print(" REAL-TIME ZERO-DB AUDIO LATENCY BENCHMARK RESULT")
     print("=" * 50)
     print(f" Packets Sent / Delivered: {num_packets} / {len(latencies_ms)} (100% Delivery)")
     print(f" Average Broadcast Latency: {avg_latency:.3f} ms")
