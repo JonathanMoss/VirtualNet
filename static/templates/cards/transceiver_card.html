@@ -27,10 +27,10 @@
     TAP TO UNMUTE AUDIO (Browser Audio Throttled)
   </div>
 
-  <div id="ptt-card-body" class="card-body d-flex flex-column flex-md-row align-items-center justify-content-between py-2 transition-all gap-2">
-    <div class="mb-0 text-start flex-grow-1">
-      <h5 class="card-title text-uppercase m-0 font-weight-bold" id="ptt-state-text">STANDBY</h5>
-      <p class="text-muted small m-0 mt-1" id="ptt-instruction">Hold SPACEBAR or push circular dial to speak (Max 20s)</p>
+  <div id="ptt-card-body" class="card-body d-flex flex-row align-items-center justify-content-between py-2 px-2 px-sm-3 transition-all gap-2">
+    <div class="mb-0 text-start flex-grow-1 min-w-0">
+      <h5 class="card-title text-uppercase m-0 font-weight-bold text-truncate" id="ptt-state-text">STANDBY</h5>
+      <p class="text-muted small m-0 mt-1 d-none d-sm-block" id="ptt-instruction">Hold SPACEBAR or push circular dial to speak (Max 20s)</p>
       <p class="text-warning small m-0 mt-1 d-none" id="audio-support-warning"></p>
       <div class="mt-1 d-none" id="active-speaker-box">
         <span class="text-muted small">Active Speaker:</span> <span id="active-speaker" class="font-weight-bold text-white small"></span>
@@ -52,14 +52,14 @@
           <div class="vu-segment vu-red"></div>
         </div>
         <div id="telemetry-scale-wrapper" class="d-flex align-items-center gap-2">
-          <canvas id="telemetry-sparkline" width="120" height="18" class="telemetry-sparkline-canvas" title="Real-time TX/RX telemetry scale"></canvas>
+          <canvas id="telemetry-sparkline" width="100" height="16" class="telemetry-sparkline-canvas" title="Real-time TX/RX telemetry scale"></canvas>
           <span id="telemetry-stats-text" class="text-muted font-mono style-tiny">STATUS: READY</span>
         </div>
       </div>
     </div>
     
     <!-- PTT Button -->
-    <div class="d-flex align-items-center gap-3 ms-md-2">
+    <div class="d-flex align-items-center ms-1 ms-sm-2 flex-shrink-0">
       <div class="my-0 text-center flex-shrink-0">
         <button id="ptt-btn" class="ptt-button" disabled>PTT</button>
       </div>

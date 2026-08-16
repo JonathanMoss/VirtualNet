@@ -2,7 +2,7 @@
 
 import { SocketManager } from './socket.js';
 import { formatDTG } from './utils.js';
-import { AideMemoireManager } from './aide_memoire.js';
+import { ResourcesManager } from './resources.js';
 import { WebAudioEngine } from './audio.js';
 import { TelemetryManager } from './telemetry.js';
 import { showAlert, showConfirm, showPrompt } from './dialog.js';
@@ -29,7 +29,7 @@ window.addEventListener('unhandledrejection', (event) => {
 class VirtualNetApp {
   constructor() {
     this.socketManager = new SocketManager(this);
-    this.aideMemoireManager = new AideMemoireManager();
+    this.resourcesManager = new ResourcesManager();
     this.audioEngine = new WebAudioEngine(this);
     this.telemetryManager = new TelemetryManager(this);
 
@@ -56,8 +56,8 @@ class VirtualNetApp {
     setInterval(() => this.updateDTGClock(), 1000);
     this.updateDTGClock();
 
-    // 3. Setup Aide Memoire Sub-panels
-    this.aideMemoireManager.initialize();
+    // 3. Setup Reference Resource Sub-panels
+    this.resourcesManager.initialize();
 
     // 4. Setup PTT UI Handlers & Mobile triggers
     this.setupPTTHandlers();
@@ -69,6 +69,7 @@ class VirtualNetApp {
     this.setupRosterFoldToggle();
     this.setupSunrayFoldToggle();
     this.setupPTTMinimiseToggle();
+    this.setupHeaderCollapseToggle();
 
     // 6. Connect Socket
     this.socketManager.connect();
@@ -341,6 +342,59 @@ class VirtualNetApp {
       }
     }
   }
+
+  setupHeaderCollapseToggle() {
+    const body = document.getElementById('header-collapse-body');
+    const toggleBtn = document.getElementById('btn-toggle-header-details');
+    const expandBtn = document.getElementById('btn-expand-header-details');
+
+    if (body) {
+      const toggleHeader = () => {
+        body.classList.toggle('d-none');
+        const isCollapsed = body.classList.contains('d-none');
+        if (toggleBtn) {
+          const toggleIcon = toggleBtn.querySelector('.toggle-icon-header');
+          if (toggleIcon) toggleIcon.textContent = isCollapsed ? '▼ SHOW INFO' : '▲ HIDE INFO';
+        }
+        if (expandBtn) {
+          if (isCollapsed) {
+            expandBtn.classList.remove('d-none');
+          } else {
+            expandBtn.classList.add('d-none');
+          }
+        }
+        try {
+          localStorage.setItem('virtualnet_header_collapsed', isCollapsed ? 'true' : 'false');
+        } catch (e) {
+          // Ignored
+        }
+      };
+
+      if (toggleBtn) {
+        toggleBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleHeader();
+        });
+      }
+
+      if (expandBtn) {
+        expandBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleHeader();
+        });
+      }
+
+      // Restore preference
+      try {
+        if (localStorage.getItem('virtualnet_header_collapsed') === 'true') {
+          toggleHeader();
+        }
+      } catch (e) {
+        // Ignored
+      }
+    }
+  }
+
 
 
   setupPTTHandlers() {

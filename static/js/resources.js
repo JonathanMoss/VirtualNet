@@ -1,12 +1,9 @@
-// Aide Memoire Module - VirtualNet
+// Resources Module - VirtualNet Reference Cards & Tools
 import { panZoomController } from './pan_zoom.js';
 import { batcoSvgSliderManager } from './svg_batco_slider.js';
 
-export class AideMemoireManager {
+export class ResourcesManager {
   constructor() {
-    this.drawer = null;
-    this.btnTab = document.getElementById('btn-aide-memoire-tab');
-
     // Main workspace tab references
     this.mainVocabSelect = document.getElementById('main-vocab-select');
     this.mainSlateSelect = document.getElementById('main-slate-select');
@@ -29,18 +26,6 @@ export class AideMemoireManager {
   }
 
   initialize() {
-    // Instantiate Bootstrap Offcanvas drawer
-    const drawerEl = document.getElementById('aideMemoireDrawer');
-    if (drawerEl) {
-      this.drawer = new bootstrap.Offcanvas(drawerEl);
-    }
-
-    if (this.btnTab) {
-      this.btnTab.addEventListener('click', () => {
-        if (this.drawer) this.drawer.toggle();
-      });
-    }
-
     // Populate vocab card dropdown
     if (this.mainVocabSelect) {
       this.populateVocabSelect(this.mainVocabSelect);

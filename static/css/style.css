@@ -13,27 +13,23 @@
   --color-muted-gray: #7a827a;
 }
 
-html, body {
-  overflow-y: scroll !important;
+html {
+  overflow-y: auto;
   scrollbar-gutter: stable;
   scrollbar-width: auto;
   scrollbar-color: var(--color-phosphor-green) #111111;
 }
 
-html::-webkit-scrollbar,
-body::-webkit-scrollbar {
+html::-webkit-scrollbar {
   width: 12px;
-  display: block !important;
 }
 
-html::-webkit-scrollbar-track,
-body::-webkit-scrollbar-track {
+html::-webkit-scrollbar-track {
   background: #111111;
   border-left: 1px solid #333333;
 }
 
-html::-webkit-scrollbar-thumb,
-body::-webkit-scrollbar-thumb {
+html::-webkit-scrollbar-thumb {
   background: var(--color-phosphor-green);
   border: 1px solid #004400;
   border-radius: 4px;
@@ -132,6 +128,21 @@ h1, h2, h3, h4, h5, h6, .tactical-header {
   color: var(--color-muted-gray);
   box-shadow: none;
 }
+
+.btn-tactical-danger {
+  background-color: rgba(255, 51, 51, 0.15);
+  color: var(--color-hot-red);
+  border: 1px solid var(--color-hot-red);
+  font-weight: 700;
+  transition: all 0.2s ease-in-out;
+}
+
+.btn-tactical-danger:hover, .btn-tactical-danger:focus {
+  background-color: var(--color-hot-red);
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(255, 51, 51, 0.6);
+}
+
 
 /* Monospace Tables */
 .table-tactical {
@@ -615,21 +626,8 @@ h1, h2, h3, h4, h5, h6, .tactical-header {
   letter-spacing: 0.05em;
 }
 
-.aide-memoire-btn-tab {
-  right: 0;
-  top: 30%;
-  transform: rotate(-90deg) translate(0, 100%);
-  transform-origin: right bottom;
-  z-index: 1000;
-  padding: 0.5rem 1.2rem;
-}
-
-.aide-memoire-offcanvas {
-  width: 380px;
-}
-
 .main-content-panel {
-  max-height: calc(100vh - 120px);
+  max-height: none;
 }
 
 .df-alert-banner-custom {
@@ -639,83 +637,15 @@ h1, h2, h3, h4, h5, h6, .tactical-header {
 }
 
 .sunray-panel-body {
-  max-height: 70vh;
-  overflow-y: scroll !important;
-  scrollbar-gutter: stable;
-  scrollbar-width: auto;
-  scrollbar-color: var(--color-phosphor-green) #111111;
+  max-height: none;
+  overflow: visible;
 }
 
-.sunray-panel-body::-webkit-scrollbar {
-  width: 10px;
-  display: block !important;
-}
-
-.sunray-panel-body::-webkit-scrollbar-track {
-  background: #111111;
-  border-left: 1px solid #333333;
-}
-
-.sunray-panel-body::-webkit-scrollbar-thumb {
-  background: var(--color-phosphor-green);
-  border: 1px solid #004400;
-  border-radius: 4px;
-}
-
-.table-scrollable-sm {
-  max-height: 180px;
-  overflow-y: scroll !important;
-  scrollbar-gutter: stable;
-  scrollbar-width: auto;
-  scrollbar-color: var(--color-tactical-amber) #111111;
-}
-
-.table-scrollable-md {
-  max-height: 220px;
-  overflow-y: scroll !important;
-  scrollbar-gutter: stable;
-  scrollbar-width: auto;
-  scrollbar-color: var(--color-tactical-amber) #111111;
-}
-
+.table-scrollable-sm,
+.table-scrollable-md,
 .table-scrollable-lg {
-  max-height: 240px;
-  overflow-y: scroll !important;
-  scrollbar-gutter: stable;
-  scrollbar-width: auto;
-  scrollbar-color: var(--color-tactical-amber) #111111;
-}
-
-.table-scrollable-sm::-webkit-scrollbar,
-.table-scrollable-md::-webkit-scrollbar,
-.table-scrollable-lg::-webkit-scrollbar {
-  width: 10px;
-  display: block !important;
-}
-
-.table-scrollable-sm::-webkit-scrollbar-track,
-.table-scrollable-md::-webkit-scrollbar-track,
-.table-scrollable-lg::-webkit-scrollbar-track {
-  background: #111111;
-  border-left: 1px solid #333333;
-}
-
-.table-scrollable-sm::-webkit-scrollbar-thumb,
-.table-scrollable-md::-webkit-scrollbar-thumb,
-.table-scrollable-lg::-webkit-scrollbar-thumb {
-  background: var(--color-tactical-amber);
-  border: 1px solid #553300;
-  border-radius: 4px;
-}
-
-.table-scrollable-sm table thead th,
-.table-scrollable-md table thead th,
-.table-scrollable-lg table thead th {
-  position: sticky;
-  top: 0;
-  background-color: #111111;
-  z-index: 2;
-  box-shadow: inset 0 -1px 0 #444444;
+  max-height: none;
+  overflow: visible;
 }
 
 .img-fit-contain {
@@ -726,7 +656,7 @@ h1, h2, h3, h4, h5, h6, .tactical-header {
 .net-sidebar-responsive {
   width: 25%;
   min-width: 250px;
-  max-height: calc(100vh - 120px);
+  max-height: none;
 }
 
 
