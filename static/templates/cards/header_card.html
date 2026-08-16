@@ -1,24 +1,57 @@
 <!-- Header Bar -->
-<header class="navbar navbar-dark bg-dark border-bottom border-secondary px-3 py-2 shadow-sm">
-  <div class="container-fluid flex-nowrap align-items-center">
-    <div class="d-flex align-items-center gap-2">
-      <a class="navbar-brand font-weight-bold text-uppercase d-flex align-items-center me-0 me-sm-2 text-phosphor-green" href="#">
-        VIRTUALNET (BETA)
-      </a>
-      <div class="d-flex align-items-center gap-1">
-        <a href="/guide/student" target="_blank" class="btn btn-sm btn-outline-tactical py-0 px-2 small-mobile" title="Student Guide">STUDENT GUIDE</a>
-        <a href="/guide/sunray" target="_blank" class="btn btn-sm btn-outline-warning py-0 px-2 small-mobile" title="Sunray Guide">SUNRAY GUIDE</a>
+<header id="app-header-bar" class="navbar navbar-dark bg-dark border-bottom border-secondary px-2 px-sm-3 py-1 shadow-sm">
+  <div class="container-fluid d-flex flex-column gap-1 p-0 px-sm-2">
+    
+    <!-- Collapsible Container: Rows 1-3 -->
+    <div id="header-collapse-body" class="w-100 transition-all">
+      <div class="d-flex flex-column gap-1 py-1">
+        
+        <!-- Row 1: Header Title & Collapse Toggle -->
+        <div class="d-flex align-items-center justify-content-between w-100">
+          <a class="navbar-brand font-weight-bold text-uppercase d-flex align-items-center me-0 text-phosphor-green fs-5 m-0" href="#">
+            VIRTUALNET
+          </a>
+          <button id="btn-toggle-header-details" class="btn btn-sm text-success p-0 border-0 shadow-none" title="Toggle Header Details">
+            <span class="toggle-icon-header small font-weight-bold">▲ HIDE INFO</span>
+          </button>
+        </div>
+
+        <!-- Row 2: PIN and Callsign -->
+        <div class="d-flex align-items-center justify-content-between w-100 py-1">
+          <span class="badge bg-black border border-secondary text-warning font-mono fs-6" id="header-net-pin">PIN: ----</span>
+          <div class="d-flex align-items-center gap-1 bg-black border border-warning px-2 py-1" title="Your Assigned Callsign">
+            <span class="text-muted style-tiny">CS:</span>
+            <span class="text-warning font-weight-bold fs-6" id="header-callsign">AWAITING</span>
+          </div>
+        </div>
+
+        <!-- Row 3: Session Name -->
+        <div class="d-flex align-items-center justify-content-start w-100 py-1">
+          <span class="text-white font-weight-bold fs-6 text-truncate" id="header-net-name">Net: -</span>
+        </div>
+
       </div>
     </div>
-    <div class="d-flex align-items-center gap-1 gap-sm-2 font-weight-bold fs-6 flex-wrap justify-content-end">
-      <span class="text-warning text-uppercase small-mobile" id="header-net-pin">PIN: ----</span>
-      <span class="text-muted d-none d-sm-inline">|</span>
-      <span class="text-white d-none d-md-inline" id="header-net-name">Net: -</span>
-      <span class="text-muted d-none d-md-inline">|</span>
-      <span class="text-warning small-mobile" id="header-callsign">AWAITING</span>
-      <span class="text-muted d-none d-sm-inline">|</span>
-      <span class="text-success monospace small-mobile" id="system-clock">000000Z UTC</span>
-      <button id="btn-leave-net" class="btn btn-sm btn-outline-danger ms-1 ms-sm-2 py-0 px-2">LEAVE</button>
+
+    <!-- Row 4: Leave Button & Collapsed Toggle Trigger -->
+    <div class="d-flex align-items-center justify-content-between w-100 py-1 border-top border-secondary mt-1 pt-1">
+      <div class="d-flex align-items-center gap-2">
+        <button id="btn-expand-header-details" class="btn btn-sm btn-outline-secondary py-0 px-2 style-tiny d-none" title="Expand Header Details">▼ SHOW INFO</button>
+      </div>
+      <button id="btn-leave-net" class="btn btn-sm btn-tactical-danger py-1 px-3 font-weight-bold" title="Leave Net Session">LEAVE</button>
     </div>
+
+    <!-- Separate Bottom Row: DTG Clock & Guide Links -->
+    <div class="d-flex align-items-center justify-content-between w-100 style-tiny text-muted border-top border-secondary pt-1 mt-1">
+      <div class="d-flex align-items-center gap-2">
+        <span class="text-success monospace" id="system-clock">000000Z UTC</span>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <a href="/guide/student" target="_blank" class="text-success text-decoration-none" title="Student Guide">STUDENT GUIDE</a>
+        <span>|</span>
+        <a href="/guide/sunray" target="_blank" class="text-warning text-decoration-none" title="Sunray Guide">SUNRAY GUIDE</a>
+      </div>
+    </div>
+
   </div>
 </header>

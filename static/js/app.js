@@ -69,6 +69,7 @@ class VirtualNetApp {
     this.setupRosterFoldToggle();
     this.setupSunrayFoldToggle();
     this.setupPTTMinimiseToggle();
+    this.setupHeaderCollapseToggle();
 
     // 6. Connect Socket
     this.socketManager.connect();
@@ -341,6 +342,59 @@ class VirtualNetApp {
       }
     }
   }
+
+  setupHeaderCollapseToggle() {
+    const body = document.getElementById('header-collapse-body');
+    const toggleBtn = document.getElementById('btn-toggle-header-details');
+    const expandBtn = document.getElementById('btn-expand-header-details');
+
+    if (body) {
+      const toggleHeader = () => {
+        body.classList.toggle('d-none');
+        const isCollapsed = body.classList.contains('d-none');
+        if (toggleBtn) {
+          const toggleIcon = toggleBtn.querySelector('.toggle-icon-header');
+          if (toggleIcon) toggleIcon.textContent = isCollapsed ? '▼ SHOW INFO' : '▲ HIDE INFO';
+        }
+        if (expandBtn) {
+          if (isCollapsed) {
+            expandBtn.classList.remove('d-none');
+          } else {
+            expandBtn.classList.add('d-none');
+          }
+        }
+        try {
+          localStorage.setItem('virtualnet_header_collapsed', isCollapsed ? 'true' : 'false');
+        } catch (e) {
+          // Ignored
+        }
+      };
+
+      if (toggleBtn) {
+        toggleBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleHeader();
+        });
+      }
+
+      if (expandBtn) {
+        expandBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleHeader();
+        });
+      }
+
+      // Restore preference
+      try {
+        if (localStorage.getItem('virtualnet_header_collapsed') === 'true') {
+          toggleHeader();
+        }
+      } catch (e) {
+        // Ignored
+      }
+    }
+  }
+
 
 
   setupPTTHandlers() {
