@@ -2,7 +2,7 @@
 """
 Headless End-to-End Browser Testing Suite for VirtualNet.
 
-Executes client-side JavaScript (app.js, audio.js, aide_memoire.js, pan_zoom.js)
+Executes client-side JavaScript (app.js, audio.js, resources.js, pan_zoom.js)
 in a headless Chromium browser instance via Playwright, trapping any client-side
 console.error logs, uncaught exceptions, or unhandled promise rejections.
 """
@@ -140,6 +140,3 @@ def test_ui_controls_tabs_and_drawer(page_trap):
     assert "minimised" in page.get_attribute("#ptt-container", "class")
     page.click("#btn-toggle-ptt-panel", force=True)
     assert "minimised" not in page.get_attribute("#ptt-container", "class")
-
-    # Test Aide Memoire Drawer Button
-    assert page.is_visible("#btn-aide-memoire-tab")

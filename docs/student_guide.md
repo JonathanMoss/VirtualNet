@@ -47,7 +47,7 @@ You are provided with several reference documents you can use during your VP exe
 - BATCO sheet without slider
 - VOCAB cards
 - SLATE cards
-- Aide Memoire for logging shortcuts
+- Reference cards for logging shortcuts
 
 ---
 

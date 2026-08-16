@@ -80,9 +80,9 @@ Logging is a core skill in Voice Procedure training. Each station maintains thei
 
 ---
 
-## 4. Aide Memoire & Reference Tools
+## 4. Reference Resources & Tools
 
-A side-sliding reveal panel (Aide Memoire) contains five tabbed reference tools and image inspection capabilities:
+The workspace Reference Resources panel contains five tabbed reference tools and image inspection capabilities:
 
 - **1. SHORTHAND Tab**:
   - Quick reference guide for standard military logging shorthand symbols (`0`/`CS 0`, `R`, `P`, `I`, `F`, `C`, `S`, `Z`, `x`, `RPT`, `OK`/`D`/`U`).
@@ -127,7 +127,7 @@ All browser native popups (`alert`, `confirm`, `prompt`) are replaced with a cus
 ## 7. Modular Jinja2 Card Templates & UI Testing
 
 - **Modular Jinja2 Card Component Architecture**:
-  - Application views are refactored into modular Jinja2 component templates located in `static/templates/cards/`: `header_card.html`, `join_net_card.html`, `create_net_card.html`, `transceiver_card.html`, `roster_card.html`, `sunray_card.html`, `df_alert_banner.html`, `resources_card.html`, `aide_memoire_card.html`.
+  - Application views are refactored into modular Jinja2 component templates located in `static/templates/cards/`: `header_card.html`, `join_net_card.html`, `create_net_card.html`, `transceiver_card.html`, `roster_card.html`, `sunray_card.html`, `df_alert_banner.html`, `resources_card.html`.
 - **Automated DOM Contract Verification**:
   - `tests/test_dom_contract.py` guarantees that all Jinja2 component templates strictly maintain necessary DOM element IDs, classes, and attributes consumed by JavaScript modules and CSS selectors.
 - **Playwright Headless E2E Browser Testing**:

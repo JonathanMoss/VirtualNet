@@ -90,7 +90,7 @@ The client runs as an interactive web page loaded in standard modern web browser
 - Automatically handles ping/pong keepalives, transport upgrades, and reconnects.
 
 ### Modular Jinja2 Card Component View Layer (`static/templates/cards/`)
-- Renders the responsive dashboard layout through componentized Jinja2 card templates (`header_card.html`, `join_net_card.html`, `create_net_card.html`, `transceiver_card.html`, `roster_card.html`, `sunray_card.html`, `df_alert_banner.html`, `resources_card.html`, `aide_memoire_card.html`).
+- Renders the responsive dashboard layout through componentized Jinja2 card templates (`header_card.html`, `join_net_card.html`, `create_net_card.html`, `transceiver_card.html`, `roster_card.html`, `sunray_card.html`, `df_alert_banner.html`, `resources_card.html`).
 - **DOM Contract Integrity**: `tests/test_dom_contract.py` guarantees element ID contracts (`#btn-join-net`, `#join-pin`, etc.) are strictly maintained.
 
 ### Web Audio Engine & Mobile DSP Processing (`static/js/audio.js`)

@@ -2,7 +2,7 @@
 
 import { SocketManager } from './socket.js';
 import { formatDTG } from './utils.js';
-import { AideMemoireManager } from './aide_memoire.js';
+import { ResourcesManager } from './resources.js';
 import { WebAudioEngine } from './audio.js';
 import { TelemetryManager } from './telemetry.js';
 import { showAlert, showConfirm, showPrompt } from './dialog.js';
@@ -29,7 +29,7 @@ window.addEventListener('unhandledrejection', (event) => {
 class VirtualNetApp {
   constructor() {
     this.socketManager = new SocketManager(this);
-    this.aideMemoireManager = new AideMemoireManager();
+    this.resourcesManager = new ResourcesManager();
     this.audioEngine = new WebAudioEngine(this);
     this.telemetryManager = new TelemetryManager(this);
 
@@ -56,8 +56,8 @@ class VirtualNetApp {
     setInterval(() => this.updateDTGClock(), 1000);
     this.updateDTGClock();
 
-    // 3. Setup Aide Memoire Sub-panels
-    this.aideMemoireManager.initialize();
+    // 3. Setup Reference Resource Sub-panels
+    this.resourcesManager.initialize();
 
     // 4. Setup PTT UI Handlers & Mobile triggers
     this.setupPTTHandlers();

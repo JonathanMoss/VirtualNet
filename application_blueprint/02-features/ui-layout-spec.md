@@ -6,10 +6,9 @@ This document defines the responsive layout structures (Bootstrap 5), interactiv
 
 ## 1. Grid Hierarchy & Layout Mockup
 
-The user dashboard uses a two-column Bootstrap layout with a slide-out drawer:
+The user dashboard uses a two-column Bootstrap layout:
 - **Left Sidebar** (`col-md-3` / `net-sidebar`): Foldable online roster list and Net Control status panel.
 - **Main Panel** (`col` / `main-content-panel`): PTT transceiver card and reference resource panels.
-- **Right Margin Slide-out** (Accordion Drawer): Aide Memoire & Code Tools drawer.
 
 ### ASCII Wireframe Mockup (Student view after Callsign Assignment)
 ```
@@ -87,9 +86,9 @@ Top navigation bar styled as a military command header:
 
 ---
 
-## 3. Side-Sliding Aide Memoire Panel & Reference Resources
+## 3. Reference Resources Panel
 
-The Aide Memoire section (`#aideMemoireAccordion`) provides five multi-functional reference tools for voice procedure, code keying, and report formatting:
+The Reference Resources panel (`resources_card.html`) provides multi-functional reference tools for voice procedure, code keying, and report formatting:
 
 ### 3.1 1. SHORTHAND Tab
 - Quick reference table for standard military logging shorthand:
@@ -210,7 +209,6 @@ To improve maintainability and component isolation, `static/templates/index.html
 - **`sunray_card.html`**: Instructor dashboard, admissions queue, callsign assignment, and session management.
 - **`df_alert_banner.html`**: Tactical Direction Finding warning banner component.
 - **`resources_card.html`**: Main reference resources tab container.
-- **`aide_memoire_card.html`**: Side-sliding reveal drawer containing SHORTHAND, BATCO slider, VOCAB, SLATES, and LOGGING panels.
 
 ### DOM Contract Verification (`tests/test_dom_contract.py`)
 Because JavaScript handlers rely on specific element IDs and CSS selectors, the automated test suite executes a DOM contract suite (`test_dom_contract.py`) that parses Jinja2 card templates to guarantee:
