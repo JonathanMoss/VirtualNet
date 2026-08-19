@@ -45,7 +45,7 @@ export class WebAudioEngine {
     return;
   }
 
-  makeDistortionCurve(_amount = 20) {
+  makeDistortionCurve() {
     return new Float32Array(0);
   }
 
@@ -272,7 +272,7 @@ export class WebAudioEngine {
     return float32;
   }
 
-  resampleFloat32(inputData, _fromSampleRate, _toSampleRate) {
+  resampleFloat32(inputData) {
     // Deprecated manual JS cubic interpolation: WebAudio AudioBuffer handles native hardware C++ resampling automatically
     return inputData;
   }

@@ -51,7 +51,7 @@ def get_js_element_references(js_dir: Path) -> list[tuple[str, str, int]]:
     # Regex matching document.getElementById('xyz') or document.getElementById("xyz")
     get_elem_pattern = re.compile(r"document\.getElementById\(['\"]([^'\"]+)['\"]\)")
 
-    for js_file in js_dir.glob("*.js"):
+    for js_file in js_dir.rglob("*.js"):
         with open(js_file, "r", encoding="utf-8") as f:
             for line_no, line in enumerate(f, start=1):
                 matches = get_elem_pattern.findall(line)

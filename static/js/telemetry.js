@@ -75,7 +75,7 @@ export class TelemetryManager {
     this.updateStatsText();
   }
 
-  recordTxAck(_byteSize) {
+  recordTxAck() {
     this.txAcksReceived++;
     // Mark last sent chunk as ACKed
     for (let i = this.history.length - 1; i >= 0; i--) {
