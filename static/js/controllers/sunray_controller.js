@@ -60,10 +60,22 @@ export class SunrayController {
   renderAdmissionsQueue(queue) {
     const tbody = document.getElementById('admissions-tbody');
     const headerBar = document.getElementById('app-header-bar');
+    const queueBadge = document.getElementById('sunray-queue-badge');
     if (!tbody) return;
 
+    const isWaiting = queue && queue.length > 0;
+
+    if (queueBadge) {
+      if (isWaiting) {
+        queueBadge.textContent = `${queue.length} WAITING`;
+        queueBadge.classList.remove('d-none');
+      } else {
+        queueBadge.classList.add('d-none');
+      }
+    }
+
     if (headerBar) {
-      if (queue && queue.length > 0 && this.app.myRole === 'SUNRAY') {
+      if (isWaiting && this.app.myRole === 'SUNRAY') {
         headerBar.classList.add('slow-flash-header');
       } else {
         headerBar.classList.remove('slow-flash-header');
@@ -77,6 +89,7 @@ export class SunrayController {
     }
 
     queue.forEach(item => {
+      const stationId = item.stationId || item.id;
       const tr = document.createElement('tr');
       tr.className = 'align-middle';
       tr.innerHTML = `
@@ -93,7 +106,7 @@ export class SunrayController {
           </select>
         </td>
         <td class="text-end py-1">
-          <button type="button" class="btn btn-tactical btn-sm py-0 btn-do-assign" data-station-id="${item.stationId}">ASSIGN</button>
+          <button type="button" class="btn btn-tactical btn-sm py-0 btn-do-assign" data-station-id="${stationId}">ASSIGN</button>
         </td>
       `;
 
@@ -108,7 +121,7 @@ export class SunrayController {
           await showAlert("Please enter a callsign for the operator.", { title: "INPUT REQUIRED" });
           return;
         }
-        this.app.socketManager.assignCallsign(item.stationId, callSign, role);
+        this.app.socketManager.assignCallsign(stationId, callSign, role);
       };
 
       if (btnAssign) btnAssign.addEventListener('click', doAssign);
@@ -127,6 +140,16 @@ export class SunrayController {
   renderInstructorRoster(stations) {
     const tbody = document.getElementById('instructor-roster-tbody');
     if (!tbody) return;
+
+    // Automatically derive awaiting admissions queue from roster stations
+    const awaiting = (stations || []).filter(st => st.status === 'AWAITING_ASSIGNMENT' || !st.callSign);
+    const queueItems = awaiting.map(st => ({
+      stationId: st.stationId || st.id,
+      nickname: st.nickname,
+      role: st.role || 'SUB_STATION',
+      suggestedCallSign: st.callSign || ''
+    }));
+    this.renderAdmissionsQueue(queueItems);
 
     tbody.innerHTML = '';
     if (!stations || stations.length === 0) {
