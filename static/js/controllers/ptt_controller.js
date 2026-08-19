@@ -3,7 +3,16 @@ import { SYSTEM_CONSTANTS } from '../constants.js';
 export class PTTController {
   constructor(app) {
     this.app = app;
-    this.isKeying = false;
+  }
+
+  get isKeying() {
+    return this.app ? this.app.isKeying : false;
+  }
+
+  set isKeying(val) {
+    if (this.app) {
+      this.app.isKeying = val;
+    }
   }
 
   isEditingInput(target) {

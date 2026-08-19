@@ -58,7 +58,15 @@ export class VirtualNetApp {
     this.activeSpeaker = 'None';
     this.currentTransmissionId = null;
     this.isTransmitting = false;
-    this.isKeying = false;
+    this._isKeying = false;
+  }
+
+  get isKeying() {
+    return this._isKeying;
+  }
+
+  set isKeying(val) {
+    this._isKeying = !!val;
   }
 
   init() {
