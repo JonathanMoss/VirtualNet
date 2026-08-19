@@ -46,6 +46,10 @@ registry = StationSocketRegistry()
 
 def get_station_from_sid(db, sid: str):
     """Utility to look up the Station model from the active socket ID."""
+    try:
+        db.expire_all()
+    except (AttributeError, RuntimeError):
+        pass
     station_id = registry.get_station_id(sid)
     if not station_id:
         return None

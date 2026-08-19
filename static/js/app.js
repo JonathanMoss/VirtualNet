@@ -59,6 +59,7 @@ export class VirtualNetApp {
     this.currentTransmissionId = null;
     this.isTransmitting = false;
     this._isKeying = false;
+    window.app = this;
   }
 
   get isKeying() {
@@ -357,6 +358,7 @@ export class VirtualNetApp {
 
   startTransmission() {
     if (this.isTransmitting) return;
+    this.isKeying = true;
     this.socketManager.requestPTT();
   }
 
@@ -517,6 +519,10 @@ export class VirtualNetApp {
       const headerCs = document.getElementById('header-callsign');
       if (headerCs) headerCs.textContent = `Callsign: ${this.myCallSign}`;
 
+      if (document.activeElement && typeof document.activeElement.blur === 'function') {
+        document.activeElement.blur();
+      }
+
       if (WebAudioEngine.isMediaCaptureSupported()) {
         const pttBtn = document.getElementById('ptt-btn');
         if (pttBtn) pttBtn.disabled = false;
@@ -598,6 +604,17 @@ export class VirtualNetApp {
   handleRosterUpdate(stations) {
     this.rosterController.renderRoster(stations);
     this.sunrayController.renderInstructorRoster(stations);
+
+    if (stations && Array.isArray(stations)) {
+      const activeSpeaker = stations.find(s => (s.transmission_status === 'TRANSMITTING' || s.transmissionStatus === 'TRANSMITTING' || s.status === 'TALKING') && s.id !== this.myStationId);
+      if (activeSpeaker) {
+        this.updatePTTCardState('RECEIVING', activeSpeaker.call_sign || activeSpeaker.callSign || 'STATION');
+      } else if (!this.isTransmitting && !this.isKeying) {
+        if (this.pttController && this.pttController.state === 'RECEIVING') {
+          this.updatePTTCardState('IDLE');
+        }
+      }
+    }
   }
 
   handleAdmissionsQueueUpdate(queue) {
@@ -636,9 +653,16 @@ export class VirtualNetApp {
   }
 }
 
-// Instantiate and initialize the app
-document.addEventListener('DOMContentLoaded', () => {
-  const app = new VirtualNetApp();
-  window.virtualNetApp = app;
-  app.init();
-});
+function bootApp() {
+  if (!window.virtualNetApp) {
+    const app = new VirtualNetApp();
+    window.virtualNetApp = app;
+    app.init();
+  }
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', bootApp);
+} else {
+  bootApp();
+}

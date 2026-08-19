@@ -1,0 +1,52 @@
+services:
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 2s
+      retries: 5
+
+  web-app:
+    build: .
+    depends_on:
+      redis:
+        condition: service_healthy
+    expose:
+      - "5000"
+    ports:
+      - "5002:5000"
+    volumes:
+      - ./data:/app/data
+      - ./app:/app/app
+      - ./static:/app/static
+    environment:
+      - FLASK_ENV=testing
+      - DATABASE_URL=sqlite:////app/data/virtualnet_e2e.db
+      - REDIS_URL=redis://redis:6379/0
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:5000/\")' || exit 1"]
+      interval: 3s
+      timeout: 2s
+      retries: 10
+
+  e2e-test:
+    build: .
+    tty: true
+    depends_on:
+      web-app:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - ./data:/app/data
+    environment:
+      - FLASK_ENV=testing
+      - DATABASE_URL=sqlite:////app/data/virtualnet_e2e.db
+      - REDIS_URL=redis://redis:6379/0
+      - E2E_BASE_URL=http://web-app:5000
+      - E2E_TESTING=1
+      - PYTHONUNBUFFERED=1
+      - PYTHONPATH=/app
+    working_dir: /app
+    command: ["pytest", "tests/test_e2e_full_suite.py", "-v", "-s", "--tb=short"]
+    restart: "no"

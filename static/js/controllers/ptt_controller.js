@@ -27,8 +27,10 @@ export class PTTController {
       if (!this.app.audioEngine.audioContext) {
         await this.app.audioEngine.init();
       }
-      if (this.app.audioEngine.audioContext && this.app.audioEngine.audioContext.state === 'suspended') {
-        await this.app.audioEngine.audioContext.resume();
+      if (this.app.audioEngine.audioContext && (this.app.audioEngine.audioContext.state === 'suspended' || this.app.audioEngine.audioContext.state === 'interrupted')) {
+        this.app.audioEngine.audioContext.resume().catch(err => {
+          console.warn("AudioContext non-blocking resume warning:", err);
+        });
       }
     };
 
@@ -81,13 +83,11 @@ export class PTTController {
       if (!pttBtn) return;
 
       pttBtn.addEventListener('mousedown', async (e) => {
-        if (e.button !== 0) return;
+        if (e.button !== undefined && e.button !== 0) return;
         e.preventDefault();
-        if (!this.isKeying && !this.app.isTransmitting) {
-          this.isKeying = true;
-          await startAudioContext();
-          this.app.startTransmission();
-        }
+        this.isKeying = true;
+        await startAudioContext();
+        this.app.startTransmission();
       });
 
       const handleRelease = (e) => {
@@ -131,6 +131,8 @@ export class PTTController {
     const headerBadge = document.getElementById('ptt-header-status-badge');
 
     if (!container || !stateText || !pttBtn) return;
+
+    pttBtn.disabled = !this.app.myCallSign;
 
     const isMinimised = container.classList.contains('minimised');
     container.className = isMinimised
