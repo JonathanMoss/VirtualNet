@@ -206,4 +206,60 @@ export class SunrayController {
       tbody.appendChild(tr);
     });
   }
+
+  async loadSunrayTransmissionHistory(pin) {
+    if (!pin) return;
+    try {
+      const res = await fetch(`/api/session/${pin}/transmissions`);
+      if (!res.ok) return;
+      const data = await res.json();
+      const txLogTbody = document.getElementById('sunray-tx-log-tbody');
+      if (!txLogTbody || !data.transmissions) return;
+
+      txLogTbody.innerHTML = '';
+      if (data.transmissions.length === 0) {
+        txLogTbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">No transmission records logged yet.</td></tr>';
+        return;
+      }
+
+      data.transmissions.forEach(tx => {
+        const tr = document.createElement('tr');
+        let statusClass = 'text-success';
+        if (tx.reason === 'MAX_DURATION_EXCEEDED') statusClass = 'text-danger';
+        else if (tx.reason === 'OVERRIDDEN') statusClass = 'text-warning';
+
+        tr.innerHTML = `
+          <td>${tx.dtg || '-'}</td>
+          <td class="font-weight-bold text-phosphor-green">${tx.callSign || '-'}</td>
+          <td>${tx.duration || '-'}</td>
+          <td class="${statusClass}">${tx.reason || 'COMPLETED'}</td>
+        `;
+        txLogTbody.appendChild(tr);
+      });
+    } catch (err) {
+      console.warn("Error loading transmission history:", err);
+    }
+  }
+
+  handleSunrayTxLog(data) {
+    const txLogTbody = document.getElementById('sunray-tx-log-tbody');
+    if (!txLogTbody || !data) return;
+
+    if (txLogTbody.children.length === 1 && txLogTbody.children[0].textContent.includes('No transmission records')) {
+      txLogTbody.innerHTML = '';
+    }
+
+    const tr = document.createElement('tr');
+    let statusClass = 'text-success';
+    if (data.reason === 'MAX_DURATION_EXCEEDED') statusClass = 'text-danger';
+    else if (data.reason === 'OVERRIDDEN') statusClass = 'text-warning';
+
+    tr.innerHTML = `
+      <td>${data.dtg || '-'}</td>
+      <td class="font-weight-bold text-phosphor-green">${data.callSign || '-'}</td>
+      <td>${data.duration || '-'}</td>
+      <td class="${statusClass}">${data.reason || 'COMPLETED'}</td>
+    `;
+    txLogTbody.insertBefore(tr, txLogTbody.firstChild);
+  }
 }

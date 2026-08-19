@@ -169,3 +169,44 @@ def test_socket_manager_app_callbacks_exist_in_app_js():
         "that are NOT defined in app.js:\n"
         + "\n".join(f"  - this.app.{m}()" for m in missing_methods)
     )
+
+
+def test_subcontroller_delegated_methods_exist():
+    """Verify that all this.<controller>.<method>() calls in app.js exist in controller modules."""
+    # pylint: disable=too-many-locals
+    controllers_dir = JS_DIR_PATH / "controllers"
+    app_js_path = JS_DIR_PATH / "app.js"
+    assert controllers_dir.exists(), f"Controllers directory not found at {controllers_dir}"
+
+    controller_methods = {}
+    method_def_pattern = re.compile(r"^\s*(?:async\s+)?([a-zA-Z0-9_]+)\s*\(", re.MULTILINE)
+    for js_file in controllers_dir.glob("*.js"):
+        with open(js_file, "r", encoding="utf-8") as f:
+            content = f.read()
+            controller_methods[js_file.stem] = set(method_def_pattern.findall(content))
+
+    controller_map = {
+        "rosterController": "roster_controller",
+        "sunrayController": "sunray_controller",
+        "logsheetController": "logsheet_controller",
+        "pttController": "ptt_controller"
+    }
+
+    ctrl_regex = r"this\.(rosterController|sunrayController|logsheetController|pttController)\.([a-zA-Z0-9_]+)\("
+    call_pattern = re.compile(ctrl_regex)
+
+    missing_delegations = []
+    with open(app_js_path, "r", encoding="utf-8") as f:
+        for line_no, line in enumerate(f, start=1):
+            matches = call_pattern.findall(line)
+            for ctrl_var, method_name in matches:
+                module_name = controller_map.get(ctrl_var)
+                defined_set = controller_methods.get(module_name, set())
+                if method_name not in defined_set:
+                    msg = f"app.js:L{line_no} -> this.{ctrl_var}.{method_name}() missing in {module_name}.js"
+                    missing_delegations.append(msg)
+
+    assert not missing_delegations, (
+        f"Found {len(missing_delegations)} missing sub-controller method delegation(s):\n"
+        + "\n".join(f"  - {d}" for d in missing_delegations)
+    )
