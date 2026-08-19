@@ -317,6 +317,196 @@ export class VirtualNetApp {
     this.updatePTTCardState('IDLE');
   }
 
+  setAudioUnavailable(reason) {
+    const pttBtn = document.getElementById('ptt-btn');
+    const instruction = document.getElementById('ptt-instruction');
+    const supportWarning = document.getElementById('audio-support-warning');
+
+    if (pttBtn) pttBtn.disabled = true;
+    if (instruction) {
+      instruction.textContent = 'Audio unavailable for this session.';
+      instruction.style.color = 'var(--color-tactical-amber)';
+    }
+    if (supportWarning) {
+      supportWarning.textContent = reason;
+      supportWarning.classList.remove('d-none');
+    }
+  }
+
+  handleCreateResponse(data) {
+    if (data.success) {
+      this.myStationId = data.stationId;
+      this.myNickname = "SUNRAY";
+      this.myRole = data.role || "SUNRAY";
+      this.myCallSign = data.callSign || data.sunrayCallsign || "0";
+      this.netId = data.netId;
+      this.netName = data.netName;
+      this.netPin = data.pin;
+
+      this.saveSession(data.pin, "SUNRAY", this.myRole, data.stationId);
+
+      document.getElementById('landing-section').classList.add('d-none');
+      document.getElementById('dashboard-section').classList.remove('d-none');
+      const instSec = document.getElementById('instructor-section');
+      if (instSec) instSec.classList.remove('d-none');
+      const lockOverlay = document.getElementById('callsign-lock-overlay');
+      if (lockOverlay) lockOverlay.classList.add('d-none');
+
+      const headerPin = document.getElementById('header-net-pin');
+      if (headerPin) headerPin.textContent = `PIN: ${data.pin}`;
+
+      const headerName = document.getElementById('header-net-name');
+      if (headerName) {
+        headerName.textContent = `Net: ${data.netName}`;
+        headerName.classList.remove('d-none');
+      }
+
+      const headerCallsign = document.getElementById('header-callsign');
+      if (headerCallsign) headerCallsign.textContent = `Callsign: ${this.myCallSign}`;
+
+      if (WebAudioEngine.isMediaCaptureSupported()) {
+        const pttBtn = document.getElementById('ptt-btn');
+        if (pttBtn) pttBtn.disabled = false;
+      }
+    } else {
+      showAlert(`Failed to create net session: ${data.reason}`, { title: "CREATE NET FAILED", titleColor: "var(--color-hot-red)" });
+    }
+  }
+
+  handleJoinResponse(data) {
+    if (data.success) {
+      this.myStationId = data.stationId;
+      this.myRole = data.role;
+      this.myCallSign = data.callSign;
+      this.netId = data.netId;
+      this.netName = data.netName;
+      this.netPin = data.pin;
+      this.saveSession(data.pin, this.myNickname, this.myRole, this.myStationId);
+
+      const headerPinBadge = document.getElementById('header-net-pin');
+      if (headerPinBadge) {
+        headerPinBadge.textContent = `PIN: ${data.pin}`;
+      }
+
+      const headerName = document.getElementById('header-net-name');
+      if (headerName) {
+        headerName.textContent = `Net: ${data.netName}`;
+        headerName.classList.remove('d-none');
+      }
+
+      document.getElementById('landing-section').classList.add('d-none');
+      document.getElementById('dashboard-section').classList.remove('d-none');
+
+      const overlayNick = document.getElementById('overlay-nickname');
+      if (overlayNick) overlayNick.textContent = this.myNickname;
+
+      const lockOverlay = document.getElementById('callsign-lock-overlay');
+
+      if (this.myRole === 'SUNRAY' || this.myRole === 'CONTROL' || this.myRole === 'INSTRUCTOR') {
+        if (lockOverlay) lockOverlay.classList.add('d-none');
+        const headerCs = document.getElementById('header-callsign');
+        if (headerCs) headerCs.textContent = `Callsign: ${this.myCallSign || '0'}`;
+
+        if (WebAudioEngine.isMediaCaptureSupported()) {
+          const pttBtn = document.getElementById('ptt-btn');
+          if (pttBtn) pttBtn.disabled = false;
+        }
+
+        const instSec = document.getElementById('instructor-section');
+        if (instSec) instSec.classList.remove('d-none');
+        this.loadSunrayTransmissionHistory(data.pin);
+
+      } else if (data.status === 'CONNECTED' && data.callSign) {
+        if (lockOverlay) lockOverlay.classList.add('d-none');
+        const headerCs = document.getElementById('header-callsign');
+        if (headerCs) headerCs.textContent = `Callsign: ${this.myCallSign}`;
+        if (WebAudioEngine.isMediaCaptureSupported()) {
+          const pttBtn = document.getElementById('ptt-btn');
+          if (pttBtn) pttBtn.disabled = false;
+          this.audioEngine.ensureMicStream().catch(err => {
+            console.warn("Background microphone pre-warm warning:", err);
+          });
+        }
+      } else {
+        if (lockOverlay) lockOverlay.classList.remove('d-none');
+      }
+    } else {
+      console.warn("Join/Rejoin failed:", data.reason);
+      this.clearSavedSession();
+      this.resetToLanding();
+      const reasonMsg = data.reason || "This net session has been closed or timed out.";
+      showAlert(`SESSION NO LONGER EXISTS: ${reasonMsg}`, { title: "SESSION NO LONGER EXISTS", titleColor: "var(--color-hot-red)" });
+    }
+  }
+
+  handleCallsignAssigned(data) {
+    if (data.success) {
+      this.myCallSign = data.assignedCallSign;
+      this.myRole = data.role;
+      this.netId = data.netSession.netId;
+      this.netName = data.netSession.netName;
+      this.netState = data.netSession.netState;
+
+      if (this.netPin) {
+        this.saveSession(this.netPin, this.myNickname, this.myRole, this.myStationId);
+      }
+
+      const lockOverlay = document.getElementById('callsign-lock-overlay');
+      if (lockOverlay) lockOverlay.classList.add('d-none');
+
+      const headerName = document.getElementById('header-net-name');
+      if (headerName) {
+        headerName.textContent = `Net: ${this.netName}`;
+        headerName.classList.remove('d-none');
+      }
+
+      const headerCs = document.getElementById('header-callsign');
+      if (headerCs) headerCs.textContent = `Callsign: ${this.myCallSign}`;
+
+      if (WebAudioEngine.isMediaCaptureSupported()) {
+        const pttBtn = document.getElementById('ptt-btn');
+        if (pttBtn) pttBtn.disabled = false;
+        this.audioEngine.ensureMicStream().catch(err => {
+          console.warn("Background microphone pre-warm warning:", err);
+        });
+      }
+    }
+  }
+
+  handlePTTResponse(data) {
+    if (data.allowed) {
+      if (!this.isKeying && !this.isTransmitting) {
+        this.socketManager.releasePTT(data.transmissionId);
+        this.isKeying = false;
+        return;
+      }
+
+      this.isTransmitting = true;
+      this.currentTransmissionId = data.transmissionId;
+      this.updatePTTCardState('KEYING');
+
+      this.audioEngine.startRecording(data.transmissionId).catch((e) => {
+        console.error('PTT start recording failed:', e);
+        this.setAudioUnavailable(e.message || 'Unable to access microphone.');
+        this.stopTransmission();
+        this.updatePTTCardState('IDLE');
+        return;
+      });
+
+      setTimeout(() => {
+        if (this.isTransmitting) {
+          this.updatePTTCardState('TRANSMITTING');
+          this.audioEngine.playPTTStartChirp();
+        }
+      }, 300);
+    } else {
+      this.isKeying = false;
+      this.audioEngine.playPTTEndSquelchTail();
+      this.updatePTTCardState('BLOCKED', data.reason);
+      setTimeout(() => this.updatePTTCardState('IDLE'), SYSTEM_CONSTANTS.UI_RESET_DELAY_MS);
+    }
+  }
+
   handlePTTGranted(data) {
     this.isKeying = false;
     this.isTransmitting = true;

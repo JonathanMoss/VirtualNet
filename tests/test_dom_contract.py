@@ -135,3 +135,37 @@ def test_no_embedded_style_blocks_in_html_templates():
         f"Found {len(style_blocks)} embedded <style> block(s) in HTML templates:\n"
         + "\n".join(f"  - {sb}" for sb in style_blocks)
     )
+
+
+def test_socket_manager_app_callbacks_exist_in_app_js():
+    """Verify that 100% of this.app.<methodName>(...) callbacks invoked in socket.js exist in app.js."""
+    socket_js_path = JS_DIR_PATH / "socket.js"
+    app_js_path = JS_DIR_PATH / "app.js"
+    assert socket_js_path.exists(), f"socket.js not found at {socket_js_path}"
+    assert app_js_path.exists(), f"app.js not found at {app_js_path}"
+
+    app_call_pattern = re.compile(r"this\.app\.([a-zA-Z0-9_]+)\(")
+    referenced_methods = set()
+    with open(socket_js_path, "r", encoding="utf-8") as f:
+        for line in f:
+            matches = app_call_pattern.findall(line)
+            for match in matches:
+                if match not in ("audioEngine", "telemetryManager", "resourcesManager", "socketManager"):
+                    referenced_methods.add(match)
+
+    method_def_pattern = re.compile(r"^\s*([a-zA-Z0-9_]+)\s*\(", re.MULTILINE)
+    with open(app_js_path, "r", encoding="utf-8") as f:
+        app_js_content = f.read()
+
+    defined_methods = set(method_def_pattern.findall(app_js_content))
+
+    missing_methods = []
+    for method_name in referenced_methods:
+        if method_name not in defined_methods:
+            missing_methods.append(method_name)
+
+    assert not missing_methods, (
+        f"Found {len(missing_methods)} SocketManager app callback(s) in socket.js "
+        "that are NOT defined in app.js:\n"
+        + "\n".join(f"  - this.app.{m}()" for m in missing_methods)
+    )
