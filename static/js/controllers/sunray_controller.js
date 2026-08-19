@@ -10,38 +10,29 @@ export class SunrayController {
   }
 
   setupFoldToggle() {
-    const card = document.getElementById('instructor-section');
-    const toggleBtn = document.getElementById('btn-toggle-sunray-panel');
     const header = document.getElementById('sunray-card-header');
+    const toggleBtn = document.getElementById('btn-toggle-sunray-panel');
+    const body = document.getElementById('sunray-collapse-body');
 
-    if (card && toggleBtn && header) {
+    if (header && body) {
       const toggleSunray = () => {
-        card.classList.toggle('collapsed');
-        const isCollapsed = card.classList.contains('collapsed');
-        try {
-          localStorage.setItem('virtualnet_sunray_collapsed', isCollapsed ? 'true' : 'false');
-        } catch (e) {
-          // Ignored
-        }
-        toggleBtn.textContent = isCollapsed ? '[+]' : '[-]';
+        header.classList.toggle('collapsed');
+        body.classList.toggle('d-none');
       };
 
-      header.addEventListener('click', (e) => {
-        if (e.target !== toggleBtn) toggleSunray();
-      });
-      toggleBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleSunray();
-      });
-
-      try {
-        if (localStorage.getItem('virtualnet_sunray_collapsed') === 'true') {
-          card.classList.add('collapsed');
-          toggleBtn.textContent = '[+]';
-        }
-      } catch (e) {
-        // Ignored
+      if (toggleBtn) {
+        toggleBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleSunray();
+        });
       }
+
+      header.addEventListener('click', (e) => {
+        const endBtn = document.getElementById('btn-end-session');
+        if (e.target !== endBtn && !endBtn?.contains(e.target)) {
+          toggleSunray();
+        }
+      });
     }
   }
 

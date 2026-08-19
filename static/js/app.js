@@ -248,34 +248,39 @@ export class VirtualNetApp {
   }
 
   setupPTTMinimiseToggle() {
-    const card = document.getElementById('ptt-container');
-    const toggleBtn = document.getElementById('btn-toggle-ptt-panel');
+    const container = document.getElementById('ptt-container');
     const header = document.getElementById('ptt-card-header');
+    const toggleBtn = document.getElementById('btn-toggle-ptt-panel');
+    const toggleIcon = toggleBtn ? toggleBtn.querySelector('.toggle-icon-ptt') : null;
 
-    if (card && toggleBtn && header) {
-      const togglePTT = () => {
-        card.classList.toggle('collapsed');
-        const isCollapsed = card.classList.contains('collapsed');
+    if (container && header) {
+      const toggleMinimise = () => {
+        container.classList.toggle('minimised');
+        const isMinimised = container.classList.contains('minimised');
+        if (toggleIcon) {
+          toggleIcon.textContent = isMinimised ? '▼ EXPAND' : '▲ MINIMISE';
+        }
         try {
-          localStorage.setItem('virtualnet_ptt_collapsed', isCollapsed ? 'true' : 'false');
+          localStorage.setItem('virtualnet_ptt_minimised', isMinimised ? 'true' : 'false');
         } catch (e) {
           // Ignored
         }
-        toggleBtn.textContent = isCollapsed ? '[+]' : '[-]';
       };
 
+      if (toggleBtn) {
+        toggleBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleMinimise();
+        });
+      }
+
       header.addEventListener('click', (e) => {
-        if (e.target !== toggleBtn) togglePTT();
-      });
-      toggleBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        togglePTT();
+        if (e.target !== toggleBtn) toggleMinimise();
       });
 
       try {
-        if (localStorage.getItem('virtualnet_ptt_collapsed') === 'true') {
-          card.classList.add('collapsed');
-          toggleBtn.textContent = '[+]';
+        if (localStorage.getItem('virtualnet_ptt_minimised') === 'true') {
+          toggleMinimise();
         }
       } catch (e) {
         // Ignored
@@ -284,13 +289,53 @@ export class VirtualNetApp {
   }
 
   setupHeaderCollapseToggle() {
-    const headerBar = document.getElementById('app-header-bar');
+    const body = document.getElementById('header-collapse-body');
     const toggleBtn = document.getElementById('btn-toggle-header-details');
-    if (headerBar && toggleBtn) {
-      toggleBtn.addEventListener('click', () => {
-        headerBar.classList.toggle('collapsed');
-        toggleBtn.textContent = headerBar.classList.contains('collapsed') ? '▲' : '▼';
-      });
+    const expandBtn = document.getElementById('btn-expand-header-details');
+
+    if (body) {
+      const toggleHeader = () => {
+        body.classList.toggle('d-none');
+        const isCollapsed = body.classList.contains('d-none');
+        if (toggleBtn) {
+          const toggleIcon = toggleBtn.querySelector('.toggle-icon-header');
+          if (toggleIcon) toggleIcon.textContent = isCollapsed ? '▼ SHOW INFO' : '▲ HIDE INFO';
+        }
+        if (expandBtn) {
+          if (isCollapsed) {
+            expandBtn.classList.remove('d-none');
+          } else {
+            expandBtn.classList.add('d-none');
+          }
+        }
+        try {
+          localStorage.setItem('virtualnet_header_collapsed', isCollapsed ? 'true' : 'false');
+        } catch (e) {
+          // Ignored
+        }
+      };
+
+      if (toggleBtn) {
+        toggleBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleHeader();
+        });
+      }
+
+      if (expandBtn) {
+        expandBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleHeader();
+        });
+      }
+
+      try {
+        if (localStorage.getItem('virtualnet_header_collapsed') === 'true') {
+          toggleHeader();
+        }
+      } catch (e) {
+        // Ignored
+      }
     }
   }
 

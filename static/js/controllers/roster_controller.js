@@ -22,24 +22,28 @@ export class RosterController {
         } catch (e) {
           // Ignored
         }
-        toggleBtn.textContent = isCollapsed ? '[+]' : '[-]';
       };
 
-      header.addEventListener('click', (e) => {
-        if (e.target !== toggleBtn) toggleRoster();
-      });
       toggleBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         toggleRoster();
       });
 
+      header.addEventListener('click', () => {
+        if (sidebar.classList.contains('collapsed')) {
+          toggleRoster();
+        }
+      });
+
       try {
-        if (localStorage.getItem('virtualnet_roster_collapsed') === 'true') {
+        const pref = localStorage.getItem('virtualnet_roster_collapsed');
+        if (pref === 'true' || (pref === null && window.innerWidth < 768)) {
           sidebar.classList.add('collapsed');
-          toggleBtn.textContent = '[+]';
         }
       } catch (e) {
-        // Ignored
+        if (window.innerWidth < 768) {
+          sidebar.classList.add('collapsed');
+        }
       }
     }
   }
