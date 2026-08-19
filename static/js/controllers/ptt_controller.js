@@ -6,59 +6,112 @@ export class PTTController {
     this.isKeying = false;
   }
 
+  isEditingInput(target) {
+    const el = target || document.activeElement;
+    if (!el) return false;
+    const tag = el.tagName ? el.tagName.toUpperCase() : '';
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+  }
+
   setupPTTHandlers() {
-    const pttBtn = document.getElementById('ptt-btn');
-    if (!pttBtn) return;
-
-    const handlePTTDown = (e) => {
-      e.preventDefault();
-      if (this.isKeying) return;
-      this.isKeying = true;
-      this.app.startTransmission();
+    const startAudioContext = async () => {
+      if (!this.app.audioEngine.audioContext) {
+        await this.app.audioEngine.init();
+      }
+      if (this.app.audioEngine.audioContext && this.app.audioEngine.audioContext.state === 'suspended') {
+        await this.app.audioEngine.audioContext.resume();
+      }
     };
 
-    const handlePTTUp = (e) => {
-      e.preventDefault();
-      if (!this.isKeying) return;
-      this.isKeying = false;
-      this.app.stopTransmission();
-    };
+    // User gesture unlock for WebAudio API
+    window.addEventListener('click', startAudioContext, { once: true });
+    window.addEventListener('keydown', startAudioContext, { once: true });
+    window.addEventListener('touchstart', startAudioContext, { once: true });
 
-    pttBtn.addEventListener('pointerdown', handlePTTDown);
-    pttBtn.addEventListener('pointerup', handlePTTUp);
-    pttBtn.addEventListener('pointerleave', handlePTTUp);
-
+    // Global Spacebar Keydown Handler
     window.addEventListener('keydown', (e) => {
-      const tag = document.activeElement ? document.activeElement.tagName.toUpperCase() : '';
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      const isSpace = e.code === 'Space' || e.key === ' ' || e.key === 'Spacebar' || e.keyCode === 32;
+      if (!isSpace) return;
 
-      if (e.code === 'Space' && !e.repeat) {
-        const dashboard = document.getElementById('dashboard-section');
-        if (dashboard && !dashboard.classList.contains('d-none')) {
-          e.preventDefault();
-          if (!this.isKeying) {
-            this.isKeying = true;
+      const dashboard = document.getElementById('dashboard-section');
+      const isDashboardActive = dashboard && !dashboard.classList.contains('d-none');
+
+      if (isDashboardActive && !this.isEditingInput(e.target)) {
+        e.preventDefault(); // Stop browser page scrolling to bottom!
+        if (e.repeat) return;
+
+        if (!this.isKeying && !this.app.isTransmitting) {
+          this.isKeying = true;
+          startAudioContext().then(() => {
             this.app.startTransmission();
-          }
+          });
         }
       }
     });
 
+    // Global Spacebar Keyup Handler
     window.addEventListener('keyup', (e) => {
-      const tag = document.activeElement ? document.activeElement.tagName.toUpperCase() : '';
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      const isSpace = e.code === 'Space' || e.key === ' ' || e.key === 'Spacebar' || e.keyCode === 32;
+      if (!isSpace) return;
 
-      if (e.code === 'Space') {
-        const dashboard = document.getElementById('dashboard-section');
-        if (dashboard && !dashboard.classList.contains('d-none')) {
-          e.preventDefault();
-          if (this.isKeying) {
-            this.isKeying = false;
-            this.app.stopTransmission();
-          }
+      const dashboard = document.getElementById('dashboard-section');
+      const isDashboardActive = dashboard && !dashboard.classList.contains('d-none');
+
+      if (isDashboardActive && !this.isEditingInput(e.target)) {
+        e.preventDefault();
+        if (this.isKeying || this.app.isTransmitting) {
+          this.isKeying = false;
+          this.app.stopTransmission();
         }
       }
     });
+
+    // UI Transceiver Hold-to-Talk Mouse & Touch Listeners
+    const bindBtn = () => {
+      const pttBtn = document.getElementById('ptt-btn');
+      if (!pttBtn) return;
+
+      pttBtn.addEventListener('mousedown', async (e) => {
+        if (e.button !== 0) return;
+        e.preventDefault();
+        if (!this.isKeying && !this.app.isTransmitting) {
+          this.isKeying = true;
+          await startAudioContext();
+          this.app.startTransmission();
+        }
+      });
+
+      const handleRelease = (e) => {
+        if (e && e.button !== undefined && e.button !== 0) return;
+        if (this.isKeying || this.app.isTransmitting) {
+          this.isKeying = false;
+          this.app.stopTransmission();
+        }
+      };
+
+      pttBtn.addEventListener('mouseup', handleRelease);
+      pttBtn.addEventListener('mouseleave', handleRelease);
+      window.addEventListener('mouseup', handleRelease);
+
+      pttBtn.addEventListener('touchstart', async (e) => {
+        e.preventDefault();
+        if (!this.isKeying && !this.app.isTransmitting) {
+          this.isKeying = true;
+          await startAudioContext();
+          this.app.startTransmission();
+        }
+      });
+
+      pttBtn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        if (this.isKeying || this.app.isTransmitting) {
+          this.isKeying = false;
+          this.app.stopTransmission();
+        }
+      });
+    };
+
+    bindBtn();
   }
 
   updatePTTCardState(state, detail = '') {

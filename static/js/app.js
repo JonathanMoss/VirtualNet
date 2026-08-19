@@ -354,10 +354,11 @@ export class VirtualNetApp {
 
   stopTransmission() {
     if (!this.isTransmitting && !this.isKeying) return;
+    const txId = this.currentTransmissionId;
     this.isTransmitting = false;
     this.isKeying = false;
     this.audioEngine.stopRecording();
-    this.socketManager.releasePTT();
+    this.socketManager.releasePTT(txId);
     this.audioEngine.playPTTEndSquelchTail();
     this.updatePTTCardState('IDLE');
   }
