@@ -48,5 +48,5 @@ services:
       - PYTHONUNBUFFERED=1
       - PYTHONPATH=/app
     working_dir: /app
-    command: ["pytest", "tests/test_e2e_full_suite.py", "-v", "-s", "--tb=short"]
+    command: ["sh", "-c", "pytest tests/test_e2e_full_suite.py -v -s --tb=short 2>&1 | tee /app/data/e2e_test_report.log"]
     restart: "no"

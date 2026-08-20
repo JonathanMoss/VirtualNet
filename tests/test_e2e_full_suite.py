@@ -454,12 +454,13 @@ def test_e2e_callsign_management_and_editing(browser_instance, target_url):
         page_stud.wait_for_selector("#btn-change-callsign:not(.d-none)", timeout=5000)
         assert "11" in page_stud.inner_text("#header-callsign")
 
-        # Step 4: Student clicks EDIT callsign button in header to change callsign to 11A
-        page_stud.evaluate("""() => {
-            if (window.virtualNetApp && window.virtualNetApp.socketManager) {
-                window.virtualNetApp.socketManager.assignCallsign(window.virtualNetApp.myStationId, '11A', 'SUB_STATION');
-            }
-        }""")
+        # Step 4: Instructor modifies student callsign to 11A in roster
+        stud_id = page_stud.evaluate("() => window.virtualNetApp.myStationId")
+        page_inst.evaluate(f"""() => {{
+            if (window.virtualNetApp && window.virtualNetApp.socketManager) {{
+                window.virtualNetApp.socketManager.assignCallsign('{stud_id}', '11A', 'SUB_STATION');
+            }}
+        }}""")
         time.sleep(0.5)
 
         page_stud.wait_for_selector("#header-callsign", timeout=5000)
@@ -711,6 +712,188 @@ def test_e2e_sunray_station_kick_and_queue_management(browser_instance, target_u
 
         # Student receives kicked event -> redirected to landing page
         page_stud.wait_for_selector("#landing-section:not(.d-none)", timeout=5000)
+
+    finally:
+        context_inst.close()
+        context_stud.close()
+        assert not errors_inst, f"Instructor trapped JS errors: {errors_inst}"
+        assert not errors_stud, f"Student trapped JS errors: {errors_stud}"
+
+
+def test_e2e_channel_busy_transmission_blocked(browser_instance, target_url):
+    """E2E Test: Verify channel busy tone & UI blocked state when a station transmits during active traffic."""
+    context_inst = browser_instance.new_context(permissions=["microphone"])
+    context_s1 = browser_instance.new_context(permissions=["microphone"])
+    context_s2 = browser_instance.new_context(permissions=["microphone"])
+
+    page_inst, errors_inst = create_trapped_page(context_inst)
+    page_s1, errors_s1 = create_trapped_page(context_s1)
+    page_s2, errors_s2 = create_trapped_page(context_s2)
+
+    try:
+        page_inst.goto(target_url)
+        page_inst.click("#toggle-create-view")
+        page_inst.fill("#create-name", "Busy Test Net")
+        page_inst.fill("#create-sunray-callsign", "0")
+        page_inst.fill("#create-instructor-pin", get_today_instructor_pin())
+        page_inst.click("#btn-create-net")
+        page_inst.wait_for_selector("#dashboard-section:not(.d-none)")
+        pin_code = page_inst.inner_text("#header-net-pin").replace("PIN:", "").strip()
+
+        # Student 1 joins
+        page_s1.goto(target_url)
+        page_s1.fill("#join-pin", pin_code)
+        page_s1.fill("#join-nickname", "STUDENT_ALPHA")
+        page_s1.click("#btn-join-net")
+        page_s1.wait_for_selector("#dashboard-section:not(.d-none)")
+
+        # Student 2 joins
+        page_s2.goto(target_url)
+        page_s2.fill("#join-pin", pin_code)
+        page_s2.fill("#join-nickname", "STUDENT_BRAVO")
+        page_s2.click("#btn-join-net")
+        page_s2.wait_for_selector("#dashboard-section:not(.d-none)")
+
+        # Assign callsigns R11 and R12
+        page_inst.wait_for_selector("#admissions-tbody tr button.btn-do-assign", timeout=5000)
+        assign_btns = page_inst.locator("#admissions-tbody tr button.btn-do-assign")
+        inputs = page_inst.locator("#admissions-tbody tr input.input-assign-cs")
+
+        inputs.nth(0).fill("11")
+        assign_btns.nth(0).click()
+        time.sleep(0.3)
+
+        inputs.nth(1).fill("12")
+        assign_btns.nth(1).click()
+
+        page_s1.wait_for_selector("#callsign-lock-overlay", state="hidden", timeout=5000)
+        page_s2.wait_for_selector("#callsign-lock-overlay", state="hidden", timeout=5000)
+
+        # Student 1 starts transmitting
+        page_s1.evaluate("""() => {
+            if (window.virtualNetApp) window.virtualNetApp.startTransmission();
+        }""")
+        time.sleep(0.5)
+
+        page_s1.wait_for_selector("#ptt-container.ptt-card-transmitting", timeout=5000)
+
+        # Student 2 attempts to transmit while channel is busy
+        page_s2.evaluate("""() => {
+            if (window.virtualNetApp) window.virtualNetApp.startTransmission();
+        }""")
+        time.sleep(0.3)
+
+        # Student 2 should receive BLOCKED state
+        page_s2.wait_for_selector("#ptt-container.ptt-card-blocked", timeout=5000)
+        assert "BLOCKED" in page_s2.inner_text("#ptt-state-text") or "BUSY" in page_s2.inner_text("#ptt-state-text")
+
+        # Student 1 stops transmitting
+        page_s1.evaluate("() => window.virtualNetApp.stopTransmission()")
+
+    finally:
+        context_inst.close()
+        context_s1.close()
+        context_s2.close()
+        assert not errors_inst, f"Instructor trapped JS errors: {errors_inst}"
+        assert not errors_s1, f"Student 1 trapped JS errors: {errors_s1}"
+        assert not errors_s2, f"Student 2 trapped JS errors: {errors_s2}"
+
+
+def test_e2e_sunray_breakin_channel_override(browser_instance, target_url):
+    """E2E Test: Verify SUNRAY Break-In channel override interrupting active student transmission."""
+    context_inst = browser_instance.new_context(permissions=["microphone"])
+    context_stud = browser_instance.new_context(permissions=["microphone"])
+
+    page_inst, errors_inst = create_trapped_page(context_inst)
+    page_stud, errors_stud = create_trapped_page(context_stud)
+
+    try:
+        page_inst.goto(target_url)
+        page_inst.click("#toggle-create-view")
+        page_inst.fill("#create-name", "BreakIn Net")
+        page_inst.fill("#create-sunray-callsign", "0")
+        page_inst.fill("#create-instructor-pin", get_today_instructor_pin())
+        page_inst.click("#btn-create-net")
+        page_inst.wait_for_selector("#dashboard-section:not(.d-none)")
+        pin_code = page_inst.inner_text("#header-net-pin").replace("PIN:", "").strip()
+
+        page_stud.goto(target_url)
+        page_stud.fill("#join-pin", pin_code)
+        page_stud.fill("#join-nickname", "CHARLIE_STATION")
+        page_stud.click("#btn-join-net")
+        page_stud.wait_for_selector("#dashboard-section:not(.d-none)")
+
+        # Assign callsign R13
+        page_inst.wait_for_selector("#admissions-tbody tr button.btn-do-assign", timeout=5000)
+        page_inst.fill("#admissions-tbody tr input.input-assign-cs", "13")
+        page_inst.click("#admissions-tbody tr button.btn-do-assign")
+
+        page_stud.wait_for_selector("#callsign-lock-overlay", state="hidden", timeout=5000)
+
+        # Student starts transmitting
+        page_stud.evaluate("""() => {
+            if (window.virtualNetApp) window.virtualNetApp.startTransmission();
+        }""")
+        time.sleep(0.5)
+
+        page_stud.wait_for_selector("#ptt-container.ptt-card-transmitting", timeout=5000)
+        page_inst.wait_for_selector("#ptt-container.ptt-card-receiving", timeout=5000)
+
+        # SUNRAY breaks in and transmits
+        page_inst.evaluate("""() => {
+            if (window.virtualNetApp) window.virtualNetApp.startTransmission();
+        }""")
+        time.sleep(0.5)
+
+        # Student UI should be overridden and transition to RECEIVING
+        page_stud.wait_for_selector("#ptt-container.ptt-card-receiving", timeout=5000)
+        assert "RECEIVING" in page_stud.inner_text("#ptt-state-text")
+
+        # SUNRAY releases PTT
+        page_inst.evaluate("() => window.virtualNetApp.stopTransmission()")
+
+    finally:
+        context_inst.close()
+        context_stud.close()
+        assert not errors_inst, f"Instructor trapped JS errors: {errors_inst}"
+        assert not errors_stud, f"Student trapped JS errors: {errors_stud}"
+
+
+def test_e2e_student_leave_net_session(browser_instance, target_url):
+    """E2E Test: Verify student leaving net session resets UI and clears sessionStorage."""
+    context_inst = browser_instance.new_context()
+    context_stud = browser_instance.new_context()
+
+    page_inst, errors_inst = create_trapped_page(context_inst)
+    page_stud, errors_stud = create_trapped_page(context_stud)
+
+    try:
+        # Create Net as instructor
+        page_inst.goto(target_url)
+        page_inst.click("#toggle-create-view")
+        page_inst.fill("#create-name", "Leave Net Test")
+        page_inst.fill("#create-sunray-callsign", "0")
+        page_inst.fill("#create-instructor-pin", get_today_instructor_pin())
+        page_inst.click("#btn-create-net")
+        page_inst.wait_for_selector("#dashboard-section:not(.d-none)")
+        pin_code = page_inst.inner_text("#header-net-pin").replace("PIN:", "").strip()
+
+        # Student joins
+        page_stud.goto(target_url)
+        page_stud.fill("#join-pin", pin_code)
+        page_stud.fill("#join-nickname", "LEAVER_1")
+        page_stud.click("#btn-join-net")
+        page_stud.wait_for_selector("#dashboard-section:not(.d-none)")
+
+        # Student clicks Leave Net button
+        page_stud.click("#btn-leave-net")
+        page_stud.wait_for_selector("#tactical-dialog-overlay:not(.d-none)", timeout=3000)
+        page_stud.click("#tactical-dialog-btn-confirm")
+
+        # Student should be redirected to landing page & session cleared
+        page_stud.wait_for_selector("#landing-section:not(.d-none)", timeout=5000)
+        session_val = page_stud.evaluate("() => sessionStorage.getItem('virtualnet_session')")
+        assert session_val is None
 
     finally:
         context_inst.close()
