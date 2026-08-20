@@ -3,7 +3,7 @@ import os
 import markdown
 from flask import Blueprint, jsonify, render_template
 from app.database import get_db
-from app.models import NetSession, LogEntry, Station, Transmission
+from app.models import NetSession, Station, Transmission
 from app.services.transmission_service import format_transmission_dtg
 
 bp = Blueprint('routes', __name__)
@@ -81,35 +81,6 @@ def favicon():
     """Serves a blank 204 response for favicon requests."""
     return '', 204
 
-
-@bp.route('/api/session/<pin>/logs')
-def get_session_logs(pin):
-    """API endpoint to get all log entries for a given session PIN (for instructor review)."""
-    db = get_db()
-    session = db.query(NetSession).filter_by(pin=pin.upper()).first()
-    if not session:
-        return jsonify({"error": "Session not found"}), 404
-
-    logs = db.query(LogEntry).filter_by(net_id=session.id).order_by(LogEntry.created_at.asc()).all()
-    stations = db.query(Station).filter_by(net_id=session.id).all()
-    station_map = {s.id: s for s in stations}
-
-    logs_data = []
-    for log in logs:
-        station = station_map.get(log.owner_station_id)
-        logs_data.append({
-            "id": log.id,
-            "ownerCallSign": station.call_sign if station else "UNKNOWN",
-            "ownerNickname": station.nickname if station else "UNKNOWN",
-            "dtg": log.dtg,
-            "fromCallSign": log.from_call_sign,
-            "toCallSign": log.to_call_sign,
-            "precedence": log.precedence,
-            "eventText": log.event_text,
-            "operatorInitials": log.operator_initials,
-            "createdAt": log.created_at.isoformat()
-        })
-    return jsonify({"pin": pin, "logs": logs_data})
 
 
 @bp.route('/api/session/<pin>/roster')

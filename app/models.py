@@ -23,7 +23,6 @@ class NetSession(Base):
 
     stations = relationship("Station", back_populates="net_session", cascade="all, delete-orphan")
     transmissions = relationship("Transmission", back_populates="net_session", cascade="all, delete-orphan")
-    log_entries = relationship("LogEntry", back_populates="net_session", cascade="all, delete-orphan")
     injects = relationship("InstructorInject", back_populates="net_session", cascade="all, delete-orphan")
 
 
@@ -45,7 +44,6 @@ class Station(Base):
     last_seen = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
 
     net_session = relationship("NetSession", back_populates="stations")
-    log_entries = relationship("LogEntry", back_populates="station", cascade="all, delete-orphan")
 
     __table_args__ = (
         UniqueConstraint('net_id', 'call_sign', name='_net_callsign_uc'),
@@ -67,25 +65,6 @@ class Transmission(Base):
 
     net_session = relationship("NetSession", back_populates="transmissions")
 
-
-class LogEntry(Base):
-    """Represents a radio message log sheet entry."""
-    # pylint: disable=too-few-public-methods
-    __tablename__ = 'log_entries'
-
-    id = Column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    net_id = Column(String(36), ForeignKey('net_sessions.id'), nullable=False)
-    owner_station_id = Column(String(36), ForeignKey('stations.id'), nullable=False)
-    dtg = Column(String(20), nullable=False)  # DDHHMMZ MON YY format
-    from_call_sign = Column(String(15), nullable=False)
-    to_call_sign = Column(String(15), nullable=False)
-    precedence = Column(String(10), default="ROUTINE", nullable=False)
-    event_text = Column(String(255), nullable=False)
-    operator_initials = Column(String(3), nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
-
-    net_session = relationship("NetSession", back_populates="log_entries")
-    station = relationship("Station", back_populates="log_entries")
 
 
 class InstructorInject(Base):

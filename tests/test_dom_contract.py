@@ -188,11 +188,10 @@ def test_subcontroller_delegated_methods_exist():
     controller_map = {
         "rosterController": "roster_controller",
         "sunrayController": "sunray_controller",
-        "logsheetController": "logsheet_controller",
         "pttController": "ptt_controller"
     }
 
-    ctrl_regex = r"this\.(rosterController|sunrayController|logsheetController|pttController)\.([a-zA-Z0-9_]+)\("
+    ctrl_regex = r"this\.(rosterController|sunrayController|pttController)\.([a-zA-Z0-9_]+)\("
     call_pattern = re.compile(ctrl_regex)
 
     missing_delegations = []

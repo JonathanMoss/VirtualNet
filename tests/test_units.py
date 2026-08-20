@@ -6,8 +6,8 @@ from conftest import get_today_instructor_pin
 
 from app import socketio
 from app.database import db_session
-from app.models import NetSession, Station, LogEntry, Transmission
-from app.schemas import NetSessionCreate, StationCreate, LogEntryCreate
+from app.models import NetSession, Station, Transmission
+from app.schemas import NetSessionCreate, StationCreate
 
 
 
@@ -63,41 +63,6 @@ def test_station_create_validation():
         StationCreate(nickname="!!!BadUser!!!", pin="A3F9")
 
 
-def test_log_entry_validation():
-    """Test LogEntryCreate schema validation rules."""
-    # Valid GMT entry (Z)
-    payload_z = {
-        "dtg": "281015Z JUL 26",
-        "from_call_sign": "R11",
-        "to_call_sign": "CONTROL",
-        "precedence": "ROUTINE",
-        "event_text": "REPORT RECEIVED OVER",
-        "operator_initials": "JM"
-    }
-    model_z = LogEntryCreate(**payload_z)
-    assert model_z.dtg == "281015Z JUL 26"
-
-    # Valid BST entry (A)
-    payload_a = {
-        "dtg": "302120A JUL 26",
-        "from_call_sign": "R11",
-        "to_call_sign": "CONTROL",
-        "precedence": "ROUTINE",
-        "event_text": "REPORT RECEIVED OVER",
-        "operator_initials": "JM"
-    }
-    model_a = LogEntryCreate(**payload_a)
-    assert model_a.dtg == "302120A JUL 26"
-
-    # Invalid DTG
-    bad_payload = {**payload_z, "dtg": "281015 JUL 26"}
-    with pytest.raises(ValidationError):
-        LogEntryCreate(**bad_payload)
-
-    # Invalid precedence
-    bad_precedence = {**payload_z, "precedence": "URGENT"}
-    with pytest.raises(ValidationError):
-        LogEntryCreate(**bad_precedence)
 
 
 def test_database_persistence(db):
@@ -125,24 +90,6 @@ def test_database_persistence(db):
     stations = session.query(Station).filter_by(net_id=retrieved_net.id).all()
     assert len(stations) == 2
 
-    # Create LogEntry
-    log = LogEntry(
-        net_id=retrieved_net.id,
-        owner_station_id=st1.id,
-        dtg="281015Z JUL 26",
-        from_call_sign="CONTROL",
-        to_call_sign="A10",
-        precedence="ROUTINE",
-        event_text="TEST TRANSMISSION",
-        operator_initials="JM"
-    )
-    session.add(log)
-    session.commit()
-
-    retrieved_log = session.query(LogEntry).filter_by(net_id=retrieved_net.id).first()
-    assert retrieved_log is not None
-    assert retrieved_log.event_text == "TEST TRANSMISSION"
-
 
 def test_routing_endpoints(app, db):
     # pylint: disable=redefined-outer-name,unused-argument
@@ -156,18 +103,7 @@ def test_routing_endpoints(app, db):
     db.add(st)
     db.commit()
 
-    log = LogEntry(
-        net_id=session_obj.id,
-        owner_station_id=st.id,
-        dtg="281015Z JUL 26",
-        from_call_sign="R11",
-        to_call_sign="CONTROL",
-        precedence="ROUTINE",
-        event_text="CHECK RECEIVED OK",
-        operator_initials="JM"
-    )
-    db.add(log)
-    db.commit()
+
 
     # Test with Flask test client
     client = app.test_client()
@@ -183,19 +119,6 @@ def test_routing_endpoints(app, db):
     assert data['pin'] == 'R9Y2'
     assert len(data['roster']) == 1
     assert data['roster'][0]['nickname'] == 'User1'
-
-
-    # Logs endpoint
-    resp = client.get('/api/session/R9Y2/logs')
-    assert resp.status_code == 200
-    data = resp.json
-    assert data['pin'] == 'R9Y2'
-    assert len(data['logs']) == 1
-    assert data['logs'][0]['eventText'] == 'CHECK RECEIVED OK'
-
-    # Non-existent session logs
-    resp = client.get('/api/session/ZZZZ/logs')
-    assert resp.status_code == 404
 
     # Non-existent session roster
     resp = client.get('/api/session/ZZZZ/roster')

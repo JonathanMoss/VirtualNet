@@ -10,7 +10,6 @@ import { showAlert, showConfirm, showPrompt } from './dialog.js';
 import { SYSTEM_CONSTANTS } from './constants.js';
 import { RosterController } from './controllers/roster_controller.js';
 import { SunrayController } from './controllers/sunray_controller.js';
-import { LogsheetController } from './controllers/logsheet_controller.js';
 import { PTTController } from './controllers/ptt_controller.js';
 
 // Global exception & unhandled rejection handler to catch third-party browser extension errors
@@ -42,7 +41,6 @@ export class VirtualNetApp {
     // Modular Sub-Controllers
     this.rosterController = new RosterController(this);
     this.sunrayController = new SunrayController(this);
-    this.logsheetController = new LogsheetController(this);
     this.pttController = new PTTController(this);
 
     // Global session variables
@@ -91,7 +89,6 @@ export class VirtualNetApp {
     this.rosterController.setupFoldToggle();
     this.sunrayController.setupFoldToggle();
     this.sunrayController.setupSessionEndTrigger();
-    this.logsheetController.setupLogsheetTable();
 
     this.setupPTTMinimiseToggle();
     this.setupHeaderCollapseToggle();

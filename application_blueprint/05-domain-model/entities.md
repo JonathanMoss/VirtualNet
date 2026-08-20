@@ -81,30 +81,9 @@ Represents a voice transmission segment.
 
 ---
 
-## 4. LogEntry
+## 4. Logging Reference Card
 
-A single log row entered on an operator's logsheet.
-
-### Pydantic Schema: `LogEntrySchema`
-- `entry_id`: `uuid.UUID`
-- `dtg`: `str` (Constraint: matches DDHHMM[A-Z] MON YY format, e.g., `"302120A JUL 26"` or `"281015Z JUL 26"`)
-- `from_call_sign`: `str`
-- `to_call_sign`: `str`
-- `precedence`: `str` (Allowed: `"ROUTINE"`, `"PRIORITY"`, `"IMMEDIATE"`, `"FLASH"`)
-- `event_text`: `str` (Constraint: 1-255 chars, capitalized)
-- `operator_initials`: `str` (Constraint: 2-3 alphabetic characters, capitalized)
-
-### Database Columns: `log_entries` Table
-- `id`: `String(36)`, Primary Key (UUID)
-- `net_id`: `String(36)`, Foreign Key (`net_sessions.id`), Not Null
-- `owner_station_id`: `String(36)`, Foreign Key (`stations.id`), Not Null
-- `dtg`: `String(20)`, Not Null
-- `from_call_sign`: `String(15)`, Not Null
-- `to_call_sign`: `String(15)`, Not Null
-- `precedence`: `String(10)`, Not Null (default `"ROUTINE"`)
-- `event_text`: `String(255)`, Not Null
-- `operator_initials`: `String(3)`, Not Null
-- `created_at`: `DateTime`, Not Null
+Operators maintain physical paper logsheets during net operations. The application provides an in-app Logging Reference Card (`/static/images/LOGGING/LOGGING.png`) with pan and zoom capabilities displaying standard radio logging format, precedence rules, and DTG guidelines.
 
 ---
 

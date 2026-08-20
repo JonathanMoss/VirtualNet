@@ -62,5 +62,5 @@ You are provided with several reference documents you can use during your VP exe
 - Always wait for the channel to be clear (`IDLE`).
 - Hold PTT, pause, then speak.
 - End transmissions with **OVER** or **OUT**.
-- Keep any logsheet entries accurate and up to date.
+- Maintain physical paper logsheet entries accurately using the in-app LOGGING reference card.
 - Have fun!

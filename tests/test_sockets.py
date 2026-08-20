@@ -374,61 +374,6 @@ def test_audio_chunk_edge_cases(app, socket_client):
     assert len(socket_client.get_received()) == 0
 
 
-def test_sync_log_entry_draft_and_finalized_locking(app, socket_client):
-    # pylint: disable=redefined-outer-name
-    """Test log entry synchronization and finalized entry locking immutability."""
-    valid_pin = get_today_instructor_pin()
-    socket_client.emit('create_net', {'name': 'Log Net', 'callsign_indicator': 'L', 'instructor_pin': valid_pin})
-    pin = next(item for item in socket_client.get_received() if item['name'] == 'create_response')['args'][0]['pin']
-
-    # Student joins and gets callsign
-    student = socketio.test_client(app)
-    student.emit('join_net', {'pin': pin, 'nickname': 'LogStudent'})
-    join_resp = next(item for item in student.get_received() if item['name'] == 'join_response')['args'][0]
-    net_id = join_resp['netId']
-    station_id = join_resp['stationId']
-
-    # Unassigned station sync_log_entry -> fails
-    entry_payload = {
-        'entryId': 'log-001',
-        'dtg': '281015Z JUL 26',
-        'from_call_sign': 'L01',
-        'to_call_sign': 'CONTROL',
-        'precedence': 'ROUTINE',
-        'event_text': 'Draft message text',
-        'operator_initials': 'LS'
-    }
-    student.emit('sync_log_entry', {'netId': net_id, 'entry': entry_payload})
-    sync_unauth = next(item for item in student.get_received() if item['name'] == 'sync_response')['args'][0]
-    assert sync_unauth['success'] is False
-
-    # Assign callsign
-    socket_client.emit('join_net', {'pin': pin, 'nickname': 'LogInst', 'role': 'INSTRUCTOR'})
-    socket_client.get_received()
-    socket_client.emit('assign_callsign', {'stationId': station_id, 'callSign': '01'})
-    socket_client.get_received()
-    student.get_received()
-
-    # Invalid LogEntry validation failure
-    bad_payload = {**entry_payload, 'dtg': 'INVALID_DTG'}
-    student.emit('sync_log_entry', {'netId': net_id, 'entry': bad_payload})
-    sync_invalid = next(item for item in student.get_received() if item['name'] == 'sync_response')['args'][0]
-    assert sync_invalid['success'] is False
-
-    # Sync valid new entry (finalized with operator_initials = 'LS')
-    student.emit('sync_log_entry', {'netId': net_id, 'entry': entry_payload})
-    sync_ok = next(item for item in student.get_received() if item['name'] == 'sync_response')['args'][0]
-    assert sync_ok['success'] is True
-    assert sync_ok['entryId'] == 'log-001'
-
-    # Try modifying finalized/locked entry -> fails
-    modified_payload = {**entry_payload, 'event_text': 'Attempted edit after locking'}
-    student.emit('sync_log_entry', {'netId': net_id, 'entry': modified_payload})
-    sync_locked = next(item for item in student.get_received() if item['name'] == 'sync_response')['args'][0]
-    assert sync_locked['success'] is False
-    assert 'locked/finalized' in sync_locked['reason']
-
-    student.disconnect()
 
 
 def test_set_signal_quality(app, socket_client):
