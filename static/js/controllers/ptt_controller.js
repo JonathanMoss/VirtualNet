@@ -3,6 +3,7 @@ import { SYSTEM_CONSTANTS } from '../constants.js';
 export class PTTController {
   constructor(app) {
     this.app = app;
+    this.state = 'IDLE';
   }
 
   get isKeying() {
@@ -124,6 +125,7 @@ export class PTTController {
   }
 
   updatePTTCardState(state, detail = '') {
+    this.state = state;
     const container = document.getElementById('ptt-container');
     const stateText = document.getElementById('ptt-state-text');
     const instruction = document.getElementById('ptt-instruction');

@@ -627,9 +627,7 @@ export class VirtualNetApp {
 
   handlePTTReleased() {
     if (!this.isTransmitting && !this.isKeying) {
-      if (this.pttController && this.pttController.state === 'RECEIVING') {
-        this.updatePTTCardState('IDLE');
-      }
+      this.updatePTTCardState('IDLE');
     }
   }
 
