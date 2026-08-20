@@ -127,21 +127,42 @@ export class VirtualNetApp {
       });
     }
 
-    // 8. Check for saved session persistence and auto-reconnect
+    // 8. Setup copy PIN and share link
+    this.setupCopyPinAndShareLink();
+
+    // 9. Setup pre-fill settings from URL & localStorage
+    this.setupUrlQueryParamPreFill();
+    this.checkPreloadLastNetConfig();
+
+    // 10. Setup multi-tab session synchronization listener
+    this.setupStorageEventListener();
+
+    // 11. Check for saved session persistence and auto-reconnect
     const saved = this.loadSavedSession();
     if (saved && saved.pin && saved.nickname) {
-      console.log("Restoring active session from storage/cookie:", saved);
+      console.log("Restoring active session from storage:", saved);
       this.myNickname = saved.nickname;
       this.myRole = saved.role || SYSTEM_CONSTANTS.DEFAULT_ROLE;
       this.myStationId = saved.stationId || null;
-      this.socketManager.joinNet(saved.pin, saved.nickname, saved.role, saved.stationId);
+      this.lastInstructorPin = saved.instructorPin || null;
+      this.socketManager.joinNet(saved.pin, saved.nickname, saved.role, saved.stationId, saved.instructorPin);
     }
   }
 
-  saveSession(pin, nickname, role, stationId, callSign = null) {
+  saveSession(pin, nickname, role, stationId, callSign = null, instructorPin = null) {
     try {
-      const data = { pin, nickname, role, stationId, callSign, timestamp: Date.now() };
-      sessionStorage.setItem(SYSTEM_CONSTANTS.SESSION_STORAGE_KEY, JSON.stringify(data));
+      const todayUtc = new Date().toISOString().slice(0, 10);
+      const data = {
+        pin,
+        nickname,
+        role,
+        stationId,
+        callSign,
+        instructorPin,
+        createdDate: todayUtc,
+        timestamp: Date.now()
+      };
+      localStorage.setItem(SYSTEM_CONSTANTS.SESSION_STORAGE_KEY, JSON.stringify(data));
     } catch (e) {
       console.warn("Failed to save session credentials:", e);
     }
@@ -149,12 +170,21 @@ export class VirtualNetApp {
 
   loadSavedSession() {
     try {
-      const sessionStr = sessionStorage.getItem(SYSTEM_CONSTANTS.SESSION_STORAGE_KEY);
+      const sessionStr = localStorage.getItem(SYSTEM_CONSTANTS.SESSION_STORAGE_KEY);
       if (!sessionStr) return null;
       const data = JSON.parse(sessionStr);
       if (Date.now() - data.timestamp > SYSTEM_CONSTANTS.SESSION_MAX_AGE_MS) {
         this.clearSavedSession();
         return null;
+      }
+      // Daily 6-digit PIN validation for SUNRAY role
+      if (data.role === 'SUNRAY' || data.role === 'INSTRUCTOR' || data.role === 'CONTROL') {
+        const todayUtc = new Date().toISOString().slice(0, 10);
+        if (data.createdDate && data.createdDate !== todayUtc) {
+          console.warn("SUNRAY instructor PIN expired for today");
+          this.clearSavedSession();
+          return null;
+        }
       }
       return data;
     } catch (e) {
@@ -164,9 +194,106 @@ export class VirtualNetApp {
 
   clearSavedSession() {
     try {
-      sessionStorage.removeItem('virtualnet_session');
+      localStorage.removeItem(SYSTEM_CONSTANTS.SESSION_STORAGE_KEY);
     } catch (e) {
       // Ignored
+    }
+  }
+
+  setupStorageEventListener() {
+    window.addEventListener('storage', (e) => {
+      if (e.key === SYSTEM_CONSTANTS.SESSION_STORAGE_KEY && !e.newValue) {
+        console.log("Session cleared in another tab — resetting...");
+        this.clearSavedSession();
+        this.resetToLanding();
+        showAlert("Net session was ended or left in another tab.", { title: "SESSION ENDED", titleColor: "var(--color-hot-red)" });
+      }
+    });
+  }
+
+  setConnectionStatus(statusText, variant = 'success') {
+    const statusBadge = document.getElementById('header-connection-status');
+    if (statusBadge) {
+      statusBadge.textContent = statusText;
+      statusBadge.className = `badge bg-black border border-${variant} text-${variant} font-mono style-tiny ms-1`;
+    }
+  }
+
+  setupCopyPinAndShareLink() {
+    const btnCopyPin = document.getElementById('btn-copy-pin');
+    if (btnCopyPin) {
+      btnCopyPin.addEventListener('click', async () => {
+        if (!this.netPin) return;
+        const joinUrl = `${window.location.origin}/?pin=${this.netPin}`;
+        const copyText = `VirtualNet Session PIN: ${this.netPin}\nJoin URL: ${joinUrl}`;
+        try {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(copyText);
+          } else {
+            const ta = document.createElement('textarea');
+            ta.value = copyText;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+          }
+          const origText = btnCopyPin.textContent;
+          btnCopyPin.textContent = 'COPIED!';
+          btnCopyPin.classList.replace('btn-outline-secondary', 'btn-success');
+          setTimeout(() => {
+            btnCopyPin.textContent = origText;
+            btnCopyPin.classList.replace('btn-success', 'btn-outline-secondary');
+          }, 2000);
+        } catch (err) {
+          console.warn("Failed to copy PIN/link:", err);
+        }
+      });
+    }
+  }
+
+  setupUrlQueryParamPreFill() {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const pinParam = urlParams.get('pin');
+      if (pinParam) {
+        const joinPinEl = document.getElementById('join-pin');
+        if (joinPinEl) {
+          joinPinEl.value = pinParam.trim().toUpperCase();
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to parse URL params:", e);
+    }
+  }
+
+  saveLastNetConfig(name, sunrayCallsign) {
+    try {
+      localStorage.setItem('virtualnet_last_net_config', JSON.stringify({ name, sunrayCallsign }));
+    } catch (e) {
+      console.warn("Failed to save last net config:", e);
+    }
+  }
+
+  checkPreloadLastNetConfig() {
+    try {
+      const btnPreload = document.getElementById('btn-preload-last-net');
+      const savedConfig = localStorage.getItem('virtualnet_last_net_config');
+      if (btnPreload && savedConfig) {
+        btnPreload.classList.remove('d-none');
+        btnPreload.onclick = () => {
+          const config = JSON.parse(savedConfig);
+          if (config.name) {
+            const nameEl = document.getElementById('create-name');
+            if (nameEl) nameEl.value = config.name;
+          }
+          if (config.sunrayCallsign) {
+            const csEl = document.getElementById('create-sunray-callsign');
+            if (csEl) csEl.value = config.sunrayCallsign;
+          }
+        };
+      }
+    } catch (e) {
+      console.warn("Failed to load last net config:", e);
     }
   }
 
@@ -243,6 +370,8 @@ export class VirtualNetApp {
         await showAlert("Please fill in all Net Session fields.", { title: "INPUT REQUIRED" });
         return;
       }
+      this.lastInstructorPin = instructorPin;
+      this.saveLastNetConfig(name, sunrayCallsign);
       this.socketManager.createNet(name, instructorPin, sunrayCallsign);
     };
 
@@ -451,7 +580,8 @@ export class VirtualNetApp {
       this.netId = data.netId;
       this.netName = data.netName;
       this.netPin = data.pin;
-      this.saveSession(data.pin, this.myNickname, this.myRole, this.myStationId, this.myCallSign);
+      this.saveSession(data.pin, this.myNickname, this.myRole, this.myStationId, this.myCallSign, this.lastInstructorPin);
+      this.setConnectionStatus("CONNECTED", "success");
 
       const headerPinBadge = document.getElementById('header-net-pin');
       if (headerPinBadge) {
@@ -509,7 +639,7 @@ export class VirtualNetApp {
       this.clearSavedSession();
       this.resetToLanding();
       const reasonMsg = data.reason || "This net session has been closed or timed out.";
-      showAlert(`SESSION NO LONGER EXISTS: ${reasonMsg}`, { title: "SESSION NO LONGER EXISTS", titleColor: "var(--color-hot-red)" });
+      showAlert(`SESSION NO LONGER VALID: ${reasonMsg}`, { title: "SESSION NO LONGER VALID", titleColor: "var(--color-hot-red)" });
     }
   }
 

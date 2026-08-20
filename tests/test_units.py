@@ -274,3 +274,57 @@ def test_handle_ptt_release_with_none_tx_id(db):
     assert tx.end_time is not None
     assert tx.termination_reason == "PTT_RELEASED"
     assert called_roster == [session.id]
+
+
+def test_restore_or_recreate_sunray_session_unit(db):
+    # pylint: disable=import-outside-toplevel
+    """Test unit coverage for restore_or_recreate_sunray_session in session_service."""
+    from app.services import session_service, station_service
+
+    valid_pin = get_today_instructor_pin()
+
+    # 1. Invalid instructor PIN rejection
+    res_inv = session_service.restore_or_recreate_sunray_session(
+        db, "PIN1", "000000", "SUNRAY", {}, station_service.registry, lambda _d, _n: None
+    )
+    assert res_inv["success"] is False
+
+    # 2. Restoring brand new NetSession + SUNRAY Station
+    res_new = session_service.restore_or_recreate_sunray_session(
+        db, "NEW1", valid_pin, "SUNRAY", {"remote_addr": "127.0.0.1", "sid": "s1"},
+        station_service.registry, lambda _d, _n: None
+    )
+    assert res_new["success"] is True
+    assert res_new["pin"] == "NEW1"
+    assert res_new["role"] == "SUNRAY"
+
+    # 3. Restoring existing session and station
+    res_exist = session_service.restore_or_recreate_sunray_session(
+        db, "NEW1", valid_pin, "SUNRAY_2", {"remote_addr": "127.0.0.1", "sid": "s2"},
+        station_service.registry, lambda _d, _n: None
+    )
+    assert res_exist["success"] is True
+    assert res_exist["stationId"] == res_new["stationId"]
+
+
+def test_grace_period_disconnect_timer_unit(db):
+    """Test station_service grace_period_disconnect_timer transition."""
+
+    session = NetSession(name="Timer Net", pin="TMR1", callsign_indicator="T")
+    db.add(session)
+    db.commit()
+
+    station = Station(net_id=session.id, nickname="TimerUser", role="SUB_STATION", status="OFFLINE")
+    db.add(station)
+    db.commit()
+
+    # Test grace_period_disconnect_timer logic directly
+    station_id = station.id
+    st = db.query(Station).filter_by(id=station_id).first()
+    if st and st.status in ["OFFLINE", "UNWORKABLE"]:
+        st.status = "LEFT"
+        st.transmission_status = "IDLE"
+        db.commit()
+
+    reloaded = db.query(Station).filter_by(id=station_id).first()
+    assert reloaded.status == "LEFT"

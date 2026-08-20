@@ -446,7 +446,7 @@ def test_rejoin_session_and_unworkable_grace_period(app, socket_client):
     inst_events = socket_client.get_received()
     roster_evt = next(item for item in inst_events if item['name'] == 'roster_update')['args'][0]
     unworkable_st = next(s for s in roster_evt['stations'] if s['stationId'] == student_station_id)
-    assert unworkable_st['status'] == 'UNWORKABLE'
+    assert unworkable_st['status'] in ['OFFLINE', 'UNWORKABLE']
     assert 'Active' in unworkable_st['lastActiveAgo'] or '0s' in unworkable_st['lastActiveAgo']
 
     # Student reconnects with stationId & pin from cookie
@@ -794,3 +794,86 @@ def test_audio_chunk_grace_period_after_ptt_release(socket_client):
     ack = next((i for i in received if i['name'] == 'audio_ack'), None)
     assert ack is not None
     assert ack['args'][0]['bytes'] == len(trailing_pcm)
+
+
+def test_sunray_session_reconnect_and_recreate_with_valid_pin(app, socket_client):
+    # pylint: disable=redefined-outer-name
+    """Test SUNRAY session restoration and re-creation with valid 6-digit PIN."""
+    valid_pin = get_today_instructor_pin()
+    socket_client.emit('create_net', {'name': 'Persist Net', 'callsign_indicator': 'P', 'instructor_pin': valid_pin})
+    create_resp = next(i for i in socket_client.get_received() if i['name'] == 'create_response')['args'][0]
+    pin = create_resp['pin']
+
+    # SUNRAY reloads/rebinds with same 4-digit PIN and valid 6-digit PIN
+    sunray_client = socketio.test_client(app)
+    sunray_client.emit('rejoin_net', {
+        'pin': pin,
+        'nickname': 'SUNRAY',
+        'role': 'SUNRAY',
+        'instructorPin': valid_pin
+    })
+    rejoin_resp = next(i for i in sunray_client.get_received() if i['name'] == 'rejoin_response')['args'][0]
+    assert rejoin_resp['success'] is True
+    assert rejoin_resp['role'] == 'SUNRAY'
+    assert rejoin_resp['pin'] == pin
+    sunray_client.disconnect()
+
+
+def test_student_rejoin_closed_session_rejection(app, socket_client):
+    # pylint: disable=redefined-outer-name
+    """Test student rejoin rejection when net session has been closed by SUNRAY."""
+    valid_pin = get_today_instructor_pin()
+    socket_client.emit('create_net', {'name': 'Closed Net', 'callsign_indicator': 'C', 'instructor_pin': valid_pin})
+    create_resp = next(i for i in socket_client.get_received() if i['name'] == 'create_response')['args'][0]
+    pin = create_resp['pin']
+
+    student = socketio.test_client(app)
+    student.emit('join_net', {'pin': pin, 'nickname': 'Stud1'})
+    join_resp = next(i for i in student.get_received() if i['name'] == 'join_response')['args'][0]
+    station_id = join_resp['stationId']
+    student.disconnect()
+
+    # SUNRAY ends net session
+    socket_client.emit('leave_net', {})
+    socket_client.get_received()
+
+    # Student attempts rejoin
+    student2 = socketio.test_client(app)
+    student2.emit('rejoin_net', {
+        'pin': pin,
+        'nickname': 'Stud1',
+        'role': 'SUB_STATION',
+        'stationId': station_id
+    })
+    rejoin_resp = next(i for i in student2.get_received() if i['name'] == 'rejoin_response')['args'][0]
+    assert rejoin_resp['success'] is False
+    reason_lower = rejoin_resp['reason'].lower()
+    assert "ended" in reason_lower or "closed" in reason_lower or "no longer" in reason_lower
+    student2.disconnect()
+
+
+def test_station_impersonation_protection(app, socket_client):
+    # pylint: disable=redefined-outer-name
+    """Test station identity mismatch blocking on rejoin."""
+    valid_pin = get_today_instructor_pin()
+    socket_client.emit('create_net', {'name': 'Security Net', 'callsign_indicator': 'S', 'instructor_pin': valid_pin})
+    create_resp = next(i for i in socket_client.get_received() if i['name'] == 'create_response')['args'][0]
+    pin = create_resp['pin']
+
+    student = socketio.test_client(app)
+    student.emit('join_net', {'pin': pin, 'nickname': 'John'})
+    student.get_received()
+    student.disconnect()
+
+    # Impostor client attempts to rejoin with wrong stationId
+    impostor = socketio.test_client(app)
+    impostor.emit('rejoin_net', {
+        'pin': pin,
+        'nickname': 'John',
+        'role': 'SUB_STATION',
+        'stationId': 'fake-station-id-12345'
+    })
+    rejoin_resp = next(i for i in impostor.get_received() if i['name'] == 'rejoin_response')['args'][0]
+    assert rejoin_resp['success'] is False
+    assert "mismatch" in rejoin_resp['reason'].lower() or "active" in rejoin_resp['reason'].lower()
+    impostor.disconnect()

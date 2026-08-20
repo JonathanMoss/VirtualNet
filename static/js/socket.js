@@ -130,11 +130,15 @@ export class SocketManager {
     const saved = this.app.loadSavedSession();
     if (saved && saved.pin && saved.nickname && this.socket && this.socket.connected) {
       console.log("Emitting rejoin_net to rebind socket SID to station:", saved.stationId);
+      if (this.app.setConnectionStatus) {
+        this.app.setConnectionStatus("RECONNECTING...", "warning");
+      }
       this.socket.emit('rejoin_net', {
         pin: saved.pin,
         nickname: saved.nickname,
         role: saved.role || 'SUB_STATION',
-        stationId: saved.stationId || null
+        stationId: saved.stationId || null,
+        instructorPin: saved.instructorPin || null
       });
     }
   }
@@ -148,12 +152,12 @@ export class SocketManager {
     }
   }
 
-  joinNet(pin, nickname, role = 'SUB_STATION', stationId = null) {
-    this.socket.emit('join_net', { pin, nickname, role, stationId });
+  joinNet(pin, nickname, role = 'SUB_STATION', stationId = null, instructorPin = null) {
+    this.socket.emit('join_net', { pin, nickname, role, stationId, instructorPin });
   }
 
-  rejoinNet(pin, nickname, role = 'SUB_STATION', stationId = null) {
-    this.socket.emit('rejoin_net', { pin, nickname, role, stationId });
+  rejoinNet(pin, nickname, role = 'SUB_STATION', stationId = null, instructorPin = null) {
+    this.socket.emit('rejoin_net', { pin, nickname, role, stationId, instructorPin });
   }
 
   leaveNet() {

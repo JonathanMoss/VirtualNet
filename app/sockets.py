@@ -117,17 +117,35 @@ def handle_rejoin_net(data):
     role = data.get('role', 'SUB_STATION')
     provided_station_id = data.get('stationId')
 
+    instructor_pin = data.get('instructorPin')
+
     # Check for 60-minute expired SUNRAY sessions
     session_service.check_and_purge_expired_sessions(db, registry, transmission_service)
 
     session = db.query(session_service.NetSession).filter_by(pin=pin).first()
     if not session or session.status == "CLOSED":
-        emit('rejoin_response', {"success": False, "reason": "This net session has been closed or timed out."})
+        if role in ["SUNRAY", "CONTROL", "INSTRUCTOR"] and instructor_pin:
+            client_info = {"remote_addr": request.remote_addr, "sid": request.sid}
+            res = session_service.restore_or_recreate_sunray_session(
+                db, pin, instructor_pin, nickname, client_info, registry, broadcast_roster
+            )
+            emit('rejoin_response', res)
+            return
+
+        emit('rejoin_response', {
+            "success": False,
+            "reason": "This net session has been ended by SUNRAY or timed out."
+        })
         return
 
     station = station_service.find_existing_station(db, session.id, nickname, role, provided_station_id)
     if not station or station.status in ["LEFT", "DISCONNECTED"]:
         emit('rejoin_response', {"success": False, "reason": "Station session no longer active."})
+        return
+
+    # Station Identity / Impersonation Check
+    if provided_station_id and station.id != provided_station_id:
+        emit('rejoin_response', {"success": False, "reason": "Station identity mismatch."})
         return
 
     is_control = station.role in ["SUNRAY", "CONTROL", "INSTRUCTOR"]

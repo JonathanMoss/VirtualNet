@@ -88,5 +88,5 @@ The `Station` lifecycle governs the individual client's state and UI presentatio
 - **TRANSMITTING**: The user is holding PTT and successfully streaming voice audio to the server.
 - **RECEIVING**: Another station is transmitting; audio is playing back on the client, and PTT activation is blocked.
 - **OVERRIDDEN**: The station was cut off by CONTROL. Client plays an alert tone and disables mic capture.
-- **MUTED**: The station has been silenced by the instructor. They can listen but cannot transmit.
-- **DISCONNECTED**: Triggered if the student leaves, network drops, or the instructor clicks "End Net Session" (which resets their client to the landing page).
+- **OFFLINE**: Triggered when a student station closes their browser tab or temporarily loses socket connection. The station is kept in SUNRAY's roster as `OFFLINE` for a 60-second grace period. Re-opening the browser within 60s rebinds the station to `CONNECTED` / `IDLE`, preserving their callsign (`R11`). If expired, status transitions to `LEFT`.
+- **DISCONNECTED**: Triggered if the student leaves, 60s offline grace period expires, or the instructor clicks "End Net Session" (which resets their client to the landing page).
