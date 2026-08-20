@@ -145,10 +145,21 @@ h1, h2, h3, h4, h5, h6, .tactical-header {
 }
 
 /* Monospace & Tactical Tables */
+table,
+.table,
+.table-tactical,
+.table-responsive table {
+  text-align: left !important;
+}
+
+table th,
+table td,
 .table th,
 .table td,
 .table-tactical th,
-.table-tactical td {
+.table-tactical td,
+.table-responsive th,
+.table-responsive td {
   text-align: left !important;
 }
 
