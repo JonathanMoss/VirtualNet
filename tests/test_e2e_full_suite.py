@@ -213,7 +213,8 @@ def test_full_multi_user_net_workflow(browser_instance, target_url):
         time.sleep(0.5)
 
         page_stud.wait_for_selector("#ptt-container.ptt-card-idle", timeout=5000)
-        print("[E2E LOG] Step 4 Complete! PTT transmission verified.")
+        page_inst.wait_for_selector("#ptt-container.ptt-card-idle", timeout=5000)
+        print("[E2E LOG] Step 4 Complete! PTT transmission & receiver release verified.")
 
         # Step 5: Verify Transmission Log Record
         page_inst.wait_for_selector("#sunray-tx-log-tbody tr", timeout=5000)
@@ -789,6 +790,11 @@ def test_e2e_channel_busy_transmission_blocked(browser_instance, target_url):
 
         # Student 1 stops transmitting
         page_s1.evaluate("() => window.virtualNetApp.stopTransmission()")
+        time.sleep(0.5)
+
+        page_s1.wait_for_selector("#ptt-container.ptt-card-idle", timeout=5000)
+        page_s2.wait_for_selector("#ptt-container.ptt-card-idle", timeout=5000)
+        page_inst.wait_for_selector("#ptt-container.ptt-card-idle", timeout=5000)
 
     finally:
         context_inst.close()

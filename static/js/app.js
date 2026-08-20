@@ -625,6 +625,14 @@ export class VirtualNetApp {
     setTimeout(() => this.updatePTTCardState('IDLE'), 2000);
   }
 
+  handlePTTReleased() {
+    if (!this.isTransmitting && !this.isKeying) {
+      if (this.pttController && this.pttController.state === 'RECEIVING') {
+        this.updatePTTCardState('IDLE');
+      }
+    }
+  }
+
   handleRosterUpdate(stations) {
     this.rosterController.renderRoster(stations);
     this.sunrayController.renderInstructorRoster(stations);

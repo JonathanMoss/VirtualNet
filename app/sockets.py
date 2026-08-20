@@ -278,6 +278,11 @@ def handle_ptt_release(data):
     station = get_station_from_sid(db, request.sid)
     tx_id = data.get('transmissionId') if data else None
     transmission_service.handle_ptt_release(db, station, tx_id, request.sid, broadcast_roster)
+    if station:
+        emit('ptt_released', {
+            'stationId': station.id,
+            'callSign': station.call_sign
+        }, room=station.net_id)
 
 
 @socketio.on('audio_chunk')

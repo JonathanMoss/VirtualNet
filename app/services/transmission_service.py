@@ -171,11 +171,21 @@ def handle_ptt_release(db, station: Station, tx_id: str, sid: str, broadcast_ros
         return
 
     net_id = station.net_id
-    tx = db.query(Transmission).filter_by(id=tx_id, end_time=None).first()
-    if tx and tx.sender_call_sign == station.call_sign:
+    station.transmission_status = "IDLE"
+
+    tx = None
+    if tx_id:
+        tx = db.query(Transmission).filter_by(id=tx_id, end_time=None).first()
+    if not tx and station:
+        tx = db.query(Transmission).filter_by(station_id=station.id, end_time=None).first()
+
+    if tx:
         tx.end_time = datetime.utcnow()
         tx.termination_reason = "PTT_RELEASED"
-        station.transmission_status = "IDLE"
-        db.commit()
+
+    db.commit()
+
+    if tx:
         notify_sunray_transmission_log(db, net_id, tx)
-        broadcast_roster(db, net_id)
+
+    broadcast_roster(db, net_id)
