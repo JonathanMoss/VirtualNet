@@ -253,6 +253,12 @@ h1, h2, h3, h4, h5, h6, .tactical-header {
   border-width: 2px !important;
 }
 
+#ptt-state-text {
+  white-space: normal !important;
+  word-break: break-word !important;
+  overflow-wrap: break-word !important;
+}
+
 #ptt-container.minimised #ptt-state-text {
   font-size: 1rem !important;
 }
