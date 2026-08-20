@@ -210,3 +210,20 @@ def test_subcontroller_delegated_methods_exist():
         f"Found {len(missing_delegations)} missing sub-controller method delegation(s):\n"
         + "\n".join(f"  - {d}" for d in missing_delegations)
     )
+
+
+def test_ptt_state_text_wrapping_dom_contract():
+    """Verify transceiver_card.html and style.css contain wrapping rules for #ptt-state-text."""
+    card_html_path = BASE_DIR / "static" / "templates" / "cards" / "transceiver_card.html"
+    style_css_path = BASE_DIR / "static" / "css" / "style.css"
+
+    with open(card_html_path, "r", encoding="utf-8") as f:
+        card_content = f.read()
+
+    with open(style_css_path, "r", encoding="utf-8") as f:
+        css_content = f.read()
+
+    assert 'id="ptt-state-text"' in card_content
+    assert 'text-wrap' in card_content or 'text-break' in card_content
+    assert '#ptt-state-text' in css_content
+    assert 'white-space: normal' in css_content or 'word-break: break-word' in css_content

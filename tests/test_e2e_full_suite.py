@@ -203,6 +203,8 @@ def test_full_multi_user_net_workflow(browser_instance, target_url):
         # Assert Transmitting UI state on Student UI
         page_stud.wait_for_selector("#ptt-container.ptt-card-transmitting", timeout=5000)
         assert "TRANSMITTING" in page_stud.inner_text("#ptt-state-text")
+        white_space = page_stud.eval_on_selector("#ptt-state-text", "el => getComputedStyle(el).whiteSpace")
+        assert white_space in ["normal", "pre-wrap"], f"Expected wrapping white-space but got '{white_space}'"
 
         # Assert Receiving on Instructor UI
         page_inst.wait_for_selector("#ptt-container.ptt-card-receiving", timeout=5000)
@@ -938,31 +940,3 @@ def test_e2e_student_leave_net_session(browser_instance, target_url):
         context_stud.close()
         assert not errors_inst, f"Instructor trapped JS errors: {errors_inst}"
         assert not errors_stud, f"Student trapped JS errors: {errors_stud}"
-
-
-def test_e2e_mobile_viewport_ptt_text_wrapping(browser_instance, target_url):
-    """E2E Test: Verify PTT state text wraps on narrow mobile viewports and does not truncate."""
-    context = browser_instance.new_context(
-        viewport={"width": 375, "height": 667},
-        permissions=["microphone"]
-    )
-    page, errors = create_trapped_page(context)
-    try:
-        page.goto(target_url)
-        page.wait_for_selector("#landing-section:not(.d-none)")
-        page.click("#toggle-create-view")
-        page.fill("#create-name", "Mobile Wrap Net")
-        page.fill("#create-sunray-callsign", "0")
-        page.fill("#create-instructor-pin", get_today_instructor_pin())
-        page.click("#btn-create-net")
-        page.wait_for_selector("#dashboard-section:not(.d-none)")
-
-        page.evaluate("() => window.virtualNetApp.controllers.ptt.updatePTTCardState('TRANSMITTING')")
-        white_space = page.eval_on_selector("#ptt-state-text", "el => getComputedStyle(el).whiteSpace")
-        assert white_space in ["normal", "pre-wrap"], f"Expected wrapping white-space but got '{white_space}'"
-
-        text_content = page.inner_text("#ptt-state-text")
-        assert "TRANSMITTING" in text_content
-    finally:
-        context.close()
-        assert not errors, f"Trapped JS errors: {errors}"
