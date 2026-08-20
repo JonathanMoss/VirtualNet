@@ -1,34 +1,26 @@
 # VirtualNet — TODO List (Tasks for Tomorrow)
 
-## 📋 Resolved Tonight (Verified & Pushed to Remote)
+## 📋 Resolved (Verified & Pushed to Remote)
 - [x] **Socket.IO `handleCreateResponse` Fix**: Resolved missing handler exception on session creation.
 - [x] **Fold / Expand UI Controls Fix**: Restored fold/expand toggles and icon indicators across Roster, Sunray panel, PTT card, and Header details.
 - [x] **Awaiting Callsign Assignment Queue Fix**: Restored student entry rendering in assignment queue when panel is minimized.
 - [x] **PTT Keying & Spacebar Page Scroll Prevention**: Fixed spacebar <kbd>Space</kbd> keying so it no longer scrolls the page (`e.preventDefault()`).
 - [x] **Sunray Controller `handleSunrayTxLog` Fix**: Resolved missing method error on Sunray TX log updates.
-- [x] **Playwright Headless E2E Test Suite Container**: Created standalone `docker-compose.e2e.yml` and `tests/test_e2e_full_suite.py` covering all 6 core workflows and regressions.
+- [x] **Playwright Headless E2E Test Suite Container**: Created standalone `docker-compose.e2e.yml` and `tests/test_e2e_full_suite.py` covering all 10 core workflows and regressions.
+- [x] **Change Callsign Functionality & Header UI Button**: Added mid-session callsign modification trigger (`.btn-change-callsign`) and automatic indicator formatting (`app/sockets.py`).
+- [x] **Expired Session Cleanup & State Reset**: Implemented complete UI label and state teardown (`resetToLanding`) and `sessionStorage` wipe when sessions expire or close.
+- [x] **Session Persistence & Tab Refresh Auto-Rejoin**: Persisted assigned callsign in `sessionStorage` and restored net state automatically across page reloads and socket rebinds.
+- [x] **Instructor PIN Management Audit & In-Memory Caching**: Optimized `pin_service.py` with in-memory caching and filesystem mtime checks.
+- [x] **Gunicorn Worker Migration Audit**: Evaluated Eventlet worker compatibility and documented Gunicorn v26 migration pathway.
 
 ---
 
-## 🎯 High-Priority Tasks & Testing for Tomorrow
+## 🎯 Next Tasks & Manual Verification
 
-### 1. Callsign Management & UI Issues
-- [ ] **Change Callsign Functionality**: Investigate and fix "Change Callsign" feature not updating or re-assigning callsigns mid-session.
-
-### 2. Live Microphone & Real Audio Quality Testing
+### Live Microphone & Real Audio Quality Testing
 - [ ] **Physical Microphone Test**: Conduct manual voice tests across multiple physical devices (Desktop, Mobile/Tablet) to verify clear PCM audio playback.
 - [ ] **Audio Quality & VU Level Tuning**: Validate WebAudio DSP noise suppression, echo cancellation, and RMS VU meter visual accuracy during live transmissions.
 - [ ] **Network Latency & Jitter Resilience**: Test audio chunk streaming stability under simulated packet delay/jitter.
-
-### 3. Session Management & Reconnection Improvements
-- [ ] **Expired Session Cleanup**: If session no longer exists on server, client must wipe previous callsign and clear local session state (`sessionStorage`).
-- [ ] **Improve Session Management**: Enhance session state synchronization, auto-rejoin upon page refresh (`sessionStorage`), and active Net state recovery.
-- [ ] **Tab Refresh & Rejoin Test**: Verify seamless session persistence when refreshing active Net sessions or reopening closed browser tabs.
-- [ ] **Socket Reconnection Recovery**: Test client auto-reconnect, room re-subscription, and state synchronization following temporary server or Wi-Fi dropouts.
-
-### 3. Architecture & Infrastructure Maintenance
-- [ ] **Gunicorn Worker Migration**: Evaluate replacing deprecated Eventlet worker (`geventlet`) with Gevent or Gthread in `Dockerfile` ahead of Gunicorn v26 release.
-- [ ] **Instructor PIN Management Audit**: Review pin persistence and security in `app/instructor_pins.json`.
 
 ---
 

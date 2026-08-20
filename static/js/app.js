@@ -5,7 +5,7 @@ import { formatDTG } from './utils.js';
 import { ResourcesManager } from './resources.js';
 import { WebAudioEngine } from './audio.js';
 import { TelemetryManager } from './telemetry.js';
-import { showAlert, showConfirm } from './dialog.js';
+import { showAlert, showConfirm, showPrompt } from './dialog.js';
 
 import { SYSTEM_CONSTANTS } from './constants.js';
 import { RosterController } from './controllers/roster_controller.js';
@@ -99,7 +99,7 @@ export class VirtualNetApp {
     // 6. Connect Socket
     this.socketManager.connect();
 
-    // 7. Setup Leave Net button
+    // 7. Setup Leave Net & Change Callsign buttons
     const btnLeave = document.getElementById('btn-leave-net');
     if (btnLeave) {
       btnLeave.addEventListener('click', async () => {
@@ -116,6 +116,20 @@ export class VirtualNetApp {
       });
     }
 
+    const btnChangeCs = document.getElementById('btn-change-callsign');
+    if (btnChangeCs) {
+      btnChangeCs.addEventListener('click', async () => {
+        if (!this.myStationId) return;
+        const newCs = await showPrompt("Enter new Call Sign or Suffix for station:", this.myCallSign || '', {
+          title: "MODIFY CALLSIGN",
+          placeholder: "e.g. R11A"
+        });
+        if (newCs && newCs.trim() !== '') {
+          this.socketManager.assignCallsign(this.myStationId, newCs.trim().toUpperCase(), this.myRole);
+        }
+      });
+    }
+
     // 8. Check for saved session persistence and auto-reconnect
     const saved = this.loadSavedSession();
     if (saved && saved.pin && saved.nickname) {
@@ -127,9 +141,9 @@ export class VirtualNetApp {
     }
   }
 
-  saveSession(pin, nickname, role, stationId) {
+  saveSession(pin, nickname, role, stationId, callSign = null) {
     try {
-      const data = { pin, nickname, role, stationId, timestamp: Date.now() };
+      const data = { pin, nickname, role, stationId, callSign, timestamp: Date.now() };
       sessionStorage.setItem(SYSTEM_CONSTANTS.SESSION_STORAGE_KEY, JSON.stringify(data));
     } catch (e) {
       console.warn("Failed to save session credentials:", e);
@@ -399,7 +413,7 @@ export class VirtualNetApp {
       this.netName = data.netName;
       this.netPin = data.pin;
 
-      this.saveSession(data.pin, "SUNRAY", this.myRole, data.stationId);
+      this.saveSession(data.pin, "SUNRAY", this.myRole, data.stationId, this.myCallSign);
 
       document.getElementById('landing-section').classList.add('d-none');
       document.getElementById('dashboard-section').classList.remove('d-none');
@@ -420,6 +434,9 @@ export class VirtualNetApp {
       const headerCallsign = document.getElementById('header-callsign');
       if (headerCallsign) headerCallsign.textContent = `Callsign: ${this.myCallSign}`;
 
+      const btnChangeCs = document.getElementById('btn-change-callsign');
+      if (btnChangeCs) btnChangeCs.classList.remove('d-none');
+
       if (WebAudioEngine.isMediaCaptureSupported()) {
         const pttBtn = document.getElementById('ptt-btn');
         if (pttBtn) pttBtn.disabled = false;
@@ -437,7 +454,7 @@ export class VirtualNetApp {
       this.netId = data.netId;
       this.netName = data.netName;
       this.netPin = data.pin;
-      this.saveSession(data.pin, this.myNickname, this.myRole, this.myStationId);
+      this.saveSession(data.pin, this.myNickname, this.myRole, this.myStationId, this.myCallSign);
 
       const headerPinBadge = document.getElementById('header-net-pin');
       if (headerPinBadge) {
@@ -462,6 +479,8 @@ export class VirtualNetApp {
         if (lockOverlay) lockOverlay.classList.add('d-none');
         const headerCs = document.getElementById('header-callsign');
         if (headerCs) headerCs.textContent = `Callsign: ${this.myCallSign || '0'}`;
+        const btnChangeCs = document.getElementById('btn-change-callsign');
+        if (btnChangeCs) btnChangeCs.classList.remove('d-none');
 
         if (WebAudioEngine.isMediaCaptureSupported()) {
           const pttBtn = document.getElementById('ptt-btn');
@@ -476,6 +495,8 @@ export class VirtualNetApp {
         if (lockOverlay) lockOverlay.classList.add('d-none');
         const headerCs = document.getElementById('header-callsign');
         if (headerCs) headerCs.textContent = `Callsign: ${this.myCallSign}`;
+        const btnChangeCs = document.getElementById('btn-change-callsign');
+        if (btnChangeCs) btnChangeCs.classList.remove('d-none');
         if (WebAudioEngine.isMediaCaptureSupported()) {
           const pttBtn = document.getElementById('ptt-btn');
           if (pttBtn) pttBtn.disabled = false;
@@ -504,7 +525,7 @@ export class VirtualNetApp {
       this.netState = data.netSession.netState;
 
       if (this.netPin) {
-        this.saveSession(this.netPin, this.myNickname, this.myRole, this.myStationId);
+        this.saveSession(this.netPin, this.myNickname, this.myRole, this.myStationId, this.myCallSign);
       }
 
       const lockOverlay = document.getElementById('callsign-lock-overlay');
@@ -518,6 +539,9 @@ export class VirtualNetApp {
 
       const headerCs = document.getElementById('header-callsign');
       if (headerCs) headerCs.textContent = `Callsign: ${this.myCallSign}`;
+
+      const btnChangeCs = document.getElementById('btn-change-callsign');
+      if (btnChangeCs) btnChangeCs.classList.remove('d-none');
 
       if (document.activeElement && typeof document.activeElement.blur === 'function') {
         document.activeElement.blur();
@@ -606,6 +630,18 @@ export class VirtualNetApp {
     this.sunrayController.renderInstructorRoster(stations);
 
     if (stations && Array.isArray(stations)) {
+      const myStation = stations.find(s => s.id === this.myStationId || s.stationId === this.myStationId);
+      if (myStation && (myStation.callSign || myStation.call_sign)) {
+        const newCs = myStation.callSign || myStation.call_sign;
+        if (newCs && newCs !== 'AWAITING') {
+          this.myCallSign = newCs;
+          const headerCs = document.getElementById('header-callsign');
+          if (headerCs) headerCs.textContent = `Callsign: ${this.myCallSign}`;
+          const btnChangeCs = document.getElementById('btn-change-callsign');
+          if (btnChangeCs) btnChangeCs.classList.remove('d-none');
+        }
+      }
+
       const activeSpeaker = stations.find(s => (s.transmission_status === 'TRANSMITTING' || s.transmissionStatus === 'TRANSMITTING' || s.status === 'TALKING') && s.id !== this.myStationId);
       if (activeSpeaker) {
         this.updatePTTCardState('RECEIVING', activeSpeaker.call_sign || activeSpeaker.callSign || 'STATION');
@@ -641,14 +677,38 @@ export class VirtualNetApp {
     this.myCallSign = null;
     this.netPin = null;
 
-    document.getElementById('dashboard-section').classList.add('d-none');
-    document.getElementById('landing-section').classList.remove('d-none');
+    const dashSec = document.getElementById('dashboard-section');
+    if (dashSec) dashSec.classList.add('d-none');
+
+    const landSec = document.getElementById('landing-section');
+    if (landSec) landSec.classList.remove('d-none');
+
+    const instSec = document.getElementById('instructor-section');
+    if (instSec) instSec.classList.add('d-none');
+
+    const lockOverlay = document.getElementById('callsign-lock-overlay');
+    if (lockOverlay) lockOverlay.classList.add('d-none');
+
     const joinPin = document.getElementById('join-pin');
     if (joinPin) joinPin.value = '';
 
     const headerPinBadge = document.getElementById('header-net-pin');
-    if (headerPinBadge) {
-      headerPinBadge.textContent = 'PIN: ----';
+    if (headerPinBadge) headerPinBadge.textContent = 'PIN: ----';
+
+    const headerCallsign = document.getElementById('header-callsign');
+    if (headerCallsign) headerCallsign.textContent = 'Callsign: AWAITING';
+
+    const btnChangeCs = document.getElementById('btn-change-callsign');
+    if (btnChangeCs) btnChangeCs.classList.add('d-none');
+
+    const headerName = document.getElementById('header-net-name');
+    if (headerName) headerName.textContent = 'Net: -';
+
+    const pttBtn = document.getElementById('ptt-btn');
+    if (pttBtn) pttBtn.disabled = true;
+
+    if (this.pttController) {
+      this.updatePTTCardState('IDLE');
     }
   }
 }

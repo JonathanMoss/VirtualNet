@@ -199,8 +199,11 @@ def handle_assign_callsign(data):
 
     session = station.net_session
     cleaned_callsign = raw_callsign.strip()
-    if cleaned_callsign.isdigit():
-        cleaned_callsign = f"{session.callsign_indicator}{cleaned_callsign}"
+    if cleaned_callsign and cleaned_callsign != "0":
+        if cleaned_callsign.isdigit():
+            cleaned_callsign = f"{session.callsign_indicator}{cleaned_callsign}"
+        elif session.callsign_indicator and not cleaned_callsign.startswith(session.callsign_indicator):
+            cleaned_callsign = f"{session.callsign_indicator}{cleaned_callsign}"
 
     duplicate = db.query(Station).filter(
         Station.net_id == session.id,

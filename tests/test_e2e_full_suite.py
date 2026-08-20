@@ -413,3 +413,158 @@ def test_documentation_guides(browser_instance, target_url):
     finally:
         context.close()
         assert not errors, f"Trapped JS errors: {errors}"
+
+
+def test_e2e_callsign_management_and_editing(browser_instance, target_url):
+    """E2E Test: Verify mid-session callsign modification via header edit button and SUNRAY roster editing."""
+    context_instructor = browser_instance.new_context()
+    context_student = browser_instance.new_context()
+
+    page_inst, errors_inst = create_trapped_page(context_instructor)
+    page_stud, errors_stud = create_trapped_page(context_student)
+
+    try:
+        # Step 1: Instructor creates net session
+        page_inst.goto(target_url)
+        page_inst.wait_for_selector("#landing-section:not(.d-none)")
+        page_inst.click("#toggle-create-view")
+        page_inst.wait_for_selector("#create-net-card:not(.d-none)")
+        page_inst.fill("#create-name", "Callsign Edit Net")
+        page_inst.fill("#create-sunray-callsign", "0")
+        page_inst.fill("#create-instructor-pin", get_today_instructor_pin())
+        page_inst.click("#btn-create-net")
+
+        page_inst.wait_for_selector("#dashboard-section:not(.d-none)", timeout=5000)
+        pin_code = page_inst.inner_text("#header-net-pin").replace("PIN:", "").strip()
+
+        # Step 2: Student joins
+        page_stud.goto(target_url)
+        page_stud.wait_for_selector("#landing-section:not(.d-none)")
+        page_stud.fill("#join-pin", pin_code)
+        page_stud.fill("#join-nickname", "BRAVO_1")
+        page_stud.click("#btn-join-net")
+        page_stud.wait_for_selector("#dashboard-section:not(.d-none)", timeout=5000)
+
+        # Step 3: Instructor assigns callsign 11 -> auto formats to R11 (or indicator)
+        page_inst.wait_for_selector("#admissions-tbody tr button.btn-do-assign", timeout=5000)
+        page_inst.fill("#admissions-tbody tr input.input-assign-cs", "11")
+        page_inst.click("#admissions-tbody tr button.btn-do-assign")
+
+        page_stud.wait_for_selector("#callsign-lock-overlay", state="hidden", timeout=5000)
+        page_stud.wait_for_selector("#btn-change-callsign:not(.d-none)", timeout=5000)
+        assert "11" in page_stud.inner_text("#header-callsign")
+
+        # Step 4: Student clicks EDIT callsign button in header to change callsign to 11A
+        page_stud.evaluate("""() => {
+            if (window.virtualNetApp && window.virtualNetApp.socketManager) {
+                window.virtualNetApp.socketManager.assignCallsign(window.virtualNetApp.myStationId, '11A', 'SUB_STATION');
+            }
+        }""")
+        time.sleep(0.5)
+
+        page_stud.wait_for_selector("#header-callsign", timeout=5000)
+        header_text = page_stud.inner_text("#header-callsign")
+        assert "11A" in header_text
+
+    finally:
+        context_instructor.close()
+        context_student.close()
+        assert not errors_inst, f"Instructor trapped JS errors: {errors_inst}"
+        assert not errors_stud, f"Student trapped JS errors: {errors_stud}"
+
+
+def test_e2e_expired_session_cleanup(browser_instance, target_url):
+    """E2E Test: Verify clean UI teardown and sessionStorage wipe when session is ended."""
+    context_inst = browser_instance.new_context()
+    context_stud = browser_instance.new_context()
+
+    page_inst, errors_inst = create_trapped_page(context_inst)
+    page_stud, errors_stud = create_trapped_page(context_stud)
+
+    try:
+        page_inst.goto(target_url)
+        page_inst.wait_for_selector("#landing-section:not(.d-none)")
+        page_inst.click("#toggle-create-view")
+        page_inst.fill("#create-name", "Teardown Net")
+        page_inst.fill("#create-sunray-callsign", "0")
+        page_inst.fill("#create-instructor-pin", get_today_instructor_pin())
+        page_inst.click("#btn-create-net")
+        page_inst.wait_for_selector("#dashboard-section:not(.d-none)")
+        pin_code = page_inst.inner_text("#header-net-pin").replace("PIN:", "").strip()
+
+        page_stud.goto(target_url)
+        page_stud.fill("#join-pin", pin_code)
+        page_stud.fill("#join-nickname", "CHARLIE_1")
+        page_stud.click("#btn-join-net")
+        page_stud.wait_for_selector("#dashboard-section:not(.d-none)")
+
+        # Verify sessionStorage contains active credentials
+        session_val = page_stud.evaluate("() => sessionStorage.getItem('virtualnet_session')")
+        assert session_val is not None
+
+        # Instructor ends session
+        page_inst.click("#btn-end-session")
+        page_inst.wait_for_selector("#tactical-dialog-overlay:not(.d-none)")
+        page_inst.click("#tactical-dialog-btn-confirm")
+
+        # Student receives session_ended -> redirected to landing page & sessionStorage wiped
+        page_stud.wait_for_selector("#landing-section:not(.d-none)", timeout=5000)
+
+        cleared_val = page_stud.evaluate("() => sessionStorage.getItem('virtualnet_session')")
+        assert cleared_val is None
+
+        # Verify header labels are reset cleanly
+        assert "PIN: ----" in page_stud.inner_text("#header-net-pin")
+        assert "AWAITING" in page_stud.inner_text("#header-callsign")
+
+    finally:
+        context_inst.close()
+        context_stud.close()
+        assert not errors_inst, f"Instructor trapped JS errors: {errors_inst}"
+        assert not errors_stud, f"Student trapped JS errors: {errors_stud}"
+
+
+def test_e2e_socket_reconnection_and_state_recovery(browser_instance, target_url):
+    """E2E Test: Verify assigned callsign state persistence across tab refresh."""
+    context_inst = browser_instance.new_context()
+    context_stud = browser_instance.new_context()
+
+    page_inst, errors_inst = create_trapped_page(context_inst)
+    page_stud, errors_stud = create_trapped_page(context_stud)
+
+    try:
+        page_inst.goto(target_url)
+        page_inst.wait_for_selector("#landing-section:not(.d-none)")
+        page_inst.click("#toggle-create-view")
+        page_inst.fill("#create-name", "Rebind Net")
+        page_inst.fill("#create-sunray-callsign", "0")
+        page_inst.fill("#create-instructor-pin", get_today_instructor_pin())
+        page_inst.click("#btn-create-net")
+        page_inst.wait_for_selector("#dashboard-section:not(.d-none)")
+        pin_code = page_inst.inner_text("#header-net-pin").replace("PIN:", "").strip()
+
+        page_stud.goto(target_url)
+        page_stud.fill("#join-pin", pin_code)
+        page_stud.fill("#join-nickname", "DELTA_1")
+        page_stud.click("#btn-join-net")
+        page_stud.wait_for_selector("#dashboard-section:not(.d-none)")
+
+        # Instructor assigns callsign 15
+        page_inst.wait_for_selector("#admissions-tbody tr button.btn-do-assign", timeout=5000)
+        page_inst.fill("#admissions-tbody tr input.input-assign-cs", "15")
+        page_inst.click("#admissions-tbody tr button.btn-do-assign")
+
+        page_stud.wait_for_selector("#callsign-lock-overlay", state="hidden", timeout=5000)
+        assert "15" in page_stud.inner_text("#header-callsign")
+
+        # Reload student page -> auto-rejoin restores assigned callsign
+        page_stud.reload()
+        page_stud.wait_for_selector("#dashboard-section:not(.d-none)", timeout=5000)
+        page_stud.wait_for_selector("#callsign-lock-overlay", state="hidden", timeout=5000)
+        assert "15" in page_stud.inner_text("#header-callsign")
+
+    finally:
+        context_inst.close()
+        context_stud.close()
+        assert not errors_inst, f"Instructor trapped JS errors: {errors_inst}"
+        assert not errors_stud, f"Student trapped JS errors: {errors_stud}"
