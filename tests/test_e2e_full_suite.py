@@ -195,7 +195,7 @@ def test_full_multi_user_net_workflow(browser_instance, target_url):
             }
             if (window.virtualNetApp) window.virtualNetApp.startTransmission();
         }""")
-        time.sleep(2.0)
+        time.sleep(0.5)
 
         cls = page_stud.evaluate("() => document.getElementById('ptt-container').className")
         print(f"[E2E LOG] Step 4 Debug class: {cls}")
