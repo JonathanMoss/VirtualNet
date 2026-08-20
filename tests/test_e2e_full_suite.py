@@ -568,3 +568,152 @@ def test_e2e_socket_reconnection_and_state_recovery(browser_instance, target_url
         context_stud.close()
         assert not errors_inst, f"Instructor trapped JS errors: {errors_inst}"
         assert not errors_stud, f"Student trapped JS errors: {errors_stud}"
+
+
+def test_e2e_reference_resources_tabs_and_pan_zoom(browser_instance, target_url):
+    """E2E Test: Verify all resource sub-tabs, BATCO slider buttons, dropdown selects, and pan-zoom controls."""
+    context = browser_instance.new_context()
+    page, errors = create_trapped_page(context)
+
+    try:
+        page.goto(target_url)
+        page.wait_for_selector("#landing-section:not(.d-none)")
+        page.click("#toggle-create-view")
+        page.fill("#create-name", "Resources Net")
+        page.fill("#create-sunray-callsign", "0")
+        page.fill("#create-instructor-pin", get_today_instructor_pin())
+        page.click("#btn-create-net")
+        page.wait_for_selector("#dashboard-section:not(.d-none)")
+
+        # 1. BATCO SLIDER Tab - Click Up / Down buttons
+        page.click("#tab-batco-slider-link")
+        page.wait_for_selector("#tab-batco-slider.active")
+        assert page.is_visible("#btn-slider-up")
+        assert page.is_visible("#btn-slider-down")
+        page.click("#btn-slider-down")
+        page.click("#btn-slider-up")
+
+        # 2. BATCO TAB & Zoom buttons
+        page.click("#tab-batco-link")
+        page.wait_for_selector("#tab-batco.active")
+        page.click('#tab-batco button.btn-zoom-in[data-target="main-batco-img"]')
+        page.click('#tab-batco button.btn-zoom-out[data-target="main-batco-img"]')
+        page.click('#tab-batco button.btn-zoom-reset[data-target="main-batco-img"]')
+
+        # 3. VOCAB CARD TAB & Select dropdown
+        page.click("#tab-vocab-link")
+        page.wait_for_selector("#tab-vocab.active")
+        page.wait_for_selector("#main-vocab-select option")
+        page.select_option("#main-vocab-select", index=1)
+        page.click('#tab-vocab button.btn-zoom-in[data-target="main-vocab-img"]')
+        page.click('#tab-vocab button.btn-zoom-reset[data-target="main-vocab-img"]')
+
+        # 4. SLATE CARDS TAB & Select dropdown
+        page.click("#tab-slates-link")
+        page.wait_for_selector("#tab-slates.active")
+        page.select_option("#main-slate-select", "CONTACT")
+        page.click('#tab-slates button.btn-zoom-in[data-target="main-slate-img"]')
+        page.click('#tab-slates button.btn-zoom-reset[data-target="main-slate-img"]')
+
+    finally:
+        context.close()
+        assert not errors, f"Trapped JS errors: {errors}"
+
+
+def test_e2e_logsheet_row_deletion_and_export_modals(browser_instance, target_url):
+    """E2E Test: Verify logsheet row entry, row deletion, and JSON/TXT export triggers."""
+    context = browser_instance.new_context()
+    page, errors = create_trapped_page(context)
+
+    try:
+        page.goto(target_url)
+        page.wait_for_selector("#landing-section:not(.d-none)")
+        page.click("#toggle-create-view")
+        page.fill("#create-name", "Log Export Net")
+        page.fill("#create-sunray-callsign", "0")
+        page.fill("#create-instructor-pin", get_today_instructor_pin())
+        page.click("#btn-create-net")
+        page.wait_for_selector("#dashboard-section:not(.d-none)")
+
+        # Switch to LOGGING tab
+        page.click("#tab-logging-link")
+        page.wait_for_selector("#tab-logging.active")
+
+        # Add 2 log rows
+        page.click("#btn-add-log-row")
+        page.click("#btn-add-log-row")
+
+        rows = page.locator("#logsheet-tbody tr")
+        assert rows.count() >= 2
+
+        # Delete first row via × button
+        delete_btn = rows.first.locator("button.btn-delete-row")
+        delete_btn.click()
+
+        # Fill details in remaining row
+        remaining_row = page.locator("#logsheet-tbody tr").first
+        remaining_row.locator("input.log-from").fill("R11")
+        remaining_row.locator("input.log-to").fill("0")
+        remaining_row.locator("input.log-text").fill("SITREP 1 COMPLETE")
+        remaining_row.locator("input.log-initials").fill("JM")
+
+        # Trigger JSON & TXT exports
+        assert page.is_visible("#btn-export-log-json")
+        assert page.is_visible("#btn-export-log-txt")
+
+        page.click("#btn-export-log-json")
+        page.click("#btn-export-log-txt")
+
+    finally:
+        context.close()
+        assert not errors, f"Trapped JS errors: {errors}"
+
+
+def test_e2e_sunray_station_kick_and_queue_management(browser_instance, target_url):
+    """E2E Test: Verify SUNRAY roster editing, kick station trigger, and session kick response."""
+    context_inst = browser_instance.new_context()
+    context_stud = browser_instance.new_context()
+
+    page_inst, errors_inst = create_trapped_page(context_inst)
+    page_stud, errors_stud = create_trapped_page(context_stud)
+
+    try:
+        page_inst.goto(target_url)
+        page_inst.wait_for_selector("#landing-section:not(.d-none)")
+        page_inst.click("#toggle-create-view")
+        page_inst.fill("#create-name", "Kick Test Net")
+        page_inst.fill("#create-sunray-callsign", "0")
+        page_inst.fill("#create-instructor-pin", get_today_instructor_pin())
+        page_inst.click("#btn-create-net")
+        page_inst.wait_for_selector("#dashboard-section:not(.d-none)")
+        pin_code = page_inst.inner_text("#header-net-pin").replace("PIN:", "").strip()
+
+        page_stud.goto(target_url)
+        page_stud.fill("#join-pin", pin_code)
+        page_stud.fill("#join-nickname", "KICK_ME")
+        page_stud.click("#btn-join-net")
+        page_stud.wait_for_selector("#dashboard-section:not(.d-none)")
+
+        # Assign callsign R99
+        page_inst.wait_for_selector("#admissions-tbody tr button.btn-do-assign", timeout=5000)
+        page_inst.fill("#admissions-tbody tr input.input-assign-cs", "99")
+        page_inst.click("#admissions-tbody tr button.btn-do-assign")
+
+        page_stud.wait_for_selector("#callsign-lock-overlay", state="hidden", timeout=5000)
+
+        # Instructor clicks KICK on station R99 in instructor roster
+        page_inst.wait_for_selector("#instructor-roster-tbody tr button.btn-kick-st", timeout=5000)
+        page_inst.click("#instructor-roster-tbody tr button.btn-kick-st")
+
+        # Confirm kick dialog modal
+        page_inst.wait_for_selector("#tactical-dialog-overlay:not(.d-none)", timeout=3000)
+        page_inst.click("#tactical-dialog-btn-confirm")
+
+        # Student receives kicked event -> redirected to landing page
+        page_stud.wait_for_selector("#landing-section:not(.d-none)", timeout=5000)
+
+    finally:
+        context_inst.close()
+        context_stud.close()
+        assert not errors_inst, f"Instructor trapped JS errors: {errors_inst}"
+        assert not errors_stud, f"Student trapped JS errors: {errors_stud}"
