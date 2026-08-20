@@ -9,7 +9,6 @@ from app.services import (
     pin_service,
     station_service,
     transmission_service,
-    log_service,
     session_service,
 )
 
@@ -303,19 +302,6 @@ def handle_audio_chunk(data):
 
     emit('audio_chunk', data, room=net_id, include_self=False, binary=True)
     emit('audio_ack', {'bytes': len(data)})
-
-
-@socketio.on('sync_log_entry')
-def handle_sync_log_entry(data):
-    """Saves or updates a log entry row, enforcing finality/immutability constraints."""
-    db = get_db()
-    station = get_station_from_sid(db, request.sid)
-    net_id = data.get('netId')
-    entry_payload = data.get('entry', {})
-    entry_id = entry_payload.get('entryId')
-
-    res = log_service.sync_log_entry(db, station, net_id, entry_id, entry_payload)
-    emit('sync_response', res)
 
 
 @socketio.on('set_signal_quality')

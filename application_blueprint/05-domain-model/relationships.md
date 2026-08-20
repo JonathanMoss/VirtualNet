@@ -10,10 +10,7 @@ erDiagram
     NetSession ||--o{ Transmission : "records"
     NetSession ||--o{ InstructorInject : "schedules"
     
-    Station ||--|| RadioLog : "maintains"
     Station ||--o{ Transmission : "originates"
-    
-    RadioLog ||--o{ LogEntry : "contains"
 ```
 
 ---
@@ -43,13 +40,7 @@ erDiagram
   - Each `Station` maintaining active participation in the net (excluding "Ghost Mode" Instructors) maintains exactly one `RadioLog` for the session.
   - The `RadioLog` is owned by the station's call sign.
 
-### 5. RadioLog ↔ LogEntry (One-to-Many)
-- **Rules**:
-  - A `RadioLog` contains zero or more ordered `LogEntry` items.
-  - Entries are added sequentially by the operator.
-  - When a `Station` is disconnected, their local log entries are preserved locally on the client and optionally synced/uploaded to the server.
-
-### 6. Station ↔ Transmission (One-to-Many / Voice Broadcast)
+### 5. Station ↔ Transmission (One-to-Many / Voice Broadcast)
 - **Rules**:
   - A `Station` acts as the originator of zero or more `Transmission` events.
   - When a `Station` originates a `Transmission`, the audio stream is broadcast by the server to all other `Station` instances connected to that `NetSession` (except the originating station to prevent feedback).

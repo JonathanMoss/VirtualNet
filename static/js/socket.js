@@ -109,12 +109,6 @@ export class SocketManager {
       this.app.handleSunrayTxLog(data);
     });
 
-    this.socket.on('sync_response', (data) => {
-      if (!data.success) {
-        console.warn("Log entry failed to sync:", data.reason);
-      }
-    });
-
     this.socket.on('session_ended', () => {
       showAlert("This net session has been ended by SUNRAY.", { title: "SESSION ENDED", titleColor: "var(--color-hot-red)" });
       this.app.clearSavedSession();
@@ -198,22 +192,6 @@ export class SocketManager {
       }
       this.socket.volatile.emit('audio_chunk', binaryData);
     }
-  }
-
-  syncLogEntry(entry) {
-    this.socket.emit('sync_log_entry', {
-      netId: this.app.netId,
-      ownerCallSign: this.app.myCallSign,
-      entry: {
-        entryId: entry.id,
-        dtg: entry.dtg,
-        fromCallSign: entry.fromCallSign,
-        toCallSign: entry.toCallSign,
-        precedence: entry.precedence,
-        eventText: entry.eventText,
-        operatorInitials: entry.operatorInitials
-      }
-    });
   }
 
   setSignalQuality(stationId, signalQuality) {

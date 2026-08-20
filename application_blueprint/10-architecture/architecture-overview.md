@@ -62,12 +62,11 @@ Separates domain logic from WebSocket routing and request parsing:
 - **`pin_service.py`**: Manages daily instructor 6-digit PIN validation.
 - **`station_service.py`**: Manages station registrations, active socket registry (`StationSocketRegistry`), roster assembly, and 30-second disconnect grace periods.
 - **`transmission_service.py`**: Manages PTT lock acquisition, NCS CONTROL break-in override, transmission state transitions, and zero-DB audio routing fast paths.
-- **`log_service.py`**: Handles radio log sheet entry synchronization and enforces log entry finality/immutability constraints.
 - **`session_service.py`**: Handles net session creation, unique 4-character PIN generation, and session termination with ephemeral data purging.
 
 ### Pydantic Data Validation Layer (`schemas.py`)
 - Enforces runtime typing and validation schemas on all JSON communication payloads.
-- Converts raw incoming dictionary payloads into validated Python models (e.g., `NetSessionCreate`, `LogEntryCreate`).
+- Converts raw incoming dictionary payloads into validated Python models (e.g., `NetSessionCreate`, `StationCreate`).
 - Raises automatic serialization errors for invalid or malformed data packets.
 
 ### Zero-DB Audio Router (`transmission_service.py`)

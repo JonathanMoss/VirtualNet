@@ -5,7 +5,7 @@ from datetime import datetime
 from flask_socketio import join_room, leave_room
 from pydantic import ValidationError
 from app import socketio
-from app.models import NetSession, Station, InstructorInject, LogEntry, Transmission
+from app.models import NetSession, Station, InstructorInject, Transmission
 from app.schemas import NetSessionCreate
 from app.services.pin_service import verify_instructor_pin
 
@@ -93,7 +93,6 @@ def end_net_session_by_id(db, net_id: str, station_registry, transmission_servic
 
         # Ephemeral Purge
         db.query(InstructorInject).filter_by(net_id=net_id).delete()
-        db.query(LogEntry).filter_by(net_id=net_id).delete()
         db.query(Transmission).filter_by(net_id=net_id).delete()
         db.query(Station).filter_by(net_id=net_id).delete()
         db.delete(session)

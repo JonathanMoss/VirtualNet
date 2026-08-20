@@ -60,24 +60,9 @@ Triggered when Net Control cuts off an active sender.
 
 ---
 
-## 3. Log sheet & Sync Events
-
-### `LogEntrySyncedEvent`
-Triggered when a client pushes a new or updated log entry to the server.
-- **Payload**:
-  - `timestamp`: DateTime
-  - `stationCallSign`: String
-  - `entryId`: UUID
-  - `dtg`: String
-  - `fromCallSign`: String
-  - `toCallSign`: String
-  - `precedence`: String
-  - `eventText`: String
-  - `operatorInitials`: String
-
 ---
 
-## 4. Net Admin & Scenario Events
+## 3. Net Admin & Scenario Events
 
 ### `NetStateChangedEvent`
 Triggered when the global net state is updated.

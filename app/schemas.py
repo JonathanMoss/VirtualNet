@@ -108,68 +108,6 @@ class StationSchema(BaseModel):
     connected_at: datetime
 
 
-class LogEntryCreate(BaseModel):
-    """Validation schema for creating or updating a log sheet entry."""
-    # pylint: disable=too-few-public-methods
-    dtg: str
-    from_call_sign: str = Field(..., min_length=1, max_length=15)
-    to_call_sign: str = Field(..., min_length=1, max_length=15)
-    precedence: str
-    event_text: str = Field(..., min_length=1, max_length=255)
-    operator_initials: str = Field(..., min_length=2, max_length=3)
-
-    @field_validator('dtg')
-    @classmethod
-    def validate_dtg(cls, v: str) -> str:
-        """Validate DTG string format."""
-        v_upper = v.upper()
-        if not DTG_REGEX.match(v_upper):
-            raise ValueError("DTG must be in format DDHHMMZ MON YY (e.g. 281015Z JUL 26)")
-        return v_upper
-
-    @field_validator('precedence')
-    @classmethod
-    def validate_precedence(cls, v: str) -> str:
-        """Validate message precedence category."""
-        v_upper = v.upper()
-        if v_upper not in ["ROUTINE", "PRIORITY", "IMMEDIATE", "FLASH"]:
-            raise ValueError("Precedence must be one of ROUTINE, PRIORITY, IMMEDIATE, FLASH")
-        return v_upper
-
-    @field_validator('from_call_sign', 'to_call_sign')
-    @classmethod
-    def validate_callsigns(cls, v: str) -> str:
-        """Validate message call sign format."""
-        v_upper = v.upper()
-        if not re.match(r"^[A-Z0-9\-]+$", v_upper):
-            raise ValueError("Call sign must be alphanumeric/hyphens only")
-        return v_upper
-
-    @field_validator('operator_initials')
-    @classmethod
-    def validate_initials(cls, v: str) -> str:
-        """Validate operator initials format."""
-        v_upper = v.upper()
-        if not v_upper.isalpha():
-            raise ValueError("Operator initials must be alphabetic only")
-        return v_upper
-
-
-class LogEntrySchema(BaseModel):
-    """Response schema for a LogEntry instance."""
-    # pylint: disable=too-few-public-methods
-    model_config = ConfigDict(from_attributes=True)
-
-    id: str
-    net_id: str
-    owner_station_id: str
-    dtg: str
-    from_call_sign: str
-    to_call_sign: str
-    precedence: str
-    event_text: str
-    operator_initials: str
-    created_at: datetime
 
 
 class InstructorInjectSchema(BaseModel):

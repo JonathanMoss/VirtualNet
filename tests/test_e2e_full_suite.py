@@ -329,8 +329,8 @@ def test_fold_expand_ui_controls(browser_instance, target_url):
         assert not errors, f"Trapped JS errors: {errors}"
 
 
-def test_logsheet_grid_and_keyboard_shortcuts(browser_instance, target_url):
-    """Test radio logsheet table entry addition, cell input, keyboard navigation, and export modal."""
+def test_logging_reference_tab_and_zoom_controls(browser_instance, target_url):
+    """Test LOGGING reference card tab rendering and pan/zoom controls."""
     context = browser_instance.new_context()
     page, errors = create_trapped_page(context)
 
@@ -340,7 +340,7 @@ def test_logsheet_grid_and_keyboard_shortcuts(browser_instance, target_url):
         page.click("#toggle-create-view")
         page.wait_for_selector("#create-net-card:not(.d-none)")
 
-        page.fill("#create-name", "Logsheet Net")
+        page.fill("#create-name", "Logging Reference Net")
         page.fill("#create-sunray-callsign", "0")
         page.fill("#create-instructor-pin", get_today_instructor_pin())
         page.click("#btn-create-net")
@@ -351,20 +351,15 @@ def test_logsheet_grid_and_keyboard_shortcuts(browser_instance, target_url):
         page.click("#tab-logging-link")
         page.wait_for_selector("#tab-logging.active", timeout=3000)
 
-        # Add Entry
-        page.click("#btn-add-log-row")
-        page.wait_for_selector("#logsheet-tbody tr", timeout=3000)
+        # Verify image and zoom controls
+        assert page.is_visible("#main-logging-img")
+        img_src = page.get_attribute("#main-logging-img", "src")
+        assert "/static/images/LOGGING/LOGGING.png" in img_src
 
-        # Fill Row inputs
-        first_row = page.locator("#logsheet-tbody tr").first
-        first_row.locator("input.log-from").fill("R11")
-        first_row.locator("input.log-to").fill("0")
-        first_row.locator("input.log-text").fill("ROGER OUT")
-        first_row.locator("input.log-initials").fill("JM")
-
-        # Test Export Logsheet Buttons
-        assert page.is_visible("#btn-export-log-json")
-        assert page.is_visible("#btn-export-log-txt")
+        # Verify zoom controls
+        zoom_in_btn = page.locator("#tab-logging .btn-zoom-in")
+        assert zoom_in_btn.is_visible()
+        zoom_in_btn.click()
 
     finally:
         context.close()
@@ -636,8 +631,8 @@ def test_e2e_reference_resources_tabs_and_pan_zoom(browser_instance, target_url)
         assert not errors, f"Trapped JS errors: {errors}"
 
 
-def test_e2e_logsheet_row_deletion_and_export_modals(browser_instance, target_url):
-    """E2E Test: Verify logsheet row entry, row deletion, and JSON/TXT export triggers."""
+def test_e2e_logging_reference_image_tab(browser_instance, target_url):
+    """E2E Test: Verify LOGGING tab renders reference image card without log table inputs."""
     context = browser_instance.new_context()
     page, errors = create_trapped_page(context)
 
@@ -645,7 +640,7 @@ def test_e2e_logsheet_row_deletion_and_export_modals(browser_instance, target_ur
         page.goto(target_url)
         page.wait_for_selector("#landing-section:not(.d-none)")
         page.click("#toggle-create-view")
-        page.fill("#create-name", "Log Export Net")
+        page.fill("#create-name", "Logging Tab Net")
         page.fill("#create-sunray-callsign", "0")
         page.fill("#create-instructor-pin", get_today_instructor_pin())
         page.click("#btn-create-net")
@@ -655,30 +650,12 @@ def test_e2e_logsheet_row_deletion_and_export_modals(browser_instance, target_ur
         page.click("#tab-logging-link")
         page.wait_for_selector("#tab-logging.active")
 
-        # Add 2 log rows
-        page.click("#btn-add-log-row")
-        page.click("#btn-add-log-row")
+        # Verify no digital logsheet table exists
+        assert page.locator("#logsheet-tbody").count() == 0
+        assert page.locator("#btn-add-log-row").count() == 0
 
-        rows = page.locator("#logsheet-tbody tr")
-        assert rows.count() >= 2
-
-        # Delete first row via × button
-        delete_btn = rows.first.locator("button.btn-delete-row")
-        delete_btn.click()
-
-        # Fill details in remaining row
-        remaining_row = page.locator("#logsheet-tbody tr").first
-        remaining_row.locator("input.log-from").fill("R11")
-        remaining_row.locator("input.log-to").fill("0")
-        remaining_row.locator("input.log-text").fill("SITREP 1 COMPLETE")
-        remaining_row.locator("input.log-initials").fill("JM")
-
-        # Trigger JSON & TXT exports
-        assert page.is_visible("#btn-export-log-json")
-        assert page.is_visible("#btn-export-log-txt")
-
-        page.click("#btn-export-log-json")
-        page.click("#btn-export-log-txt")
+        # Verify logging reference card image is rendered
+        assert page.is_visible("#main-logging-img")
 
     finally:
         context.close()
