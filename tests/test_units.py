@@ -319,3 +319,35 @@ def test_guide_routes(app):
     assert res_invalid.status_code == 404
     assert b"404 - Guide Not Found" in res_invalid.data
     assert b"NOT FOUND" in res_invalid.data
+
+
+def test_handle_ptt_release_with_none_tx_id(db):
+    # pylint: disable=import-outside-toplevel
+    """Test handle_ptt_release when tx_id is None query falls back to sender_call_sign."""
+    from app.services import transmission_service
+
+    session = NetSession(name="PTT Release Net", pin="PR11", callsign_indicator="P")
+    db.add(session)
+    db.commit()
+
+    station = Station(
+        net_id=session.id, nickname="STUDENT1", role="SUB_STATION",
+        call_sign="P11", transmission_status="TRANSMITTING"
+    )
+    db.add(station)
+    db.commit()
+
+    tx = Transmission(net_id=session.id, sender_call_sign="P11")
+    db.add(tx)
+    db.commit()
+
+    called_roster = []
+    def dummy_broadcast(_db_inst, net_id):
+        called_roster.append(net_id)
+
+    transmission_service.handle_ptt_release(db, station, None, "dummy_sid", dummy_broadcast)
+
+    assert station.transmission_status == "IDLE"
+    assert tx.end_time is not None
+    assert tx.termination_reason == "PTT_RELEASED"
+    assert called_roster == [session.id]

@@ -176,8 +176,12 @@ def handle_ptt_release(db, station: Station, tx_id: str, sid: str, broadcast_ros
     tx = None
     if tx_id:
         tx = db.query(Transmission).filter_by(id=tx_id, end_time=None).first()
-    if not tx and station:
-        tx = db.query(Transmission).filter_by(station_id=station.id, end_time=None).first()
+    if not tx and station and station.call_sign:
+        tx = db.query(Transmission).filter_by(
+            sender_call_sign=station.call_sign,
+            net_id=net_id,
+            end_time=None
+        ).order_by(Transmission.start_time.desc()).first()
 
     if tx:
         tx.end_time = datetime.utcnow()
