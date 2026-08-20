@@ -191,6 +191,9 @@ export class PTTController {
         headerBadge.textContent = "STANDBY";
         headerBadge.className = "badge bg-secondary text-white ms-1";
       }
+      if (this.app && this.app.telemetryManager) {
+        this.app.telemetryManager.resetToIdle();
+      }
     }
   }
 

@@ -214,7 +214,19 @@ def test_full_multi_user_net_workflow(browser_instance, target_url):
 
         page_stud.wait_for_selector("#ptt-container.ptt-card-idle", timeout=5000)
         page_inst.wait_for_selector("#ptt-container.ptt-card-idle", timeout=5000)
-        print("[E2E LOG] Step 4 Complete! PTT transmission & receiver release verified.")
+
+        # Assert quality meter / VU meter and telemetry scale reset on idle
+        vu_active_stud = page_stud.locator("#vu-meter-bar .vu-segment.active").count()
+        vu_active_inst = page_inst.locator("#vu-meter-bar .vu-segment.active").count()
+        assert vu_active_stud == 0, f"Student VU meter active segments should be 0 on idle, got: {vu_active_stud}"
+        assert vu_active_inst == 0, f"Instructor VU meter active segments should be 0 on idle, got: {vu_active_inst}"
+
+        stats_stud = page_stud.inner_text("#telemetry-stats-text")
+        stats_inst = page_inst.inner_text("#telemetry-stats-text")
+        assert "STATUS:" in stats_stud, f"Student telemetry text should reset on idle, got: {stats_stud}"
+        assert "STATUS:" in stats_inst, f"Instructor telemetry text should reset on idle, got: {stats_inst}"
+
+        print("[E2E LOG] Step 4 Complete! PTT transmission & quality meter idle reset verified.")
 
         # Step 5: Verify Transmission Log Record
         page_inst.wait_for_selector("#sunray-tx-log-tbody tr", timeout=5000)
