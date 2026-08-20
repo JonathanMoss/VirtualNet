@@ -891,6 +891,11 @@ def test_e2e_sunray_breakin_channel_override(browser_instance, target_url):
 
         # SUNRAY releases PTT
         page_inst.evaluate("() => window.virtualNetApp.stopTransmission()")
+        page_stud.evaluate("() => { if (window.virtualNetApp) window.virtualNetApp.stopTransmission(); }")
+        time.sleep(0.5)
+
+        page_inst.wait_for_selector("#ptt-container.ptt-card-idle", timeout=5000)
+        page_stud.wait_for_selector("#ptt-container.ptt-card-idle", timeout=5000)
 
     finally:
         context_inst.close()
