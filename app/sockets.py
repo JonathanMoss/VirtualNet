@@ -4,7 +4,7 @@ from flask import request
 from flask_socketio import emit, join_room
 from app import socketio
 from app.database import get_db
-from app.models import Station
+from app.models import Station, NetSession
 from app.services import (
     pin_service,
     station_service,
@@ -198,15 +198,21 @@ def handle_assign_callsign(data):
         return
 
     session = station.net_session
-    cleaned_callsign = raw_callsign.strip()
-    if cleaned_callsign and cleaned_callsign != "0":
-        if cleaned_callsign.isdigit():
-            cleaned_callsign = f"{session.callsign_indicator}{cleaned_callsign}"
-        elif session.callsign_indicator and not cleaned_callsign.startswith(session.callsign_indicator):
-            cleaned_callsign = f"{session.callsign_indicator}{cleaned_callsign}"
+    if not session:
+        session = db.query(NetSession).filter_by(id=station.net_id).first()
 
+    cleaned_callsign = raw_callsign.strip()
+    if cleaned_callsign and cleaned_callsign != "0" and session:
+        indicator = getattr(session, 'callsign_indicator', '') or ''
+        if indicator:
+            if cleaned_callsign.isdigit():
+                cleaned_callsign = f"{indicator}{cleaned_callsign}"
+            elif not cleaned_callsign.startswith(indicator):
+                cleaned_callsign = f"{indicator}{cleaned_callsign}"
+
+    net_id = session.id if session else station.net_id
     duplicate = db.query(Station).filter(
-        Station.net_id == session.id,
+        Station.net_id == net_id,
         Station.call_sign == cleaned_callsign,
         Station.id != station_id,
         Station.status != "DISCONNECTED"

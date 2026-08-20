@@ -160,7 +160,8 @@ export class SunrayController {
     stations.forEach(st => {
       const tr = document.createElement('tr');
       tr.className = 'align-middle';
-      const isMe = st.id === this.app.myStationId ? ' <span class="text-warning small">(YOU)</span>' : '';
+      const targetId = st.id || st.stationId;
+      const isMe = targetId === this.app.myStationId ? ' <span class="text-warning small">(YOU)</span>' : '';
       const isSunrayRole = st.role === 'SUNRAY' || st.role === 'INSTRUCTOR' || st.role === 'CONTROL';
 
       tr.innerHTML = `
@@ -169,9 +170,9 @@ export class SunrayController {
         <td class="py-1"><span class="badge ${isSunrayRole ? 'bg-warning text-dark' : 'bg-secondary text-light'} py-0">${st.role}</span></td>
         <td class="py-1"><span class="badge ${st.status === 'TALKING' ? 'bg-danger text-white pulse-glow' : 'bg-success text-dark'} py-0">${st.status}</span></td>
         <td class="text-end py-1">
-          ${st.id !== this.app.myStationId ? `
-            <button type="button" class="btn btn-outline-info btn-sm py-0 me-1 btn-edit-cs" data-station-id="${st.id}" data-cs="${st.callSign || ''}">EDIT CS</button>
-            <button type="button" class="btn btn-outline-danger btn-sm py-0 btn-kick-st" data-station-id="${st.id}" data-nick="${st.nickname}">KICK</button>
+          ${targetId !== this.app.myStationId ? `
+            <button type="button" class="btn btn-outline-info btn-sm py-0 me-1 btn-edit-cs" data-station-id="${targetId}" data-cs="${st.callSign || ''}">EDIT CS</button>
+            <button type="button" class="btn btn-outline-danger btn-sm py-0 btn-kick-st" data-station-id="${targetId}" data-nick="${st.nickname}">KICK</button>
           ` : '<span class="text-muted small">N/A</span>'}
         </td>
       `;
@@ -184,7 +185,7 @@ export class SunrayController {
             placeholder: "e.g. R11A"
           });
           if (newCs && newCs.trim() !== '') {
-            this.app.socketManager.assignCallsign(st.id, newCs.trim().toUpperCase(), st.role);
+            this.app.socketManager.assignCallsign(targetId, newCs.trim().toUpperCase(), st.role);
           }
         });
       }
@@ -198,7 +199,7 @@ export class SunrayController {
             confirmClass: "btn btn-danger btn-sm"
           });
           if (confirmed) {
-            this.app.socketManager.kickStation(st.id);
+            this.app.socketManager.kickStation(targetId);
           }
         });
       }

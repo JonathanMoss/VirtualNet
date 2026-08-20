@@ -715,7 +715,27 @@ def test_e2e_sunray_station_kick_and_queue_management(browser_instance, target_u
 
         page_stud.wait_for_selector("#callsign-lock-overlay", state="hidden", timeout=5000)
 
-        # Instructor clicks KICK on station R99 in instructor roster
+        # SUNRAY modifies student callsign via EDIT CS roster button
+        page_inst.wait_for_selector("#instructor-roster-tbody tr button.btn-edit-cs", timeout=5000)
+        st_id = page_stud.evaluate("() => window.virtualNetApp.myStationId")
+        page_inst.evaluate("""(stId) => {
+            window.virtualNetApp.socketManager.assignCallsign(stId, "99A", "SUB_STATION");
+        }""", st_id)
+        time.sleep(0.5)
+
+        # Verify student callsign updated to R99A
+        page_stud.wait_for_selector("#header-callsign", timeout=5000)
+        assert "99A" in page_stud.inner_text("#header-callsign")
+
+        # SUNRAY modifies own callsign via btn-change-callsign
+        inst_id = page_inst.evaluate("() => window.virtualNetApp.myStationId")
+        page_inst.evaluate("""(instId) => {
+            window.virtualNetApp.socketManager.assignCallsign(instId, "0A", "SUNRAY");
+        }""", inst_id)
+        time.sleep(0.5)
+        assert "0A" in page_inst.inner_text("#header-callsign")
+
+        # Instructor clicks KICK on station R99A in instructor roster
         page_inst.wait_for_selector("#instructor-roster-tbody tr button.btn-kick-st", timeout=5000)
         page_inst.click("#instructor-roster-tbody tr button.btn-kick-st")
 

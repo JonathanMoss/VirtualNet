@@ -70,6 +70,7 @@ def broadcast_roster(db, net_id: str):
         last_active_str = "Active now" if seconds_ago < 5 else f"{seconds_ago}s ago"
 
         roster.append({
+            "id": s.id,
             "stationId": s.id,
             "callSign": s.call_sign if s.call_sign else "",
             "nickname": s.nickname,
