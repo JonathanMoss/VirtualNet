@@ -7,6 +7,7 @@ in a headless Chromium browser instance via Playwright, trapping any client-side
 console.error logs, uncaught exceptions, or unhandled promise rejections.
 """
 
+import os
 import socket
 import threading
 import time
@@ -33,7 +34,12 @@ def find_free_port() -> int:
 
 @pytest.fixture(scope="module")
 def live_server():
-    """Fixture that boots Flask app on an ephemeral port in a background thread."""
+    """Fixture that boots Flask app on an ephemeral port in a background thread or reuses E2E_BASE_URL."""
+    env_url = os.getenv("E2E_BASE_URL")
+    if env_url:
+        yield env_url, None
+        return
+
     port = find_free_port()
     app = create_app()
     app.config["TESTING"] = True

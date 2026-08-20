@@ -207,7 +207,7 @@ def test_join_net_error_cases(app, socket_client):
 
 
 def test_assign_callsign_error_cases(app, socket_client):
-    # pylint: disable=redefined-outer-name
+    # pylint: disable=redefined-outer-name,too-many-locals
     """Test unauthorized actions and duplicate errors in assign_callsign."""
     valid_pin = get_today_instructor_pin()
     # Setup net session
@@ -238,12 +238,27 @@ def test_assign_callsign_error_cases(app, socket_client):
     socket_client.get_received()
     student.get_received()
 
+    # Instructor modifies student callsign to new suffix
+    socket_client.emit('assign_callsign', {'stationId': student_id, 'callSign': 'A10A', 'role': 'SUB_STATION'})
+    recv = socket_client.get_received()
+    roster_ev = next((item for item in recv if item['name'] == 'roster_update'), None)
+    assert roster_ev is not None
+
+    # Instructor modifies own callsign
+    with app.app_context():
+        db = db_session()
+        inst_st = db.query(Station).filter_by(nickname='InstAssign').first()
+        target_id = inst_st.id if inst_st else student_id
+        socket_client.emit('assign_callsign', {'stationId': target_id, 'callSign': '0A', 'role': 'INSTRUCTOR'})
+        recv_inst = socket_client.get_received()
+        assert any(item['name'] == 'roster_update' for item in recv_inst)
+
     # Join student2 and try to assign duplicate callsign
     student2 = socketio.test_client(app)
     student2.emit('join_net', {'pin': pin, 'nickname': 'StudentY', 'role': 'SUB_STATION'})
     s2_id = next(item for item in student2.get_received() if item['name'] == 'join_response')['args'][0]['stationId']
 
-    socket_client.emit('assign_callsign', {'stationId': s2_id, 'callSign': '10'})
+    socket_client.emit('assign_callsign', {'stationId': s2_id, 'callSign': 'A10A'})
     err_dup = next(item for item in socket_client.get_received() if item['name'] == 'error')['args'][0]
     assert 'already assigned' in err_dup['reason']
 

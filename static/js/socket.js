@@ -89,6 +89,10 @@ export class SocketManager {
       this.app.handlePTTTimeout(data);
     });
 
+    this.socket.on('ptt_released', (data) => {
+      if (this.app.handlePTTReleased) this.app.handlePTTReleased(data);
+    });
+
     this.socket.on('audio_chunk', (data) => {
       console.log("[SOCKET-RX] Received 'audio_chunk' event from Socket.IO", data ? (data.byteLength || data.length) : 0, "bytes");
       // Decode binary chunk and play back
@@ -111,7 +115,7 @@ export class SocketManager {
       }
     });
 
-    this.socket.on('session_ended', (_data) => {
+    this.socket.on('session_ended', () => {
       showAlert("This net session has been ended by SUNRAY.", { title: "SESSION ENDED", titleColor: "var(--color-hot-red)" });
       this.app.clearSavedSession();
       this.app.resetToLanding();

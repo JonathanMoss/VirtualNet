@@ -5,9 +5,12 @@
       <span>SUNRAY CONTROL PANEL</span>
       <span id="sunray-queue-badge" class="badge bg-warning text-dark d-none">0 WAITING</span>
     </span>
-    <button id="btn-toggle-sunray-panel" class="btn btn-sm text-warning p-0 border-0 shadow-none" title="Toggle SUNRAY panel">
-      <span class="toggle-icon-sunray d-inline-block transition-transform">▼</span>
-    </button>
+    <div class="d-flex align-items-center gap-2">
+      <button id="btn-end-session" class="btn btn-outline-danger btn-sm py-0 font-weight-bold" aria-label="End Net Session">END SESSION</button>
+      <button id="btn-toggle-sunray-panel" class="btn btn-sm text-warning p-0 border-0 shadow-none" title="Toggle SUNRAY panel" aria-label="Toggle SUNRAY Control Panel">
+        <span class="toggle-icon-sunray d-inline-block transition-transform">▼</span>
+      </button>
+    </div>
   </div>
   <div id="sunray-collapse-body" class="card-body p-3 sunray-panel-body">
     <div class="row">

@@ -91,11 +91,12 @@ def get_session_logs(pin):
         return jsonify({"error": "Session not found"}), 404
 
     logs = db.query(LogEntry).filter_by(net_id=session.id).order_by(LogEntry.created_at.asc()).all()
+    stations = db.query(Station).filter_by(net_id=session.id).all()
+    station_map = {s.id: s for s in stations}
 
-    # Group logs by station for easy comparison
     logs_data = []
     for log in logs:
-        station = db.query(Station).filter_by(id=log.owner_station_id).first()
+        station = station_map.get(log.owner_station_id)
         logs_data.append({
             "id": log.id,
             "ownerCallSign": station.call_sign if station else "UNKNOWN",

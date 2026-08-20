@@ -75,7 +75,7 @@ export class TelemetryManager {
     this.updateStatsText();
   }
 
-  recordTxAck(_byteSize) {
+  recordTxAck() {
     this.txAcksReceived++;
     // Mark last sent chunk as ACKed
     for (let i = this.history.length - 1; i >= 0; i--) {
@@ -228,6 +228,49 @@ export class TelemetryManager {
     }, delayMs);
   }
 
+  resetToIdle() {
+    this.txChunksSent = 0;
+    this.txBytesSent = 0;
+    this.txAcksReceived = 0;
+    this.rxChunksReceived = 0;
+    this.rxChunksPlayed = 0;
+    this.rxBytesReceived = 0;
+    this.rxDropReasons = [];
+    this.history = [];
+
+    if (this.txTimerId) {
+      clearTimeout(this.txTimerId);
+      this.txTimerId = null;
+    }
+    if (this.rxTimerId) {
+      clearTimeout(this.rxTimerId);
+      this.rxTimerId = null;
+    }
+
+    if (this.vuSegments) {
+      this.vuSegments.forEach(s => s.classList.remove('active'));
+    }
+    const vuContainer = document.getElementById('vu-meter-bar');
+    if (vuContainer) vuContainer.style.display = 'none';
+
+    if (this.sparklineCtx && this.sparklineCanvas) {
+      const ctx = this.sparklineCtx;
+      const width = this.sparklineCanvas.width;
+      const height = this.sparklineCanvas.height;
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = '#040d07';
+      ctx.fillRect(0, 0, width, height);
+      ctx.strokeStyle = 'rgba(0, 255, 65, 0.12)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, height / 2);
+      ctx.lineTo(width, height / 2);
+      ctx.stroke();
+    }
+
+    this.updateStatsText();
+  }
+
   resetTxStats() {
     this.finishTxSession();
     this.startTxSession();
@@ -244,7 +287,7 @@ export class TelemetryManager {
     if (this.app.isTransmitting) {
       const ackPct = this.txChunksSent > 0 ? Math.round((this.txAcksReceived / this.txChunksSent) * 100) : 100;
       this.statsText.textContent = `TX: ${this.txAcksReceived}/${this.txChunksSent} ACK (${ackPct}%)`;
-    } else if (this.rxChunksReceived > 0) {
+    } else if (this.rxChunksReceived > 0 && this.app.pttController && this.app.pttController.state === 'RECEIVING') {
       const playedCount = this.history.filter(item => item.type === 'rx' && item.isPlayed).length;
       const playedPct = Math.round((playedCount / this.rxChunksReceived) * 100);
       this.statsText.textContent = `RX: ${playedCount}/${this.rxChunksReceived} Played (${playedPct}%)`;
@@ -309,6 +352,9 @@ export class TelemetryManager {
       });
     } else {
       if (vuContainer) vuContainer.style.display = 'none';
+      if (this.vuSegments) {
+        this.vuSegments.forEach(s => s.classList.remove('active'));
+      }
     }
   }
 
