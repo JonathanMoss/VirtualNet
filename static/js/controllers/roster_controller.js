@@ -90,7 +90,7 @@ export class RosterController {
         <div class="text-truncate me-2">
           ${roleBadge}
           <strong class="text-phosphor-green">${st.callSign || 'N/A'}</strong>
-          <span class="text-muted small">(${st.nickname})</span>${isMe}
+          <span class="text-desert-sand small">(${st.nickname || 'N/A'})</span>${isMe}
         </div>
         <span class="badge ${badgeClass} text-uppercase font-weight-bold" style="font-size: 0.75rem;">${statusText}</span>
       `;

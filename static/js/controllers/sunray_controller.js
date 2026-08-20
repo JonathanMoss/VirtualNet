@@ -166,7 +166,7 @@ export class SunrayController {
 
       tr.innerHTML = `
         <td class="text-start text-phosphor-green font-weight-bold py-1 me-1">${st.callSign || 'AWAITING'}</td>
-        <td class="text-start text-muted py-1">${st.nickname}${isMe}</td>
+        <td class="text-start text-light font-weight-bold py-1">${st.nickname || '-'}${isMe}</td>
         <td class="text-start py-1"><span class="badge ${isSunrayRole ? 'bg-warning text-dark' : 'bg-secondary text-light'} py-0">${st.role}</span></td>
         <td class="text-start py-1"><span class="badge ${st.status === 'TALKING' ? 'bg-danger text-white pulse-glow' : 'bg-success text-dark'} py-0">${st.status}</span></td>
         <td class="text-start py-1">
