@@ -93,19 +93,19 @@ export class SunrayController {
       const tr = document.createElement('tr');
       tr.className = 'align-middle';
       tr.innerHTML = `
-        <td class="text-phosphor-green font-weight-bold py-1">${item.nickname}</td>
-        <td class="py-1">
+        <td class="text-start text-phosphor-green font-weight-bold py-1">${item.nickname}</td>
+        <td class="text-start py-1">
           <input type="text" class="form-control form-control-sm text-uppercase input-assign-cs monospace py-0" 
                  placeholder="e.g. R11" maxlength="8" style="width: 90px;" value="${item.suggestedCallSign || ''}">
         </td>
-        <td class="py-1">
-          <select class="form-select form-select-sm select-assign-role monospace py-0" style="width: 130px;">
+        <td class="text-start py-1">
+          <select class="form-select form-select-sm select-assign-role monospace py-0" style="min-width: 165px; width: 100%;">
             <option value="SUB_STATION" ${item.role === 'SUB_STATION' ? 'selected' : ''}>SUB_STATION</option>
             <option value="CONTROL" ${item.role === 'CONTROL' ? 'selected' : ''}>CONTROL</option>
             <option value="INSTRUCTOR" ${item.role === 'INSTRUCTOR' ? 'selected' : ''}>INSTRUCTOR</option>
           </select>
         </td>
-        <td class="text-end py-1">
+        <td class="text-start py-1">
           <button type="button" class="btn btn-tactical btn-sm py-0 btn-do-assign" data-station-id="${stationId}">ASSIGN</button>
         </td>
       `;
@@ -165,11 +165,11 @@ export class SunrayController {
       const isSunrayRole = st.role === 'SUNRAY' || st.role === 'INSTRUCTOR' || st.role === 'CONTROL';
 
       tr.innerHTML = `
-        <td class="text-phosphor-green font-weight-bold py-1 me-1">${st.callSign || 'AWAITING'}</td>
-        <td class="text-muted py-1">${st.nickname}${isMe}</td>
-        <td class="py-1"><span class="badge ${isSunrayRole ? 'bg-warning text-dark' : 'bg-secondary text-light'} py-0">${st.role}</span></td>
-        <td class="py-1"><span class="badge ${st.status === 'TALKING' ? 'bg-danger text-white pulse-glow' : 'bg-success text-dark'} py-0">${st.status}</span></td>
-        <td class="text-end py-1">
+        <td class="text-start text-phosphor-green font-weight-bold py-1 me-1">${st.callSign || 'AWAITING'}</td>
+        <td class="text-start text-muted py-1">${st.nickname}${isMe}</td>
+        <td class="text-start py-1"><span class="badge ${isSunrayRole ? 'bg-warning text-dark' : 'bg-secondary text-light'} py-0">${st.role}</span></td>
+        <td class="text-start py-1"><span class="badge ${st.status === 'TALKING' ? 'bg-danger text-white pulse-glow' : 'bg-success text-dark'} py-0">${st.status}</span></td>
+        <td class="text-start py-1">
           ${targetId !== this.app.myStationId ? `
             <button type="button" class="btn btn-outline-info btn-sm py-0 me-1 btn-edit-cs" data-station-id="${targetId}" data-cs="${st.callSign || ''}">EDIT CS</button>
             <button type="button" class="btn btn-outline-danger btn-sm py-0 btn-kick-st" data-station-id="${targetId}" data-nick="${st.nickname}">KICK</button>
@@ -230,10 +230,10 @@ export class SunrayController {
         else if (tx.reason === 'OVERRIDDEN') statusClass = 'text-warning';
 
         tr.innerHTML = `
-          <td>${tx.dtg || '-'}</td>
-          <td class="font-weight-bold text-phosphor-green">${tx.callSign || '-'}</td>
-          <td>${tx.duration || '-'}</td>
-          <td class="${statusClass}">${tx.reason || 'COMPLETED'}</td>
+          <td class="text-start font-mono py-1">${tx.dtg || '-'}</td>
+          <td class="text-start font-weight-bold text-phosphor-green py-1">${tx.callSign || '-'}</td>
+          <td class="text-start font-mono py-1">${tx.duration || '-'}</td>
+          <td class="text-start ${statusClass} py-1">${tx.reason || 'COMPLETED'}</td>
         `;
         txLogTbody.appendChild(tr);
       });
@@ -256,10 +256,10 @@ export class SunrayController {
     else if (data.reason === 'OVERRIDDEN') statusClass = 'text-warning';
 
     tr.innerHTML = `
-      <td>${data.dtg || '-'}</td>
-      <td class="font-weight-bold text-phosphor-green">${data.callSign || '-'}</td>
-      <td>${data.duration || '-'}</td>
-      <td class="${statusClass}">${data.reason || 'COMPLETED'}</td>
+      <td class="text-start font-mono py-1">${data.dtg || '-'}</td>
+      <td class="text-start font-weight-bold text-phosphor-green py-1">${data.callSign || '-'}</td>
+      <td class="text-start font-mono py-1">${data.duration || '-'}</td>
+      <td class="text-start ${statusClass} py-1">${data.reason || 'COMPLETED'}</td>
     `;
     txLogTbody.insertBefore(tr, txLogTbody.firstChild);
   }

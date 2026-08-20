@@ -84,12 +84,12 @@ def broadcast_roster(db, net_id: str):
 
 
 def grace_period_disconnect_timer(station_id: str, net_id: str):
-    """Wait 30 seconds after socket disconnect; if station hasn't reconnected, mark LEFT."""
-    eventlet.sleep(30)
+    """Wait 60 seconds after socket disconnect; if station hasn't reconnected, mark LEFT."""
+    eventlet.sleep(60)
     db = get_db()
     try:
         station = db.query(Station).filter_by(id=station_id).first()
-        if station and station.status == "UNWORKABLE":
+        if station and station.status in ["OFFLINE", "UNWORKABLE"]:
             station.status = "LEFT"
             station.transmission_status = "IDLE"
             db.commit()
@@ -127,7 +127,7 @@ def process_station_disconnect(db, sid: str, transmission_service):
     transmission_service.unregister_transmitting_sid(sid)
     station = get_station_from_sid(db, sid)
     if station:
-        station_id, net_id = detach_station(db, station, "UNWORKABLE")
+        station_id, net_id = detach_station(db, station, "OFFLINE")
         registry.unregister_sid(sid)
         broadcast_roster(db, net_id)
         eventlet.spawn(grace_period_disconnect_timer, station_id, net_id)

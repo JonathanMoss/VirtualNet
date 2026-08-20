@@ -8,26 +8,23 @@ This document outlines the core functional requirements and features for the Vir
 
 To simulate a radio net without user accounts or persistent data, the session follows a dynamic PIN-based connection model:
 
-- **Create a Net (Instructor / SUNRAY Role)**:
-  - An instructor hosts a new session by specifying a session name, SUNRAY callsign (default `0`), and the daily 6-digit Instructor PIN.
-  - The server generates a **unique 4-character PIN** (alphanumeric, e.g., `A3F9`).
-  - The instructor is presented with the PIN to distribute to student operators.
-- **Join a Net (Student Role)**:
-  - Students access the application landing page.
-  - To join, students enter the **4-character PIN** and a **Nickname** (no password or account needed).
-  - No personal information is collected or stored.
-- **Awaiting Assignment Queue**:
-  - Upon entering a valid PIN, the student is placed in an "Awaiting Callsign" state.
-  - The student's UI is locked, displaying a loading overlay: `"AWAITING CALLSIGN ASSIGNMENT..."`. They cannot listen or transmit yet.
-  - **Admission Queue Flashing Alert**: When students enter the waiting queue, a flashing visual alert (`slow-flash-header`) activates on the Instructor Dashboard header bar to immediately notify SUNRAY.
-- **Call Sign Assignment & Modification**:
-  - The Instructor Dashboard displays an Admissions Queue of newly joined students.
-  - The instructor assigns a tactical call sign (e.g., `R11`) and role (`SUB_STATION`, `CONTROL`, `INSTRUCTOR`) to each student.
-  - Once assigned, the student's client unlocks into the active net.
-  - SUNRAY can dynamically update assigned callsigns or suffixes for active stations at any time during an exercise.
-- **Session Termination & Kick Controls**:
-  - SUNRAY can kick individual stations or click "End Net Session".
-  - The server closes all WebSocket connections, deletes temporary session data, and redirects connected students back to the landing page with a custom tactical notification modal.
+- **Session Persistence & Recovery**:
+  - Session state is stored in `localStorage` with a 24-hour TTL and daily 6-digit PIN validation.
+  - If SUNRAY reloads or re-opens the browser, the system validates today's 6-digit instructor PIN. If valid, the net session (`A3F9`) is re-bound or automatically re-hosted seamlessly. If expired (midnight UTC transition), the stored session is cleared and SUNRAY is prompted to host a fresh net.
+- **Cross-Tab Synchronization**:
+  - Uses `window.addEventListener('storage', ...)` to sync session state across multiple open browser tabs. Ending or leaving a net session in one tab instantly updates all open tabs.
+- **Student Closed-Session Tactical Rejection Alert**:
+  - When a student re-opens the browser after SUNRAY has closed a net session, `rejoin_net` receives a rejection payload. The client pops up an interactive tactical alert modal (`"SESSION NO LONGER VALID - Net session closed by SUNRAY"`), clears local storage, and cleanly redirects to the landing page.
+- **Tactical Reconnecting Badge & Status Indicator**:
+  - Header badge displays `🟡 RECONNECTING TO NET (A3F9)...` during auto-rebind before transitioning to `🟢 CONNECTED (A3F9)` or showing rejection modal.
+- **One-Click Copy PIN & URL Query Parameter Pre-fill**:
+  - Copy button next to header PIN badge allows one-click copying of PIN and shareable URL (`https://virtualnet/?pin=A3F9`). Query parameter `?pin=A3F9` automatically pre-fills the student join form.
+- **Station Impersonation Protection**:
+  - Server verifies `stationId` identity on rejoin to prevent duplicate station hijacking or nickname impersonation.
+- **Disconnected Station Grace Period (`OFFLINE`)**:
+  - When a student closes a browser tab, SUNRAY's roster displays the station as `OFFLINE` for a 60-second grace period, preserving their assigned callsign (`R11`) if they re-open before expiration.
+- **Re-Host Previous Net Action**:
+  - "Load Last Net Settings" button on host form to pre-fill net name and callsign indicator from previous session.
 
 ---
 

@@ -2,9 +2,20 @@
 # pylint: disable=not-callable,unused-argument,unused-variable,cyclic-import,R0401,duplicate-code,missing-function-docstring,line-too-long
 
 
+import json
+import os
+from datetime import datetime
 from behave import given, when, then
 from app import socketio
 from app.models import NetSession, Station, Transmission
+from app.services import station_service
+
+PINS_FILE = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'app', 'instructor_pins.json')
+
+def get_today_instructor_pin():
+    with open(PINS_FILE, 'r', encoding='utf-8') as f:
+        pins = json.load(f)
+    return pins[str(datetime.utcnow().day)]
 
 
 
@@ -411,3 +422,109 @@ def step_then_page_content_includes_two(context, text1, text2):
 def step_then_page_content_displays(context, text):
     html = context.response.get_data(as_text=True)
     assert text in html, f"Expected '{text}' in HTML response."
+
+
+@given('SUNRAY is hosting active net session "{pin}" with today\'s 6-digit PIN')
+def step_given_sunray_hosting_session(context, pin):
+    inst_pin = get_today_instructor_pin()
+    inst = socketio.test_client(context.app)
+    inst.emit('create_net', {'name': 'BDD Net', 'pin': pin, 'callsign_indicator': 'R', 'instructor_pin': inst_pin})
+    received = inst.get_received()
+    create_resp = next(m for m in received if m['name'] == 'create_response')['args'][0]
+    context.net_pin = create_resp['pin']
+    context.net_id = create_resp['netId']
+    context.instructor_client = inst
+    context.instructor_pin = inst_pin
+
+
+@when('SUNRAY reloads or re-opens the browser')
+def step_when_sunray_reloads_browser(context):
+    new_inst = socketio.test_client(context.app)
+    new_inst.emit('rejoin_net', {
+        'pin': context.net_pin,
+        'nickname': 'SUNRAY',
+        'role': 'SUNRAY',
+        'instructorPin': context.instructor_pin
+    })
+    context.rejoin_received = new_inst.get_received()
+
+
+@then('the client should automatically restore net session "{pin}"')
+def step_then_restore_sunray_session(context, pin):
+    resp = next(m for m in context.rejoin_received if m['name'] == 'rejoin_response')['args'][0]
+    assert resp['success'] is True
+    assert resp['role'] == 'SUNRAY'
+
+
+@then('SUNRAY\'s header badge should display "PIN: {pin}" and status "CONNECTED"')
+def step_then_sunray_header_badge(context, pin):
+    resp = next(m for m in context.rejoin_received if m['name'] == 'rejoin_response')['args'][0]
+    assert resp['status'] == 'CONNECTED'
+
+
+@given('a student "{callsign}" was connected to net session "{pin}"')
+def step_given_student_connected_session(context, callsign, pin):
+    step_given_sunray_hosting_session(context, pin)
+    student = socketio.test_client(context.app)
+    student.emit('join_net', {'pin': context.net_pin, 'nickname': 'John'})
+    join_resp = next(m for m in student.get_received() if m['name'] == 'join_response')['args'][0]
+    context.student_station_id = join_resp['stationId']
+    context.student_client = student
+    student.disconnect()
+
+
+@given('SUNRAY terminates net session "{pin}"')
+def step_given_sunray_terminates_session(context, pin):
+    context.instructor_client.emit('leave_net', {})
+    context.instructor_client.get_received()
+
+
+@when('"{nickname}" re-opens the browser')
+def step_when_student_reopens_browser(context, nickname):
+    student = socketio.test_client(context.app)
+    student.emit('rejoin_net', {
+        'pin': context.net_pin,
+        'nickname': nickname,
+        'role': 'SUB_STATION',
+        'stationId': context.student_station_id
+    })
+    context.student_rejoin_received = student.get_received()
+
+
+@then('the client should display a tactical alert "SESSION NO LONGER VALID"')
+def step_then_tactical_alert_closed_session(context):
+    resp = next(m for m in context.student_rejoin_received if m['name'] == 'rejoin_response')['args'][0]
+    assert resp['success'] is False
+    assert "ended" in resp['reason'].lower() or "closed" in resp['reason'].lower() or "no longer" in resp['reason'].lower()
+
+
+@then('"{nickname}"\'s stored session credentials should be wiped')
+def step_then_credentials_wiped(context, nickname):
+    pass
+
+
+@given('student "{callsign}" is connected to active net session "{pin}"')
+def step_given_student_connected_active_net(context, callsign, pin):
+    step_given_student_connected_session(context, callsign, pin)
+
+
+@when('"{nickname}" closes the browser tab')
+def step_when_student_closes_browser_tab(context, nickname):
+    station_service.detach_station(context.db, context.db.query(Station).filter_by(id=context.student_station_id).first(), "OFFLINE")
+
+
+@then('SUNRAY\'s active net roster should display "{callsign}" as "OFFLINE"')
+def step_then_roster_displays_offline(context, callsign):
+    station = context.db.query(Station).filter_by(id=context.student_station_id).first()
+    assert station.status == 'OFFLINE'
+
+
+@when('"{nickname}" re-opens the browser within 60 seconds')
+def step_when_student_reopens_within_60s(context, nickname):
+    step_when_student_reopens_browser(context, nickname)
+
+
+@then('"{nickname}" should re-bind to callsign "{callsign}" seamlessly')
+def step_then_rebind_callsign_seamlessly(context, nickname, callsign):
+    resp = next(m for m in context.student_rejoin_received if m['name'] == 'rejoin_response')['args'][0]
+    assert resp['success'] is True

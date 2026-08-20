@@ -63,3 +63,25 @@ Feature: VirtualNet Core Radio Net Operations
     Then the server should disconnect all connected sockets
     And the client UIs for "R11 (John)" and "H10 (Sarah)" should redirect to the "Join Net" landing page
     And all local active session variables should be wiped
+
+  Scenario: SUNRAY reloads or re-opens browser with active session
+    Given SUNRAY is hosting active net session "A3F9" with today's 6-digit PIN
+    When SUNRAY reloads or re-opens the browser
+    Then the client should automatically restore net session "A3F9"
+    And SUNRAY's header badge should display "PIN: A3F9" and status "CONNECTED"
+
+  Scenario: Student re-opens browser after SUNRAY terminates net session
+    Given a student "R11 (John)" was connected to net session "A3F9"
+    And SUNRAY terminates net session "A3F9"
+    When "John" re-opens the browser
+    Then the client should display a tactical alert "SESSION NO LONGER VALID"
+    And "John"'s stored session credentials should be wiped
+    And "John" should be redirected to the landing page
+
+  Scenario: Student closes tab and re-opens within 60 second roster grace period
+    Given student "R11 (John)" is connected to active net session "A3F9"
+    When "John" closes the browser tab
+    Then SUNRAY's active net roster should display "R11 (John)" as "OFFLINE"
+    When "John" re-opens the browser within 60 seconds
+    Then "John" should re-bind to callsign "R11" seamlessly
+

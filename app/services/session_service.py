@@ -1,3 +1,4 @@
+# pylint: disable=duplicate-code
 """Service module for managing net sessions creation, management, and termination."""
 import random
 import string
@@ -72,6 +73,76 @@ def create_net_session(db, data: dict, client_info: dict, station_registry, broa
         "role": "SUNRAY",
         "callSign": sunray_callsign,
         "status": "CONNECTED"
+    }
+
+
+def restore_or_recreate_sunray_session(db, pin: str, instructor_pin: str, nickname: str,
+                                       client_info: dict, station_registry, broadcast_roster):
+    # pylint: disable=too-many-arguments,too-many-positional-arguments
+    """Restore an existing or recreate an ended SUNRAY net session if today's 6-digit PIN is valid."""
+    if not verify_instructor_pin(instructor_pin):
+        return {"success": False, "reason": "Invalid or expired 6-digit Instructor PIN for today."}
+
+    remote_addr = client_info.get('remote_addr')
+    sid = client_info.get('sid')
+
+    # Look for existing NetSession by PIN
+    session = db.query(NetSession).filter_by(pin=pin.upper()).first()
+    if not session:
+        session = NetSession(
+            name=f"Net Session {pin.upper()}",
+            pin=pin.upper(),
+            callsign_indicator="R"
+        )
+        db.add(session)
+        db.flush()
+    else:
+        session.status = "OPEN"
+
+    sunray_callsign = f"{session.callsign_indicator}0" if session.callsign_indicator else "0"
+
+    station = db.query(Station).filter(
+        Station.net_id == session.id,
+        Station.role.in_(["SUNRAY", "CONTROL", "INSTRUCTOR"])
+    ).first()
+
+    if not station:
+        station = Station(
+            net_id=session.id,
+            nickname=nickname or "SUNRAY",
+            role="SUNRAY",
+            call_sign=sunray_callsign,
+            status="CONNECTED",
+            ip_address=remote_addr
+        )
+        db.add(station)
+    else:
+        station.status = "CONNECTED"
+        station.ip_address = remote_addr
+        station.last_seen = datetime.utcnow()
+
+    db.commit()
+
+    if sid:
+        station_registry.register(sid, station.id, session.id)
+        try:
+            join_room(session.id)
+        except (RuntimeError, KeyError, AttributeError):
+            pass
+
+    broadcast_roster(db, session.id)
+
+    return {
+        "success": True,
+        "stationId": station.id,
+        "status": "CONNECTED",
+        "callSign": station.call_sign,
+        "role": "SUNRAY",
+        "netId": session.id,
+        "netName": session.name,
+        "netState": session.net_state,
+        "callsignIndicator": session.callsign_indicator,
+        "pin": session.pin
     }
 
 

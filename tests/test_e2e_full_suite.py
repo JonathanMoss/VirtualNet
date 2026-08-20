@@ -1,4 +1,4 @@
-# pylint: disable=redefined-outer-name,too-many-statements,too-many-locals,duplicate-code
+# pylint: disable=redefined-outer-name,too-many-statements,too-many-locals,duplicate-code,too-many-lines
 """
 End-to-End (E2E) Headless Browser Test Suite for VirtualNet.
 
@@ -916,6 +916,127 @@ def test_e2e_student_leave_net_session(browser_instance, target_url):
         page_stud.wait_for_selector("#landing-section:not(.d-none)", timeout=5000)
         session_val = page_stud.evaluate("() => sessionStorage.getItem('virtualnet_session')")
         assert session_val is None
+
+    finally:
+        context_inst.close()
+        context_stud.close()
+        assert not errors_inst, f"Instructor trapped JS errors: {errors_inst}"
+        assert not errors_stud, f"Student trapped JS errors: {errors_stud}"
+
+
+def test_e2e_sunray_session_persistence_reload_and_reopen(browser_instance, target_url):
+    """E2E Test: Verify SUNRAY session persistence across browser reloads and context re-opens."""
+    context = browser_instance.new_context()
+    page, errors = create_trapped_page(context)
+
+    try:
+        page.goto(target_url)
+        page.click("#toggle-create-view")
+        page.fill("#create-name", "SUNRAY Persist Net")
+        page.fill("#create-sunray-callsign", "0")
+        page.fill("#create-instructor-pin", get_today_instructor_pin())
+        page.click("#btn-create-net")
+
+        page.wait_for_selector("#dashboard-section:not(.d-none)", timeout=5000)
+        pin_code = page.inner_text("#header-net-pin").replace("PIN:", "").strip()
+
+        # Reload page
+        page.reload()
+        page.wait_for_selector("#dashboard-section:not(.d-none)", timeout=5000)
+        reloaded_pin = page.inner_text("#header-net-pin").replace("PIN:", "").strip()
+        assert reloaded_pin == pin_code
+
+        # Open new page in same context (simulating tab re-open with localStorage)
+        page2 = context.new_page()
+        page2.goto(target_url)
+        page2.wait_for_selector("#dashboard-section:not(.d-none)", timeout=5000)
+        reopened_pin = page2.inner_text("#header-net-pin").replace("PIN:", "").strip()
+        assert reopened_pin == pin_code
+
+    finally:
+        context.close()
+        assert not errors, f"Trapped JS errors: {errors}"
+
+
+def test_e2e_student_closed_session_rejoin_alert(browser_instance, target_url):
+    """E2E Test: Verify student closed-session rejection alert modal and return to landing page."""
+    context_inst = browser_instance.new_context()
+    context_stud = browser_instance.new_context()
+
+    page_inst, errors_inst = create_trapped_page(context_inst)
+    page_stud, errors_stud = create_trapped_page(context_stud)
+    errors_stud2 = []
+
+    try:
+        page_inst.goto(target_url)
+        page_inst.click("#toggle-create-view")
+        page_inst.fill("#create-name", "Closed Session Test")
+        page_inst.fill("#create-sunray-callsign", "0")
+        page_inst.fill("#create-instructor-pin", get_today_instructor_pin())
+        page_inst.click("#btn-create-net")
+        page_inst.wait_for_selector("#dashboard-section:not(.d-none)")
+        pin_code = page_inst.inner_text("#header-net-pin").replace("PIN:", "").strip()
+
+        page_stud.goto(target_url)
+        page_stud.fill("#join-pin", pin_code)
+        page_stud.fill("#join-nickname", "STUD_CLOSE_1")
+        page_stud.click("#btn-join-net")
+        page_stud.wait_for_selector("#dashboard-section:not(.d-none)")
+
+        # Close student context
+        context_stud.close()
+
+        # SUNRAY ends net session
+        page_inst.click("#btn-leave-net")
+        page_inst.wait_for_selector("#tactical-dialog-overlay:not(.d-none)", timeout=3000)
+        page_inst.click("#tactical-dialog-btn-confirm")
+        page_inst.wait_for_selector("#landing-section:not(.d-none)")
+
+        # Student opens new browser context with saved localStorage
+        context_stud2 = browser_instance.new_context()
+        page_stud2, errors_stud2 = create_trapped_page(context_stud2)
+        page_stud2.goto(target_url)
+
+        # Student receives alert modal and returns to landing
+        page_stud2.wait_for_selector("#tactical-dialog-overlay:not(.d-none)", timeout=5000)
+        dialog_title = page_stud2.inner_text("#tactical-dialog-title")
+        assert "SESSION NO LONGER VALID" in dialog_title
+        page_stud2.click("#tactical-dialog-btn-confirm")
+        page_stud2.wait_for_selector("#landing-section:not(.d-none)")
+        context_stud2.close()
+
+    finally:
+        context_inst.close()
+        assert not errors_inst, f"Instructor trapped JS errors: {errors_inst}"
+        assert not errors_stud, f"Student trapped JS errors: {errors_stud}"
+        assert not errors_stud2, f"Student 2 trapped JS errors: {errors_stud2}"
+
+
+def test_e2e_copy_pin_and_url_prefill(browser_instance, target_url):
+    """E2E Test: Verify Copy PIN button and URL query parameter ?pin=A3F9 pre-fill."""
+    context_inst = browser_instance.new_context()
+    context_stud = browser_instance.new_context()
+
+    page_inst, errors_inst = create_trapped_page(context_inst)
+    page_stud, errors_stud = create_trapped_page(context_stud)
+
+    try:
+        page_inst.goto(target_url)
+        page_inst.click("#toggle-create-view")
+        page_inst.fill("#create-name", "Copy PIN Net")
+        page_inst.fill("#create-sunray-callsign", "0")
+        page_inst.fill("#create-instructor-pin", get_today_instructor_pin())
+        page_inst.click("#btn-create-net")
+        page_inst.wait_for_selector("#dashboard-section:not(.d-none)")
+
+        pin_code = page_inst.inner_text("#header-net-pin").replace("PIN:", "").strip()
+        assert page_inst.is_visible("#btn-copy-pin")
+
+        # Open student page with URL parameter ?pin=...
+        page_stud.goto(f"{target_url}?pin={pin_code}")
+        page_stud.wait_for_selector("#join-pin")
+        prefilled_pin = page_stud.input_value("#join-pin")
+        assert prefilled_pin == pin_code
 
     finally:
         context_inst.close()
