@@ -804,6 +804,9 @@ export class VirtualNetApp {
   }
 
   resetToLanding() {
+    if (this.audioEngine) {
+      this.audioEngine.stopAllRxSources();
+    }
     this.clearSavedSession();
     this.netId = null;
     this.myStationId = null;

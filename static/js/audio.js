@@ -414,7 +414,7 @@ export class WebAudioEngine {
     audioBuf.getChannelData(0).set(float32);
 
     const currentTime = this.audioContext.currentTime;
-    if (!this.nextStartTime || this.nextStartTime < currentTime || (this.nextStartTime - currentTime) > 0.15) {
+    if (!this.nextStartTime || this.nextStartTime < currentTime || (this.nextStartTime - currentTime) > 0.12) {
       this.nextStartTime = currentTime + 0.03; // Clamp jitter buffer to 30ms for real-time low latency
     }
 
@@ -423,6 +423,14 @@ export class WebAudioEngine {
     source.connect(this.voiceGainNode);
 
     if (!this.activeRxSources) this.activeRxSources = [];
+    
+    // Throttle queue: Stop oldest source if >6 sources are active to prevent CPU & AudioNode choking
+    if (this.activeRxSources.length > 6) {
+      const oldest = this.activeRxSources.shift();
+      if (oldest) {
+        try { oldest.stop(); oldest.disconnect(); } catch (e) {}
+      }
+    }
     this.activeRxSources.push(source);
 
     const chunkId = Symbol('rxChunk');
@@ -441,6 +449,17 @@ export class WebAudioEngine {
     source.start(this.nextStartTime);
     this.nextStartTime += audioBuf.duration;
     this.lastScheduledEndTime = this.nextStartTime;
+  }
+
+  stopAllRxSources() {
+    if (this.activeRxSources && this.activeRxSources.length > 0) {
+      this.activeRxSources.forEach(src => {
+        try { src.stop(); src.disconnect(); } catch (e) {}
+      });
+      this.activeRxSources = [];
+    }
+    this.nextStartTime = 0;
+    this.lastScheduledEndTime = 0;
   }
 
   getRemainingPlaybackMs() {

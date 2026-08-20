@@ -64,7 +64,8 @@ def register_transmitting_sid(sid: str, net_id: str):
 
 
 def get_audio_net_id(sid: str, station_registry=None):
-    """Get net ID for audio streaming using fast path O(1) lookup, 500ms grace window, or registry fallback."""
+    """Get net ID for audio streaming using fast path O(1) lookup or 500ms grace window."""
+    # pylint: disable=unused-argument
     if sid in transmitting_sids:
         return transmitting_sids[sid]
 
@@ -73,9 +74,6 @@ def get_audio_net_id(sid: str, station_registry=None):
         if time.time() < expiry:
             return net_id
         grace_sids.pop(sid, None)
-
-    if station_registry:
-        return station_registry.get_net_id(sid)
 
     return None
 
