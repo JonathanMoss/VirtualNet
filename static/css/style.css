@@ -144,7 +144,19 @@ h1, h2, h3, h4, h5, h6, .tactical-header {
   box-shadow: 0 0 12px rgba(255, 51, 51, 0.6);
 }
 
-/* Monospace Tables */
+/* Monospace & Tactical Tables */
+.table th,
+.table td,
+.table-tactical th,
+.table-tactical td {
+  text-align: left !important;
+}
+
+.select-assign-role {
+  min-width: 165px !important;
+  width: 100% !important;
+}
+
 .table-tactical {
   color: var(--color-desert-sand);
   border-color: var(--border-color-tactical);
