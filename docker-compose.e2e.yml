@@ -1,6 +1,7 @@
 services:
   redis:
     image: redis:7-alpine
+    stop_grace_period: 1s
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 3s
@@ -9,6 +10,7 @@ services:
 
   web-app:
     build: .
+    stop_grace_period: 1s
     depends_on:
       redis:
         condition: service_healthy
