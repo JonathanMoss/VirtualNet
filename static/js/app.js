@@ -772,8 +772,8 @@ export class VirtualNetApp {
     if (!this.isTransmitting && !this.isKeying) {
       this.updatePTTCardState('IDLE');
     }
-    if (this.currentRxTransmissionId && this.socketManager) {
-      this.socketManager.emitAudioRxPlaybackComplete(this.currentRxTransmissionId);
+    if (this.socketManager) {
+      this.socketManager.emitAudioRxPlaybackComplete(this.currentRxTransmissionId || null);
     }
   }
 

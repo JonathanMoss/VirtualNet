@@ -89,6 +89,12 @@ export class SocketManager {
       this.app.handlePTTTimeout(data);
     });
 
+    this.socket.on('transmission_started', (data) => {
+      if (data && data.transmissionId) {
+        this.app.currentRxTransmissionId = data.transmissionId;
+      }
+    });
+
     this.socket.on('ptt_released', (data) => {
       if (this.app.handlePTTReleased) this.app.handlePTTReleased(data);
     });

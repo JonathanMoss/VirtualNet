@@ -224,8 +224,8 @@ export class TelemetryManager {
         return;
       }
       this.logRxSummary();
-      if (this.app && this.app.socketManager && this.app.currentRxTransmissionId) {
-        this.app.socketManager.emitAudioRxPlaybackComplete(this.app.currentRxTransmissionId);
+      if (this.app && this.app.socketManager) {
+        this.app.socketManager.emitAudioRxPlaybackComplete(this.app.currentRxTransmissionId || null);
       }
       this.resetRxStatsState();
     }, delayMs);
