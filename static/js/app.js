@@ -229,27 +229,26 @@ export class VirtualNetApp {
       btnCopyPin.addEventListener('click', async () => {
         if (!this.netPin) return;
         const joinUrl = `${window.location.origin}/?pin=${this.netPin}`;
-        const copyText = `VirtualNet Session PIN: ${this.netPin}\nJoin URL: ${joinUrl}`;
         try {
           if (navigator.clipboard && navigator.clipboard.writeText) {
-            await navigator.clipboard.writeText(copyText);
+            await navigator.clipboard.writeText(joinUrl);
           } else {
             const ta = document.createElement('textarea');
-            ta.value = copyText;
+            ta.value = joinUrl;
             document.body.appendChild(ta);
             ta.select();
             document.execCommand('copy');
             document.body.removeChild(ta);
           }
           const origText = btnCopyPin.textContent;
-          btnCopyPin.textContent = 'COPIED!';
-          btnCopyPin.classList.replace('btn-outline-secondary', 'btn-success');
+          btnCopyPin.textContent = 'LINK COPIED!';
+          btnCopyPin.classList.replace('btn-outline-warning', 'btn-success');
           setTimeout(() => {
             btnCopyPin.textContent = origText;
-            btnCopyPin.classList.replace('btn-success', 'btn-outline-secondary');
+            btnCopyPin.classList.replace('btn-success', 'btn-outline-warning');
           }, 2000);
         } catch (err) {
-          console.warn("Failed to copy PIN/link:", err);
+          console.warn("Failed to copy join link:", err);
         }
       });
     }
@@ -552,6 +551,9 @@ export class VirtualNetApp {
       const lockOverlay = document.getElementById('callsign-lock-overlay');
       if (lockOverlay) lockOverlay.classList.add('d-none');
 
+      const shareRow = document.getElementById('row-sunray-share-link');
+      if (shareRow) shareRow.classList.remove('d-none');
+
       const headerPin = document.getElementById('header-net-pin');
       if (headerPin) headerPin.textContent = `PIN: ${data.pin}`;
 
@@ -608,9 +610,11 @@ export class VirtualNetApp {
       if (overlayNick) overlayNick.textContent = this.myNickname;
 
       const lockOverlay = document.getElementById('callsign-lock-overlay');
+      const shareRow = document.getElementById('row-sunray-share-link');
 
       if (this.myRole === 'SUNRAY' || this.myRole === 'CONTROL' || this.myRole === 'INSTRUCTOR') {
         if (lockOverlay) lockOverlay.classList.add('d-none');
+        if (shareRow) shareRow.classList.remove('d-none');
         const headerCs = document.getElementById('header-callsign');
         if (headerCs) headerCs.textContent = `Callsign: ${this.myCallSign || '0'}`;
         const btnChangeCs = document.getElementById('btn-change-callsign');
@@ -627,6 +631,7 @@ export class VirtualNetApp {
 
       } else if (data.status === 'CONNECTED' && data.callSign) {
         if (lockOverlay) lockOverlay.classList.add('d-none');
+        if (shareRow) shareRow.classList.add('d-none');
         const headerCs = document.getElementById('header-callsign');
         if (headerCs) headerCs.textContent = `Callsign: ${this.myCallSign}`;
         const btnChangeCs = document.getElementById('btn-change-callsign');
@@ -637,6 +642,7 @@ export class VirtualNetApp {
         }
       } else {
         if (lockOverlay) lockOverlay.classList.remove('d-none');
+        if (shareRow) shareRow.classList.add('d-none');
       }
     } else {
       console.warn("Join/Rejoin failed:", data.reason);
@@ -828,6 +834,9 @@ export class VirtualNetApp {
 
     const lockOverlay = document.getElementById('callsign-lock-overlay');
     if (lockOverlay) lockOverlay.classList.add('d-none');
+
+    const shareRow = document.getElementById('row-sunray-share-link');
+    if (shareRow) shareRow.classList.add('d-none');
 
     const joinPin = document.getElementById('join-pin');
     if (joinPin) joinPin.value = '';
