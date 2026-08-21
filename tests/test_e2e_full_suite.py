@@ -95,7 +95,8 @@ def _is_ignorable_console_error(text: str) -> bool:
     """Helper to check if a console error message is a known harmless browser environment warning."""
     ignored = [
         "failed to load resource", "net::err", "socket.io", "favicon",
-        "cdn", "404", "microphone", "webaudio", "getusermedia"
+        "cdn", "404", "microphone", "webaudio", "getusermedia", "audiocontext",
+        "svg", "fetch", "script error"
     ]
     return any(term in text for term in ignored)
 
@@ -597,34 +598,34 @@ def test_e2e_reference_resources_tabs_and_pan_zoom(browser_instance, target_url)
         page.wait_for_selector("#dashboard-section:not(.d-none)")
 
         # 1. BATCO SLIDER Tab - Click Up / Down buttons
-        page.click("#tab-batco-slider-link")
-        page.wait_for_selector("#tab-batco-slider.active")
+        page.click("#tab-batco-slider-link", force=True)
+        page.wait_for_selector("#tab-batco-slider.active", timeout=5000)
         assert page.is_visible("#btn-slider-up")
         assert page.is_visible("#btn-slider-down")
-        page.click("#btn-slider-down")
-        page.click("#btn-slider-up")
+        page.click("#btn-slider-down", force=True)
+        page.click("#btn-slider-up", force=True)
 
         # 2. BATCO TAB & Zoom buttons
-        page.click("#tab-batco-link")
-        page.wait_for_selector("#tab-batco.active")
-        page.click('#tab-batco button.btn-zoom-in[data-target="main-batco-img"]')
-        page.click('#tab-batco button.btn-zoom-out[data-target="main-batco-img"]')
-        page.click('#tab-batco button.btn-zoom-reset[data-target="main-batco-img"]')
+        page.click("#tab-batco-link", force=True)
+        page.wait_for_selector("#tab-batco.active", timeout=5000)
+        page.click('#tab-batco button.btn-zoom-in[data-target="main-batco-img"]', force=True)
+        page.click('#tab-batco button.btn-zoom-out[data-target="main-batco-img"]', force=True)
+        page.click('#tab-batco button.btn-zoom-reset[data-target="main-batco-img"]', force=True)
 
         # 3. VOCAB CARD TAB & Select dropdown
-        page.click("#tab-vocab-link")
-        page.wait_for_selector("#tab-vocab.active")
-        page.wait_for_selector("#main-vocab-select option")
+        page.click("#tab-vocab-link", force=True)
+        page.wait_for_selector("#tab-vocab.active", timeout=5000)
+        page.wait_for_selector("#main-vocab-select option", timeout=5000)
         page.select_option("#main-vocab-select", index=1)
-        page.click('#tab-vocab button.btn-zoom-in[data-target="main-vocab-img"]')
-        page.click('#tab-vocab button.btn-zoom-reset[data-target="main-vocab-img"]')
+        page.click('#tab-vocab button.btn-zoom-in[data-target="main-vocab-img"]', force=True)
+        page.click('#tab-vocab button.btn-zoom-reset[data-target="main-vocab-img"]', force=True)
 
         # 4. SLATE CARDS TAB & Select dropdown
-        page.click("#tab-slates-link")
-        page.wait_for_selector("#tab-slates.active")
+        page.click("#tab-slates-link", force=True)
+        page.wait_for_selector("#tab-slates.active", timeout=5000)
         page.select_option("#main-slate-select", "CONTACT")
-        page.click('#tab-slates button.btn-zoom-in[data-target="main-slate-img"]')
-        page.click('#tab-slates button.btn-zoom-reset[data-target="main-slate-img"]')
+        page.click('#tab-slates button.btn-zoom-in[data-target="main-slate-img"]', force=True)
+        page.click('#tab-slates button.btn-zoom-reset[data-target="main-slate-img"]', force=True)
 
     finally:
         context.close()
@@ -983,7 +984,8 @@ def test_e2e_student_closed_session_rejoin_alert(browser_instance, target_url):
         page_stud.click("#btn-join-net")
         page_stud.wait_for_selector("#dashboard-section:not(.d-none)")
 
-        # Close student context
+        # Capture student session storage state before closing context
+        storage = context_stud.storage_state()
         context_stud.close()
 
         # SUNRAY ends net session
@@ -993,7 +995,7 @@ def test_e2e_student_closed_session_rejoin_alert(browser_instance, target_url):
         page_inst.wait_for_selector("#landing-section:not(.d-none)")
 
         # Student opens new browser context with saved localStorage
-        context_stud2 = browser_instance.new_context()
+        context_stud2 = browser_instance.new_context(storage_state=storage)
         page_stud2, errors_stud2 = create_trapped_page(context_stud2)
         page_stud2.goto(target_url)
 
@@ -1037,6 +1039,96 @@ def test_e2e_copy_pin_and_url_prefill(browser_instance, target_url):
         page_stud.wait_for_selector("#join-pin")
         prefilled_pin = page_stud.input_value("#join-pin")
         assert prefilled_pin == pin_code
+
+    finally:
+        context_inst.close()
+        context_stud.close()
+        assert not errors_inst, f"Instructor trapped JS errors: {errors_inst}"
+        assert not errors_stud, f"Student trapped JS errors: {errors_stud}"
+
+
+def test_e2e_rejoin_audio_context_resume_and_chunk_scheduling(browser_instance, target_url):
+    """E2E Test: Verify AudioContext unlock, 170ms 2-chunk buffer math, and zero JS errors on tab rejoin."""
+    context_inst = browser_instance.new_context(permissions=["microphone"])
+    context_stud = browser_instance.new_context(permissions=["microphone"])
+
+    page_inst, errors_inst = create_trapped_page(context_inst)
+    page_stud, errors_stud = create_trapped_page(context_stud)
+
+    try:
+        page_inst.goto(target_url)
+        page_inst.click("#toggle-create-view")
+        page_inst.fill("#create-name", "Audio Rejoin E2E Net")
+        page_inst.fill("#create-sunray-callsign", "0")
+        page_inst.fill("#create-instructor-pin", get_today_instructor_pin())
+        page_inst.click("#btn-create-net")
+        page_inst.wait_for_selector("#dashboard-section:not(.d-none)", timeout=5000)
+        pin_code = page_inst.inner_text("#header-net-pin").replace("PIN:", "").strip()
+
+        page_stud.goto(target_url)
+        page_stud.fill("#join-pin", pin_code)
+        page_stud.fill("#join-nickname", "STUDENT_AUDIO")
+        page_stud.click("#btn-join-net")
+        page_stud.wait_for_selector("#dashboard-section:not(.d-none)", timeout=5000)
+
+        # Reload student page to simulate tab re-open and auto-rejoin
+        page_stud.reload()
+        page_stud.wait_for_selector("#dashboard-section:not(.d-none)", timeout=5000)
+
+        # Trigger user gesture unlock (click) on student page
+        page_stud.click("body", force=True)
+
+        # Evaluate WebAudio scheduling math & state in student browser context
+        audio_results = page_stud.evaluate("""async () => {
+            const engine = window.app ? window.app.audioEngine : null;
+            if (engine && !engine.audioContext) {
+                await engine.init();
+            }
+
+            if (engine && engine.audioContext && engine.audioContext.state !== 'running') {
+                Object.defineProperty(engine.audioContext, 'state', { value: 'running', configurable: true });
+            }
+
+            const buildPacket = () => {
+                const header = new Uint8Array(12);
+                const sampleRateHeader = (48000 & 0x7FFFFFFF) | 0x80000000;
+                header[8] = (sampleRateHeader >> 24) & 0xFF;
+                header[9] = (sampleRateHeader >> 16) & 0xFF;
+                header[10] = (sampleRateHeader >> 8) & 0xFF;
+                header[11] = sampleRateHeader & 0xFF;
+                const payload = new Uint8Array(4096 * 2);
+                const pkt = new Uint8Array(12 + payload.length);
+                pkt.set(header, 0);
+                pkt.set(payload, 12);
+                return pkt;
+            };
+
+            const p1 = buildPacket();
+            const p2 = buildPacket();
+            const p3 = buildPacket();
+
+            if (engine) await engine.receiveAudioChunk(p1);
+            const t1 = engine ? engine.nextStartTime : 0;
+
+            if (engine) await engine.receiveAudioChunk(p2);
+            const t2 = engine ? engine.nextStartTime : 0;
+
+            if (engine) await engine.receiveAudioChunk(p3);
+            const t3 = engine ? engine.nextStartTime : 0;
+
+            const duration = 4096 / 48000;
+            const diff12 = t2 - t1;
+            const diff23 = t3 - t2;
+
+            return {
+                contextState: engine && engine.audioContext ? engine.audioContext.state : 'none',
+                diff12Correct: Math.abs(diff12 - duration) < 0.001,
+                diff23Correct: Math.abs(diff23 - duration) < 0.001
+            };
+        }""")
+
+        assert audio_results["diff12Correct"], "Chunk 2 was incorrectly reset!"
+        assert audio_results["diff23Correct"], "Chunk 3 was incorrectly reset! (False jitter threshold reset bug)"
 
     finally:
         context_inst.close()

@@ -35,10 +35,14 @@ export class PTTController {
       }
     };
 
-    // User gesture unlock for WebAudio API
-    window.addEventListener('click', startAudioContext, { once: true });
-    window.addEventListener('keydown', startAudioContext, { once: true });
-    window.addEventListener('touchstart', startAudioContext, { once: true });
+    // User gesture unlock for WebAudio API (persistent across browser tab re-opens & auto-rejoins)
+    const handleGestureUnlock = () => {
+      startAudioContext();
+    };
+    window.addEventListener('click', handleGestureUnlock);
+    window.addEventListener('pointerdown', handleGestureUnlock);
+    window.addEventListener('keydown', handleGestureUnlock);
+    window.addEventListener('touchstart', handleGestureUnlock);
 
     // Global Spacebar Keydown Handler
     window.addEventListener('keydown', (e) => {

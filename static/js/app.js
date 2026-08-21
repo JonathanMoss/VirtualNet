@@ -58,6 +58,7 @@ export class VirtualNetApp {
     this.isTransmitting = false;
     this._isKeying = false;
     window.app = this;
+    window.virtualNetApp = this;
   }
 
   get isKeying() {
@@ -574,6 +575,9 @@ export class VirtualNetApp {
 
   handleJoinResponse(data) {
     if (data.success) {
+      if (this.audioEngine) {
+        this.audioEngine.stopAllRxSources();
+      }
       this.myStationId = data.stationId;
       this.myRole = data.role;
       this.myCallSign = data.callSign;

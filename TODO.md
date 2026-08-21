@@ -1,38 +1,63 @@
-# VirtualNet — TODO List (Tasks for Tomorrow)
+Implementation Plan: Fix Audio Buffer Overlap Choking & Suspended AudioContext Rejoin Degradation
+Problem Statement & Diagnosis
+When a student closes the browser tab and re-opens it to auto-rejoin an active session, attempting to transmit or receive audio results in garbled sound quality and buffer choking.
 
-## 📋 Resolved (Verified & Pushed to Remote)
-- [x] **Socket.IO `handleCreateResponse` Fix**: Resolved missing handler exception on session creation.
-- [x] **Fold / Expand UI Controls Fix**: Restored fold/expand toggles and icon indicators across Roster, Sunray panel, PTT card, and Header details.
-- [x] **Awaiting Callsign Assignment Queue Fix**: Restored student entry rendering in assignment queue when panel is minimized.
-- [x] **PTT Keying & Spacebar Page Scroll Prevention**: Fixed spacebar <kbd>Space</kbd> keying so it no longer scrolls the page (`e.preventDefault()`).
-- [x] **Sunray Controller `handleSunrayTxLog` Fix**: Resolved missing method error on Sunray TX log updates.
-- [x] **Playwright Headless E2E Test Suite Container**: Created standalone `docker-compose.e2e.yml` and 15 Playwright E2E test cases in `tests/test_e2e_full_suite.py` aligned 100% with `application_blueprint/` specifications (including Channel Busy blocking, SUNRAY Break-In Override, and Student Leave Net Session).
-- [x] **Change Callsign Functionality & Header UI Button**: Added mid-session callsign modification trigger (`.btn-change-callsign`) and automatic indicator formatting (`app/sockets.py`).
-- [x] **Expired Session Cleanup & State Reset**: Implemented complete UI label and state teardown (`resetToLanding`) and `sessionStorage` wipe when sessions expire or close.
-- [x] **Session Persistence & Tab Refresh Auto-Rejoin**: Persisted assigned callsign in `sessionStorage` and restored net state automatically across page reloads and socket rebinds.
-- [x] **Instructor PIN Management Audit & In-Memory Caching**: Optimized `pin_service.py` with in-memory caching and filesystem mtime checks.
-- [x] **Gunicorn Worker Migration Audit**: Evaluated Eventlet worker compatibility and documented Gunicorn v26 migration pathway.
-- [x] **Full 56-Test Suite Verification**: Verified all 56 unit, contract, DOM, route, socket, load, and E2E browser tests pass cleanly in container stack.
+Root Cause Analysis
+Is this a session issue? No. The backend session state, SQLite database, and Socket.IO SID re-registration are working correctly. The issue is in the WebAudio Engine scheduling math and browser AudioContext lifecycle upon rejoin:
 
----
+Jitter Threshold Mathematical Flaw (static/js/audio.js):
 
-## 🎯 Next Tasks & Manual Verification
+Each audio chunk transmitted is 4096 PCM samples (~85.3ms duration at 48kHz).
+Receiving 2 consecutive audio chunks creates a natural 170.6ms buffer queue (0.0853s * 2 = 0.1706s).
+In receiveAudioChunk(), the previous jitter check reset nextStartTime if (nextStartTime - currentTime) > 0.12 (120ms).
+Because 170.6ms is greater than 120ms, every 3rd audio chunk was being forcibly reset to currentTime + 0.03, causing 33% to 50% of all audio chunks to collide and play simultaneously over previous chunks, producing loud garbled distortion and audio choking.
+Suspended AudioContext State on Browser Re-open (static/js/audio.js & static/js/app.js):
 
-### Live Microphone & Real Audio Quality Testing
-- [ ] **Physical Microphone Test**: Conduct manual voice tests across multiple physical devices (Desktop, Mobile/Tablet) to verify clear PCM audio playback.
-- [ ] **Audio Quality & VU Level Tuning**: Validate WebAudio DSP noise suppression, echo cancellation, and RMS VU meter visual accuracy during live transmissions.
-- [ ] **Network Latency & Jitter Resilience**: Test audio chunk streaming stability under simulated packet delay/jitter.
+When a browser tab is re-opened, browser autoplay policies place AudioContext in 'suspended' state where audioContext.currentTime is frozen at 0.
+Audio chunks received while AudioContext is suspended were being scheduled at currentTime = 0. When the user later interacted with the UI, AudioContext.resume() completed, causing all accumulated chunks to explode simultaneously.
+User Review Required
+IMPORTANT
 
----
+The jitter buffer threshold will be adjusted to 400ms (0.40s), which accommodates normal 1 to 3 chunk network buffering (85ms–255ms) without triggering false resets, while still protecting against extreme network lag.
+Audio chunks received while AudioContext.state !== 'running' will be dropped immediately to prevent stale buffer bursts upon re-joining.
+Proposed Changes
+Frontend Audio Engine (static/js/audio.js)
+[MODIFY] 
+audio.js
+Update receiveAudioChunk():
+Check if (this.audioContext.state !== 'running'): Drop incoming chunk and reset this.nextStartTime = 0.
+Update jitter threshold check from 0.12 to 0.40 seconds:
+javascript
 
-## 🚀 Commands Quick Reference
-```bash
-# Run application stack locally for manual browser testing
-docker compose up -d
+if (!this.nextStartTime || this.nextStartTime < currentTime || (this.nextStartTime - currentTime) > 0.40) {
+  this.nextStartTime = currentTime + 0.03;
+}
+Update startRecording():
+Await this.audioContext.resume() prior to initializing media capture sources to ensure ScriptProcessor/AudioWorklet nodes execute on a running context.
+Application Controller (static/js/app.js)
+[MODIFY] 
+app.js
+In joinNetSuccess() (called on both fresh joins and auto-rejoins), call this.audioEngine.stopAllRxSources() to clear any leftover playback state.
+Ensure global unlock gesture listeners (click, pointerdown, keydown, touchstart) resume AudioContext on any interaction after re-opening the browser.
+Automated Tests (tests/js/audio_buffer.test.js)
+[MODIFY] 
+audio_buffer.test.js
+Add unit tests verifying:
+Audio chunk scheduling with 170ms 2-chunk buffer does not trigger false resets.
+Audio chunks are dropped when AudioContext state is suspended.
+Verification Plan
+Automated Tests
+Containerized Quality Gates (Includes Node.js Unit & Telemetry Tests, Pylint, ESLint, Behave BDD, Security Audits):
+bash
 
-# Run automated Playwright E2E suite
-docker compose -f docker-compose.e2e.yml run --rm e2e-test
+docker compose -f docker-compose.test.yml up --build --exit-code-from test
+Pytest Suite:
+bash
 
-# Run unit tests & static analysis battery
-docker compose -f docker-compose.test.yml run --rm test
-```
+pytest --ignore=tests/test_e2e_browser.py --cov=app --cov-fail-under=90
+Playwright E2E Suite:
+bash
+
+./run_e2e.sh
+Manual Verification
+Test student flow: Join net -> Close browser tab -> Re-open browser tab -> Auto-rejoin session -> Press PTT and transmit/receive audio to verify clean voice quality without choking or distortion.
