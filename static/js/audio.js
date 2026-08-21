@@ -215,7 +215,10 @@ export class WebAudioEngine {
     
     if (this.audioContext && (this.audioContext.state === 'suspended' || this.audioContext.state === 'interrupted')) {
       try {
-        await this.audioContext.resume();
+        await Promise.race([
+          this.audioContext.resume(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("AudioContext resume timeout")), 500))
+        ]);
       } catch (err) {
         console.warn("AudioContext resume warning:", err);
       }
@@ -343,11 +346,24 @@ export class WebAudioEngine {
       await this.init();
     }
     
-    if (this.audioContext && this.audioContext.state === 'suspended') {
-      await this.audioContext.resume();
+    if (this.audioContext && (this.audioContext.state === 'suspended' || this.audioContext.state === 'interrupted')) {
+      try {
+        await Promise.race([
+          this.audioContext.resume(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("AudioContext resume timeout")), 200))
+        ]);
+      } catch (_err) {
+        // Ignored
+      }
     }
 
-    if (!this.audioContext) return;
+    if (!this.audioContext || this.audioContext.state !== 'running') {
+      if (this.app.telemetryManager && this.audioContext) {
+        this.app.telemetryManager.recordRxDrop(`AudioContext State: ${this.audioContext.state.toUpperCase()} (Browser autoplay restriction)`);
+      }
+      this.nextStartTime = 0;
+      return;
+    }
 
     let packet = binaryData;
     if (packet instanceof ArrayBuffer) {
@@ -402,19 +418,13 @@ export class WebAudioEngine {
       return;
     }
 
-    if (this.audioContext && (this.audioContext.state === 'suspended' || this.audioContext.state === 'interrupted')) {
-      if (this.app.telemetryManager) {
-        this.app.telemetryManager.recordRxDrop(`AudioContext State: ${this.audioContext.state.toUpperCase()} (Browser autoplay restriction)`);
-      }
-    }
-
     // Create AudioBuffer with sender's native sample rate.
     // WebAudio automatically handles hardware-accelerated resampling to receiver's AudioContext.
     const audioBuf = this.audioContext.createBuffer(1, float32.length, srcSampleRate);
     audioBuf.getChannelData(0).set(float32);
 
     const currentTime = this.audioContext.currentTime;
-    if (!this.nextStartTime || this.nextStartTime < currentTime || (this.nextStartTime - currentTime) > 0.12) {
+    if (!this.nextStartTime || this.nextStartTime < currentTime || (this.nextStartTime - currentTime) > 0.40) {
       this.nextStartTime = currentTime + 0.03; // Clamp jitter buffer to 30ms for real-time low latency
     }
 
