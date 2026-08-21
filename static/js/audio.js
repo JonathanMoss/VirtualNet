@@ -128,7 +128,7 @@ export class WebAudioEngine {
       await this.init();
     }
 
-    if (this.micStream && this.micStream.active && (this.workletNode || this.scriptNode)) {
+    if (this.micStream && this.micStream.active && !this.isSyntheticMic && (this.workletNode || this.scriptNode)) {
       return;
     }
 
@@ -142,6 +142,7 @@ export class WebAudioEngine {
             channelCount: 1
           }
         });
+        this.isSyntheticMic = false;
       } catch (e) {
         console.warn("⚠️ getUserMedia fallback to synthetic stream:", e);
         if (this.audioContext) {
@@ -153,6 +154,7 @@ export class WebAudioEngine {
           gain.connect(dest);
           osc.start();
           this.micStream = dest.stream;
+          this.isSyntheticMic = true;
         } else {
           throw e;
         }
@@ -222,6 +224,17 @@ export class WebAudioEngine {
       } catch (err) {
         console.warn("AudioContext resume warning:", err);
       }
+    }
+
+    if (this.isSyntheticMic) {
+      if (this.micStream) {
+        try {
+          this.micStream.getTracks().forEach(t => t.stop());
+        } catch (_e) {}
+      }
+      this.micStream = null;
+      this.workletNode = null;
+      this.scriptNode = null;
     }
 
     await this.ensureMicStream();

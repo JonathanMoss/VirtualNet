@@ -1162,3 +1162,77 @@ def test_e2e_rejoin_audio_context_resume_and_chunk_scheduling(browser_instance, 
         context_stud.close()
         assert not errors_inst, f"Instructor trapped JS errors: {errors_inst}"
         assert not errors_stud, f"Student trapped JS errors: {errors_stud}"
+
+
+def test_e2e_rejoin_audio_mic_stream_and_sample_rate_sync(browser_instance, target_url):
+    """E2E Test: Verify auto-rejoin mic stream and AudioContext recovery without background pre-warm failure."""
+    context_inst = browser_instance.new_context()
+    context_stud = browser_instance.new_context()
+
+    page_inst, errors_inst = create_trapped_page(context_inst)
+    page_stud, errors_stud = create_trapped_page(context_stud)
+
+    try:
+        # Instructor creates Net
+        page_inst.goto(target_url)
+        page_inst.click("#toggle-create-view")
+        page_inst.fill("#create-name", "Rejoin Mic Test Net")
+        page_inst.fill("#create-sunray-callsign", "0")
+        page_inst.fill("#create-instructor-pin", get_today_instructor_pin())
+        page_inst.click("#btn-create-net")
+        page_inst.wait_for_selector("#dashboard-section:not(.d-none)")
+        pin_code = page_inst.inner_text("#header-net-pin").replace("PIN:", "").strip()
+
+        # Student joins
+        page_stud.goto(target_url)
+        page_stud.fill("#join-pin", pin_code)
+        page_stud.fill("#join-nickname", "STUDENT_REJOIN")
+        page_stud.click("#btn-join-net")
+        page_stud.wait_for_selector("#dashboard-section:not(.d-none)")
+
+        # Assign callsign R11
+        page_inst.wait_for_selector("#admissions-tbody tr button.btn-do-assign", timeout=5000)
+        row1 = page_inst.locator("#admissions-tbody tr", has_text="STUDENT_REJOIN")
+        row1.locator("input.input-assign-cs").fill("R11")
+        row1.locator("button.btn-do-assign").click()
+        page_stud.wait_for_selector("#callsign-lock-overlay", state="hidden", timeout=5000)
+
+        # Student reloads page (simulating auto-rejoin on tab refresh)
+        page_stud.reload()
+        page_stud.wait_for_selector("#dashboard-section:not(.d-none)", timeout=5000)
+
+        # Verify on auto-rejoin background ensureMicStream was NOT cached as synthetic
+        is_synthetic = page_stud.evaluate("""() => {
+            const engine = window.virtualNetApp ? window.virtualNetApp.audioEngine : null;
+            return engine ? !!engine.isSyntheticMic : false;
+        }""")
+        assert not is_synthetic, "Auto-rejoin should not cache synthetic mic stream in background"
+
+        # Student keys PTT (user gesture context)
+        page_stud.evaluate("""() => {
+            const btn = document.getElementById('ptt-btn');
+            if (btn) {
+                btn.disabled = false;
+                btn.removeAttribute('disabled');
+            }
+            if (window.virtualNetApp) window.virtualNetApp.startTransmission();
+        }""")
+        time.sleep(0.5)
+
+        recording_status = page_stud.evaluate("""() => {
+            const engine = window.virtualNetApp ? window.virtualNetApp.audioEngine : null;
+            return {
+                isRecording: engine ? engine.isRecording : false,
+                hasAudioContext: engine && engine.audioContext ? true : false
+            };
+        }""")
+        assert recording_status["isRecording"], "Student should start recording cleanly on PTT keying after rejoin"
+
+        # Release PTT
+        page_stud.evaluate("() => window.virtualNetApp.stopTransmission()")
+
+    finally:
+        context_inst.close()
+        context_stud.close()
+        assert not errors_inst, f"Instructor trapped JS errors: {errors_inst}"
+        assert not errors_stud, f"Student trapped JS errors: {errors_stud}"

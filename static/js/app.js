@@ -634,9 +634,6 @@ export class VirtualNetApp {
         if (WebAudioEngine.isMediaCaptureSupported()) {
           const pttBtn = document.getElementById('ptt-btn');
           if (pttBtn) pttBtn.disabled = false;
-          this.audioEngine.ensureMicStream().catch(err => {
-            console.warn("Background microphone pre-warm warning:", err);
-          });
         }
       } else {
         if (lockOverlay) lockOverlay.classList.remove('d-none');
