@@ -8,7 +8,8 @@ from datetime import datetime
 from behave import given, when, then
 from app import socketio
 from app.models import NetSession, Station, Transmission
-from app.services import station_service
+from app.services import station_service, transmission_service
+from app.services.station_service import broadcast_roster
 
 PINS_FILE = os.path.join(os.path.dirname(__file__), '..', '..', '..', 'app', 'instructor_pins.json')
 
@@ -528,3 +529,49 @@ def step_when_student_reopens_within_60s(context, nickname):
 def step_then_rebind_callsign_seamlessly(context, nickname, callsign):
     resp = next(m for m in context.student_rejoin_received if m['name'] == 'rejoin_response')['args'][0]
     assert resp['success'] is True
+
+
+@given('student "{callsign1}" and student "{callsign2}" are connected to net session "{pin}"')
+def step_given_two_students_connected(context, callsign1, callsign2, pin):
+    step_given_student_connected_session(context, callsign1, pin)
+    context.student_station_2 = Station(net_id=context.net_id, nickname="Mike", call_sign="R12", role="SUB_STATION", status="CONNECTED")
+    context.db.add(context.student_station_2)
+    context.db.commit()
+
+
+@when('"{nickname}" holds PTT to start voice transmission')
+def step_when_hold_ptt_transmission(context, nickname):
+    station = context.db.query(Station).filter_by(id=context.student_station_id).first()
+    if not station.call_sign:
+        station.call_sign = "R11"
+        station.status = "CONNECTED"
+        context.db.commit()
+    context.active_tx_res = transmission_service.handle_ptt_request(
+        context.db, station, "dummy_sid_1", {}, broadcast_roster
+    )
+
+
+@then('SUNRAY\'s transmission log should display "{callsign}" with status "{status}"')
+def step_then_tx_log_status(context, callsign, status):
+    tx_id = context.active_tx_res["transmissionId"]
+    assert transmission_service.get_tx_status_string(tx_id) == status
+
+
+@when('"{nickname}" releases PTT after speaking')
+def step_when_release_ptt_speaking(context, nickname):
+    station = context.db.query(Station).filter_by(id=context.student_station_id).first()
+    tx_id = context.active_tx_res["transmissionId"]
+    transmission_service.handle_ptt_release(context.db, station, tx_id, "dummy_sid_1", broadcast_roster)
+
+
+@when('"{nickname}" acknowledges audio playback')
+def step_when_ack_audio_playback(context, nickname):
+    tx_id = context.active_tx_res["transmissionId"]
+    transmission_service.record_audio_rx_playback_complete(context.db, tx_id, "R12")
+
+
+@then('SUNRAY\'s transmission log should display status "{status}" and RX summary "{rx_summary}"')
+def step_then_tx_log_status_and_rx_summary(context, status, rx_summary):
+    tx_id = context.active_tx_res["transmissionId"]
+    assert transmission_service.get_tx_status_string(tx_id) == status
+    assert transmission_service.get_rx_summary_string(tx_id) == rx_summary

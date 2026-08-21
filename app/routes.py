@@ -4,6 +4,7 @@ import markdown
 from flask import Blueprint, jsonify, render_template
 from app.database import get_db
 from app.models import NetSession, Station, Transmission
+from app.services import transmission_service
 from app.services.transmission_service import format_transmission_dtg
 
 bp = Blueprint('routes', __name__)
@@ -121,12 +122,17 @@ def get_session_transmissions(pin):
     tx_data = []
     for tx in transmissions:
         duration_sec = round((tx.end_time - tx.start_time).total_seconds(), 1)
+        status_str = transmission_service.get_tx_status_string(tx.id, tx)
+        rx_summary = transmission_service.get_rx_summary_string(tx.id)
         tx_data.append({
             "id": tx.id,
+            "transmissionId": tx.id,
             "callSign": tx.sender_call_sign,
             "dtg": format_transmission_dtg(tx.start_time),
             "duration": f"{duration_sec}s",
-            "reason": tx.termination_reason or "COMPLETED",
+            "reason": tx.termination_reason or status_str,
+            "status": status_str,
+            "rxSummary": rx_summary,
             "startTime": tx.start_time.isoformat(),
             "endTime": tx.end_time.isoformat()
         })

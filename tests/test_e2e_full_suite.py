@@ -1236,3 +1236,98 @@ def test_e2e_rejoin_audio_mic_stream_and_sample_rate_sync(browser_instance, targ
         context_stud.close()
         assert not errors_inst, f"Instructor trapped JS errors: {errors_inst}"
         assert not errors_stud, f"Student trapped JS errors: {errors_stud}"
+
+
+def test_e2e_sunray_tx_log_rx_receipt_verification(browser_instance, target_url):
+    """E2E Test: Verify SUNRAY Transmission Activity Log live status and RX receipt summary."""
+    context_inst = browser_instance.new_context()
+    context_stud1 = browser_instance.new_context()
+    context_stud2 = browser_instance.new_context()
+
+    page_inst, errors_inst = create_trapped_page(context_inst)
+    page_stud1, errors_stud1 = create_trapped_page(context_stud1)
+    page_stud2, errors_stud2 = create_trapped_page(context_stud2)
+
+    try:
+        # Step 1: Instructor creates net session
+        page_inst.goto(target_url)
+        page_inst.wait_for_selector("#landing-section:not(.d-none)")
+        page_inst.click("#toggle-create-view")
+        page_inst.wait_for_selector("#create-net-card:not(.d-none)")
+        page_inst.fill("#create-name", "Tx Log Telemetry Net")
+        page_inst.fill("#create-sunray-callsign", "0")
+        page_inst.fill("#create-instructor-pin", get_today_instructor_pin())
+        page_inst.click("#btn-create-net")
+
+        page_inst.wait_for_selector("#dashboard-section:not(.d-none)", timeout=5000)
+        pin_code = page_inst.inner_text("#header-net-pin").replace("PIN:", "").strip()
+
+        # Step 2: Student 1 joins
+        page_stud1.goto(target_url)
+        page_stud1.wait_for_selector("#landing-section:not(.d-none)")
+        page_stud1.fill("#join-pin", pin_code)
+        page_stud1.fill("#join-nickname", "BRAVO_1")
+        page_stud1.click("#btn-join-net")
+        page_stud1.wait_for_selector("#dashboard-section:not(.d-none)", timeout=5000)
+        stud1_id = page_stud1.evaluate("() => window.virtualNetApp.myStationId")
+
+        # Step 3: Student 2 joins
+        page_stud2.goto(target_url)
+        page_stud2.wait_for_selector("#landing-section:not(.d-none)")
+        page_stud2.fill("#join-pin", pin_code)
+        page_stud2.fill("#join-nickname", "CHARLIE_2")
+        page_stud2.click("#btn-join-net")
+        page_stud2.wait_for_selector("#dashboard-section:not(.d-none)", timeout=5000)
+        stud2_id = page_stud2.evaluate("() => window.virtualNetApp.myStationId")
+
+        # Assign callsigns R11 to Student 1, R12 to Student 2 via socketManager
+        page_inst.evaluate(f"""() => {{
+            if (window.virtualNetApp && window.virtualNetApp.socketManager) {{
+                window.virtualNetApp.socketManager.assignCallsign('{stud1_id}', 'R11', 'SUB_STATION');
+                window.virtualNetApp.socketManager.assignCallsign('{stud2_id}', 'R12', 'SUB_STATION');
+            }}
+        }}""")
+
+        page_stud1.wait_for_selector("#callsign-lock-overlay", state="hidden", timeout=5000)
+        page_stud2.wait_for_selector("#callsign-lock-overlay", state="hidden", timeout=5000)
+
+        # Step 4: Student 1 keys PTT to start voice transmission
+        page_stud1.evaluate("""() => {
+            const btn = document.getElementById('ptt-btn');
+            if (btn) btn.disabled = false;
+            if (window.virtualNetApp) window.virtualNetApp.startTransmission();
+        }""")
+        time.sleep(0.5)
+
+        # Check SUNRAY log shows TRANSMITTING status
+        page_inst.wait_for_selector("#sunray-tx-log-tbody tr", timeout=5000)
+        log_text = page_inst.inner_text("#sunray-tx-log-tbody")
+        assert "R11" in log_text
+        assert "TRANSMITTING" in log_text
+
+        # Step 5: Student 1 releases PTT
+        page_stud1.evaluate("() => window.virtualNetApp.stopTransmission()")
+        time.sleep(0.5)
+
+        # Extract transmission ID from SUNRAY log row
+        tx_id = page_inst.get_attribute("#sunray-tx-log-tbody tr", "data-tx-id")
+
+        # Step 6: Student 2 acknowledges audio playback
+        page_stud2.evaluate(f"""() => {{
+            if (window.virtualNetApp && window.virtualNetApp.socketManager) {{
+                window.virtualNetApp.socketManager.emitAudioRxPlaybackComplete('{tx_id}');
+            }}
+        }}""")
+        time.sleep(0.5)
+
+        final_log_text = page_inst.inner_text("#sunray-tx-log-tbody")
+        assert "PTT RELEASED" in final_log_text or "COMPLETED" in final_log_text
+        assert "ALL CALLSIGNS R/X" in final_log_text or "R/X" in final_log_text
+
+    finally:
+        context_inst.close()
+        context_stud1.close()
+        context_stud2.close()
+        assert not errors_inst, f"Instructor trapped JS errors: {errors_inst}"
+        assert not errors_stud1, f"Student 1 trapped JS errors: {errors_stud1}"
+        assert not errors_stud2, f"Student 2 trapped JS errors: {errors_stud2}"

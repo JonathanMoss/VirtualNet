@@ -208,6 +208,37 @@ export class SunrayController {
     });
   }
 
+  renderTxLogRowContent(data) {
+    let statusText = data.status || data.reason || 'PTT RELEASED';
+    if (statusText === 'PTT_RELEASED') statusText = 'PTT RELEASED';
+
+    let statusBadge = `<span class="badge bg-success font-mono">${statusText}</span>`;
+    if (statusText === 'TRANSMITTING') {
+      statusBadge = `<span class="badge bg-success font-mono text-uppercase">TRANSMITTING</span>`;
+    } else if (statusText === 'MAX_DURATION_EXCEEDED') {
+      statusBadge = `<span class="badge bg-danger font-mono">MAX EXCEEDED</span>`;
+    } else if (statusText === 'OVERRIDDEN') {
+      statusBadge = `<span class="badge bg-warning text-dark font-mono">OVERRIDDEN</span>`;
+    } else if (statusText === 'PTT RELEASED') {
+      statusBadge = `<span class="badge bg-secondary font-mono">PTT RELEASED</span>`;
+    }
+
+    const rxSummaryText = data.rxSummary || 'ALL CALLSIGNS R/X';
+    let rxBadgeClass = 'bg-success';
+    if (rxSummaryText.startsWith('NOT R/X')) {
+      rxBadgeClass = 'bg-warning text-dark';
+    }
+    const rxBadge = `<span class="badge ${rxBadgeClass} font-mono">${rxSummaryText}</span>`;
+
+    return `
+      <td class="text-start font-mono py-1">${data.dtg || '-'}</td>
+      <td class="text-start font-weight-bold text-phosphor-green py-1">${data.callSign || '-'}</td>
+      <td class="text-start font-mono py-1">${data.duration || '-'}</td>
+      <td class="text-start py-1">${statusBadge}</td>
+      <td class="text-start py-1">${rxBadge}</td>
+    `;
+  }
+
   async loadSunrayTransmissionHistory(pin) {
     if (!pin) return;
     try {
@@ -219,22 +250,16 @@ export class SunrayController {
 
       txLogTbody.innerHTML = '';
       if (data.transmissions.length === 0) {
-        txLogTbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">No transmission records logged yet.</td></tr>';
+        txLogTbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">No transmission records logged yet.</td></tr>';
         return;
       }
 
       data.transmissions.forEach(tx => {
         const tr = document.createElement('tr');
-        let statusClass = 'text-success';
-        if (tx.reason === 'MAX_DURATION_EXCEEDED') statusClass = 'text-danger';
-        else if (tx.reason === 'OVERRIDDEN') statusClass = 'text-warning';
-
-        tr.innerHTML = `
-          <td class="text-start font-mono py-1">${tx.dtg || '-'}</td>
-          <td class="text-start font-weight-bold text-phosphor-green py-1">${tx.callSign || '-'}</td>
-          <td class="text-start font-mono py-1">${tx.duration || '-'}</td>
-          <td class="text-start ${statusClass} py-1">${tx.reason || 'COMPLETED'}</td>
-        `;
+        if (tx.id || tx.transmissionId) {
+          tr.dataset.txId = tx.id || tx.transmissionId;
+        }
+        tr.innerHTML = this.renderTxLogRowContent(tx);
         txLogTbody.appendChild(tr);
       });
     } catch (err) {
@@ -250,17 +275,16 @@ export class SunrayController {
       txLogTbody.innerHTML = '';
     }
 
-    const tr = document.createElement('tr');
-    let statusClass = 'text-success';
-    if (data.reason === 'MAX_DURATION_EXCEEDED') statusClass = 'text-danger';
-    else if (data.reason === 'OVERRIDDEN') statusClass = 'text-warning';
+    const txId = data.transmissionId || data.id;
+    let tr = txId ? txLogTbody.querySelector(`tr[data-tx-id="${txId}"]`) : null;
 
-    tr.innerHTML = `
-      <td class="text-start font-mono py-1">${data.dtg || '-'}</td>
-      <td class="text-start font-weight-bold text-phosphor-green py-1">${data.callSign || '-'}</td>
-      <td class="text-start font-mono py-1">${data.duration || '-'}</td>
-      <td class="text-start ${statusClass} py-1">${data.reason || 'COMPLETED'}</td>
-    `;
-    txLogTbody.insertBefore(tr, txLogTbody.firstChild);
+    if (tr) {
+      tr.innerHTML = this.renderTxLogRowContent(data);
+    } else {
+      tr = document.createElement('tr');
+      if (txId) tr.dataset.txId = txId;
+      tr.innerHTML = this.renderTxLogRowContent(data);
+      txLogTbody.insertBefore(tr, txLogTbody.firstChild);
+    }
   }
 }

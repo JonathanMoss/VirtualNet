@@ -8,6 +8,7 @@ from app import socketio
 from app.database import db_session
 from app.models import NetSession, Station, Transmission
 from app.schemas import NetSessionCreate, StationCreate
+from app.services import transmission_service
 
 
 
@@ -214,6 +215,41 @@ def test_session_transmissions_api(app, db):
     assert len(json_data['transmissions']) == 2
     assert json_data['transmissions'][0]['callSign'] == 'H10'
     assert json_data['transmissions'][1]['callSign'] == 'R11'
+    assert 'rxSummary' in json_data['transmissions'][0]
+    assert 'status' in json_data['transmissions'][0]
+
+
+def test_sunray_transmission_activity_log_telemetry(app, db):
+    # pylint: disable=redefined-outer-name,unused-argument
+    """Test transmission receipt tracking and formatting in transmission_service."""
+    session = NetSession(name="Telemetry Net", pin="TL99")
+    db.add(session)
+    db.commit()
+
+    st1 = Station(net_id=session.id, nickname="John", call_sign="R11", role="SUB_STATION", status="CONNECTED")
+    st2 = Station(net_id=session.id, nickname="Mike", call_sign="R12", role="SUB_STATION", status="CONNECTED")
+    st3 = Station(net_id=session.id, nickname="Sarah", call_sign="R15", role="SUB_STATION", status="CONNECTED")
+    db.add_all([st1, st2, st3])
+    db.commit()
+
+    def dummy_broadcast(db_inst, net_id):
+        # pylint: disable=unused-argument
+        pass
+
+    res = transmission_service.handle_ptt_request(db, st1, "sid1", {}, dummy_broadcast)
+    tx_id = res["transmissionId"]
+
+    assert transmission_service.get_tx_status_string(tx_id) == "TRANSMITTING"
+    assert transmission_service.get_rx_summary_string(tx_id) == "NOT R/X: R12, R15"
+
+    transmission_service.record_audio_rx_playback_complete(db, tx_id, "R12")
+    assert transmission_service.get_rx_summary_string(tx_id) == "NOT R/X: R15"
+
+    transmission_service.record_audio_rx_playback_complete(db, tx_id, "R15")
+    assert transmission_service.get_rx_summary_string(tx_id) == "ALL CALLSIGNS R/X"
+
+    transmission_service.handle_ptt_release(db, st1, tx_id, "sid1", dummy_broadcast)
+    assert transmission_service.get_tx_status_string(tx_id) == "PTT RELEASED"
 
 
 def test_guide_routes(app):
@@ -245,9 +281,7 @@ def test_guide_routes(app):
 
 
 def test_handle_ptt_release_with_none_tx_id(db):
-    # pylint: disable=import-outside-toplevel
     """Test handle_ptt_release when tx_id is None query falls back to sender_call_sign."""
-    from app.services import transmission_service
 
     session = NetSession(name="PTT Release Net", pin="PR11", callsign_indicator="P")
     db.add(session)
