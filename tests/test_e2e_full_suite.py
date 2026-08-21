@@ -462,7 +462,7 @@ def test_e2e_callsign_management_and_editing(browser_instance, target_url):
         page_inst.click("#admissions-tbody tr button.btn-do-assign")
 
         page_stud.wait_for_selector("#callsign-lock-overlay", state="hidden", timeout=5000)
-        page_stud.wait_for_selector("#btn-change-callsign:not(.d-none)", timeout=5000)
+        assert not page_stud.is_visible("#btn-change-callsign"), "Student should not see edit callsign button"
         assert "11" in page_stud.inner_text("#header-callsign")
 
         # Step 4: Instructor modifies student callsign to 11A in roster

@@ -635,7 +635,7 @@ export class VirtualNetApp {
         const headerCs = document.getElementById('header-callsign');
         if (headerCs) headerCs.textContent = `Callsign: ${this.myCallSign}`;
         const btnChangeCs = document.getElementById('btn-change-callsign');
-        if (btnChangeCs) btnChangeCs.classList.remove('d-none');
+        if (btnChangeCs) btnChangeCs.classList.add('d-none');
         if (WebAudioEngine.isMediaCaptureSupported()) {
           const pttBtn = document.getElementById('ptt-btn');
           if (pttBtn) pttBtn.disabled = false;
@@ -678,7 +678,13 @@ export class VirtualNetApp {
       if (headerCs) headerCs.textContent = `Callsign: ${this.myCallSign}`;
 
       const btnChangeCs = document.getElementById('btn-change-callsign');
-      if (btnChangeCs) btnChangeCs.classList.remove('d-none');
+      if (btnChangeCs) {
+        if (this.myRole === 'SUNRAY' || this.myRole === 'CONTROL' || this.myRole === 'INSTRUCTOR') {
+          btnChangeCs.classList.remove('d-none');
+        } else {
+          btnChangeCs.classList.add('d-none');
+        }
+      }
 
       if (document.activeElement && typeof document.activeElement.blur === 'function') {
         document.activeElement.blur();
@@ -781,7 +787,13 @@ export class VirtualNetApp {
           const headerCs = document.getElementById('header-callsign');
           if (headerCs) headerCs.textContent = `Callsign: ${this.myCallSign}`;
           const btnChangeCs = document.getElementById('btn-change-callsign');
-          if (btnChangeCs) btnChangeCs.classList.remove('d-none');
+          if (btnChangeCs) {
+            if (this.myRole === 'SUNRAY' || this.myRole === 'CONTROL' || this.myRole === 'INSTRUCTOR') {
+              btnChangeCs.classList.remove('d-none');
+            } else {
+              btnChangeCs.classList.add('d-none');
+            }
+          }
         }
       }
 
