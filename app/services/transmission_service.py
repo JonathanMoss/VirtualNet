@@ -11,6 +11,8 @@ MAX_TRANSMISSION_SECONDS = 20
 # Fast-path in-memory mapping of transmitting SIDs to net_id (Zero-DB audio streaming)
 transmitting_sids = {}
 grace_sids = {}  # {sid: (net_id, expiry_timestamp)}
+active_tx_receipts = {}
+# {tx_id: {"net_id": net_id, "sender_callsign": cs, "status": "TRANSMITTING"}}
 
 
 def format_transmission_dtg(dt: datetime) -> str:
@@ -21,19 +23,67 @@ def format_transmission_dtg(dt: datetime) -> str:
     return f"{dt.strftime('%d%H%M')}Z {months[dt.month - 1]} {dt.strftime('%y')}"
 
 
+def get_rx_summary_string(tx_id: str) -> str:
+    """Returns formatted receipt summary: 'ALL CALLSIGNS R/X' or 'NOT R/X: R12, R15'."""
+    receipt_data = active_tx_receipts.get(tx_id)
+    if not receipt_data:
+        return "ALL CALLSIGNS R/X"
+    expected = receipt_data.get("expected_callsigns", set())
+    received = receipt_data.get("received_callsigns", set())
+    if not expected:
+        return "ALL CALLSIGNS R/X"
+    missing = expected - received
+    if not missing:
+        return "ALL CALLSIGNS R/X"
+    return f"NOT R/X: {', '.join(sorted(list(missing)))}"
+
+
+def get_tx_status_string(tx_id: str, tx: Transmission = None) -> str:
+    """Returns transmission status string ('TRANSMITTING', 'PTT RELEASED', 'COMPLETED', etc.)."""
+    receipt_data = active_tx_receipts.get(tx_id)
+    if receipt_data and receipt_data.get("status"):
+        return receipt_data["status"]
+    if tx:
+        if tx.termination_reason:
+            if tx.termination_reason == "PTT_RELEASED":
+                return "PTT RELEASED"
+            return tx.termination_reason
+        return "PTT RELEASED" if tx.end_time else "TRANSMITTING"
+    return "PTT RELEASED"
+
+
+def record_audio_rx_playback_complete(db, tx_id: str, callsign: str):
+    """Record station audio playback receipt for tx_id and broadcast updated summary to SUNRAY."""
+    receipt_data = active_tx_receipts.get(tx_id)
+    if not receipt_data or not callsign:
+        return
+    receipt_data["received_callsigns"].add(callsign)
+    net_id = receipt_data["net_id"]
+    tx = db.query(Transmission).filter_by(id=tx_id).first()
+    if tx:
+        notify_sunray_transmission_log(db, net_id, tx)
+
+
 def notify_sunray_transmission_log(db, net_id: str, tx: Transmission, station_registry=None):
-    """Emits completed transmission log event to all SUNRAY/INSTRUCTOR stations in the net room."""
-    if not tx or not tx.start_time or not tx.end_time:
+    """Emits completed/live transmission log event to all SUNRAY/INSTRUCTOR stations in the net room."""
+    if not tx or not tx.start_time:
         return
 
-    duration_sec = round((tx.end_time - tx.start_time).total_seconds(), 1)
+    end = tx.end_time or datetime.utcnow()
+    duration_sec = round((end - tx.start_time).total_seconds(), 1)
     dtg_str = format_transmission_dtg(tx.start_time)
+
+    status_str = get_tx_status_string(tx.id, tx)
+    rx_summary = get_rx_summary_string(tx.id)
+
     log_data = {
         "transmissionId": tx.id,
         "callSign": tx.sender_call_sign,
         "dtg": dtg_str,
         "duration": f"{duration_sec}s",
-        "reason": tx.termination_reason or "COMPLETED"
+        "reason": tx.termination_reason or status_str,
+        "status": status_str,
+        "rxSummary": rx_summary
     }
 
     if station_registry:
@@ -46,8 +96,10 @@ def notify_sunray_transmission_log(db, net_id: str, tx: Transmission, station_re
             sid = station_registry.get_sid(s.id)
             if sid:
                 socketio.emit('sunray_tx_log', log_data, to=sid)
+                socketio.emit('sunray_tx_log_update', log_data, to=sid)
     else:
         socketio.emit('sunray_tx_log', log_data, room=net_id)
+        socketio.emit('sunray_tx_log_update', log_data, room=net_id)
 
 
 def unregister_transmitting_sid(sid: str):
@@ -87,6 +139,8 @@ def transmission_timeout_timer(tx_id: str, net_id: str, sid: str, broadcast_rost
         if tx:
             tx.end_time = datetime.utcnow()
             tx.termination_reason = "MAX_DURATION_EXCEEDED"
+            if tx_id in active_tx_receipts:
+                active_tx_receipts[tx_id]["status"] = "MAX_DURATION_EXCEEDED"
             sender = db.query(Station).filter_by(net_id=net_id, call_sign=tx.sender_call_sign).first()
             if sender:
                 sender.transmission_status = "IDLE"
@@ -115,8 +169,28 @@ def grant_ptt_lock(db, station: Station, sid: str, net_id: str, broadcast_roster
     db.add(tx)
     db.commit()
 
+    connected_stations = db.query(Station).filter(
+        Station.net_id == net_id,
+        Station.status == "CONNECTED",
+        Station.role == "SUB_STATION",
+        Station.call_sign.isnot(None),
+        Station.call_sign != station.call_sign
+    ).all()
+
+    active_tx_receipts[tx.id] = {
+        "net_id": net_id,
+        "sender_callsign": station.call_sign,
+        "start_time": tx.start_time,
+        "end_time": None,
+        "expected_callsigns": set(s.call_sign for s in connected_stations if s.call_sign),
+        "received_callsigns": set(),
+        "status": "TRANSMITTING"
+    }
+
     register_transmitting_sid(sid, net_id)
     broadcast_roster(db, net_id)
+    notify_sunray_transmission_log(db, net_id, tx)
+
     eventlet.spawn(transmission_timeout_timer, tx.id, net_id, sid, broadcast_roster)
     return {"allowed": True, "transmissionId": tx.id}
 
@@ -151,6 +225,8 @@ def handle_ptt_request(db, station: Station, sid: str, station_registry, broadca
 
         active_tx.end_time = datetime.utcnow()
         active_tx.termination_reason = "OVERRIDDEN"
+        if active_tx.id in active_tx_receipts:
+            active_tx_receipts[active_tx.id]["status"] = "OVERRIDDEN"
         db.commit()
         notify_sunray_transmission_log(db, net_id, active_tx, station_registry)
 
@@ -184,6 +260,9 @@ def handle_ptt_release(db, station: Station, tx_id: str, sid: str, broadcast_ros
     if tx:
         tx.end_time = datetime.utcnow()
         tx.termination_reason = "PTT_RELEASED"
+        if tx.id in active_tx_receipts:
+            active_tx_receipts[tx.id]["status"] = "PTT RELEASED"
+            active_tx_receipts[tx.id]["end_time"] = tx.end_time
 
     db.commit()
 

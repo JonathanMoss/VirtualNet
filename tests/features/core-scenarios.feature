@@ -84,3 +84,11 @@ Feature: VirtualNet Core Radio Net Operations
     When "John" re-opens the browser within 60 seconds
     Then "John" should re-bind to callsign "R11" seamlessly
 
+  Scenario: SUNRAY monitors live transmission status and receipt summary
+    Given student "R11 (John)" and student "R12 (Mike)" are connected to net session "A3F9"
+    When "John" holds PTT to start voice transmission
+    Then SUNRAY's transmission log should display "R11" with status "TRANSMITTING"
+    When "John" releases PTT after speaking
+    And "Mike" acknowledges audio playback
+    Then SUNRAY's transmission log should display status "PTT RELEASED" and RX summary "ALL CALLSIGNS R/X"
+

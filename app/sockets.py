@@ -322,6 +322,20 @@ def handle_audio_chunk(data):
     emit('audio_ack', {'bytes': len(data)})
 
 
+@socketio.on('audio_rx_playback_complete')
+def handle_audio_rx_playback_complete(data):
+    """Receiver station acknowledges completion of audio playback for a transmission ID."""
+    if not data or not isinstance(data, dict):
+        return
+    tx_id = data.get('transmissionId')
+    if not tx_id:
+        return
+    db = get_db()
+    station = get_station_from_sid(db, request.sid)
+    if station and station.call_sign:
+        transmission_service.record_audio_rx_playback_complete(db, tx_id, station.call_sign)
+
+
 @socketio.on('set_signal_quality')
 def handle_set_signal_quality(data):
     """SUNRAY alters signal quality for a student station."""

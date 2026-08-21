@@ -58,6 +58,23 @@ Triggered when Net Control cuts off an active sender.
   - `interruptedCallSign`: String
   - `overrideCallSign`: String (Always `CONTROL`/`0`)
 
+### `AudioRxPlaybackCompleteEvent` (`audio_rx_playback_complete`)
+Triggered when a receiver client station finishes playback of audio chunks for a transmission ID.
+- **Payload**:
+  - `transmissionId`: String (UUID)
+  - `stationId`: String (UUID)
+  - `callSign`: String
+
+### `SunrayTxLogUpdateEvent` (`sunray_tx_log_update`)
+Emitted by server to SUNRAY stations with updated transmission status, duration, and receipt summary.
+- **Payload**:
+  - `transmissionId`: String (UUID)
+  - `callSign`: String
+  - `dtg`: String
+  - `duration`: String (e.g. `4.2s`)
+  - `status`: String (`TRANSMITTING`, `PTT RELEASED`, `COMPLETED`, `OVERRIDDEN`)
+  - `rxSummary`: String (`ALL CALLSIGNS R/X` or `NOT R/X: R12, R15`)
+
 ---
 
 ---

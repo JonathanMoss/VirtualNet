@@ -67,6 +67,13 @@ Card container for instructors to host a session (`#create-net-card`):
     - **`[KICK]` (`.btn-kick-student`)**: Prompts custom confirmation modal to kick station (Issue #26).
 - **Session Control (`#btn-end-session`)**:
   - Styled with `.btn .btn-outline-danger`. Triggers custom tactical confirmation modal before terminating session.
+- **Transmission Activity Log Table (`#sunray-tx-log-tbody`)**:
+  - Displays real-time voice transmission telemetry for Net Control:
+    - **DTG**: Date-Time Group timestamp.
+    - **Call Sign**: Transmitting station callsign.
+    - **Duration**: Live countup while PTT is held, finalized upon release.
+    - **Status**: Live state (`TRANSMITTING` glowing green vs `PTT RELEASED`, `COMPLETED`, or `OVERRIDDEN`).
+    - **RX Summary**: Receipt verification summary (`ALL CALLSIGNS R/X` in green badge vs `NOT R/X: R12, R15` in amber badge).
 
 ### 2.4 Header Bar
 Top navigation bar styled as a military command header:

@@ -109,6 +109,10 @@ export class SocketManager {
       this.app.handleSunrayTxLog(data);
     });
 
+    this.socket.on('sunray_tx_log_update', (data) => {
+      this.app.handleSunrayTxLog(data);
+    });
+
     this.socket.on('session_ended', () => {
       showAlert("This net session has been ended by SUNRAY.", { title: "SESSION ENDED", titleColor: "var(--color-hot-red)" });
       this.app.clearSavedSession();
@@ -195,6 +199,12 @@ export class SocketManager {
         this.app.telemetryManager.recordTxChunk(binaryData.byteLength || binaryData.length || 0);
       }
       this.socket.volatile.emit('audio_chunk', binaryData);
+    }
+  }
+
+  emitAudioRxPlaybackComplete(transmissionId) {
+    if (this.socket && this.socket.connected && transmissionId) {
+      this.socket.emit('audio_rx_playback_complete', { transmissionId });
     }
   }
 
