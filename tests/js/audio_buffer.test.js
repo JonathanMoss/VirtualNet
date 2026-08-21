@@ -146,3 +146,37 @@ test('receiveAudioChunk - drops incoming chunks when AudioContext state is not r
   assert.equal(engine.nextStartTime, 0, 'nextStartTime should be reset to 0 when chunk is dropped');
   assert.ok(droppedReason && droppedReason.includes('SUSPENDED'), `Expected telemetry rx drop for suspended state, got: ${droppedReason}`);
 });
+
+test('resamplePcmFloat32 - correctly resamples 48kHz input to 44.1kHz and 44.1kHz to 48kHz', () => {
+  const engine = new WebAudioEngine({});
+  const input48k = new Float32Array(4800); // 100ms at 48kHz
+  for (let i = 0; i < input48k.length; i++) {
+    input48k[i] = Math.sin(2 * Math.PI * 440 * (i / 48000));
+  }
+
+  // Resample 48000 -> 44100
+  const resampled44k = engine.resamplePcmFloat32(input48k, 48000, 44100);
+  const expectedLength44k = Math.round(4800 * (44100 / 48000)); // 4410 samples
+  assert.equal(resampled44k.length, expectedLength44k, `Expected ${expectedLength44k} samples, got ${resampled44k.length}`);
+
+  // Resample 44100 -> 48000
+  const resampled48k = engine.resamplePcmFloat32(resampled44k, 44100, 48000);
+  assert.equal(resampled48k.length, 4800, `Expected 4800 samples, got ${resampled48k.length}`);
+});
+
+test('receiveAudioChunk - resamples incoming PCM to match receiver AudioContext sampleRate', async () => {
+  const app = { socketManager: {} };
+  const engine = new WebAudioEngine(app);
+  // Receiver AudioContext running at 44100 Hz
+  engine.audioContext = new MockAudioContext({ state: 'running', sampleRate: 44100 });
+  engine.voiceGainNode = engine.audioContext.createGain();
+
+  // Incoming chunk header specifies 48000 Hz sender rate
+  const senderPacket = createDummyAudioPacket(4096, 48000);
+  await engine.receiveAudioChunk(senderPacket);
+
+  // AudioBuffer should be created at receiver's 44100 Hz sample rate
+  assert.ok(engine.activeRxSources.length > 0, 'activeRxSources should contain scheduled buffer source');
+  const sourceNode = engine.activeRxSources[0];
+  assert.equal(sourceNode.buffer.sampleRate, 44100, `AudioBuffer sample rate should match receiver AudioContext (44100), got ${sourceNode.buffer.sampleRate}`);
+});

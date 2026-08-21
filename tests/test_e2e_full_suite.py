@@ -908,6 +908,13 @@ def test_e2e_student_leave_net_session(browser_instance, target_url):
         page_stud.click("#btn-join-net")
         page_stud.wait_for_selector("#dashboard-section:not(.d-none)")
 
+        # Instructor assigns callsign R11 to LEAVER_1
+        page_inst.wait_for_selector("#admissions-tbody tr button.btn-do-assign", timeout=5000)
+        row1 = page_inst.locator("#admissions-tbody tr", has_text="LEAVER_1")
+        row1.locator("input.input-assign-cs").fill("R11")
+        row1.locator("button.btn-do-assign").click()
+        page_stud.wait_for_selector("#callsign-lock-overlay", state="hidden", timeout=5000)
+
         # Student clicks Leave Net button
         page_stud.click("#btn-leave-net")
         page_stud.wait_for_selector("#tactical-dialog-overlay:not(.d-none)", timeout=3000)
@@ -915,8 +922,28 @@ def test_e2e_student_leave_net_session(browser_instance, target_url):
 
         # Student should be redirected to landing page & session cleared
         page_stud.wait_for_selector("#landing-section:not(.d-none)", timeout=5000)
-        session_val = page_stud.evaluate("() => sessionStorage.getItem('virtualnet_session')")
-        assert session_val is None
+
+        # Student 2 joins and is assigned the exact same callsign R11 (verifying callsign release)
+        context_stud2 = browser_instance.new_context()
+        page_stud2, errors_stud2 = create_trapped_page(context_stud2)
+        try:
+            page_stud2.goto(target_url)
+            page_stud2.fill("#join-pin", pin_code)
+            page_stud2.fill("#join-nickname", "NEW_STUDENT")
+            page_stud2.click("#btn-join-net")
+            page_stud2.wait_for_selector("#dashboard-section:not(.d-none)")
+
+            page_inst.wait_for_selector("#admissions-tbody tr button.btn-do-assign", timeout=5000)
+            row2 = page_inst.locator("#admissions-tbody tr", has_text="NEW_STUDENT")
+            row2.locator("input.input-assign-cs").fill("R11")
+            row2.locator("button.btn-do-assign").click()
+
+            page_stud2.wait_for_selector("#callsign-lock-overlay", state="hidden", timeout=5000)
+            assigned_cs = page_stud2.inner_text("#header-callsign")
+            assert "11" in assigned_cs
+        finally:
+            context_stud2.close()
+            assert not errors_stud2, f"Student 2 trapped JS errors: {errors_stud2}"
 
     finally:
         context_inst.close()

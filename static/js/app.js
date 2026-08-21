@@ -146,6 +146,9 @@ export class VirtualNetApp {
       this.myRole = saved.role || SYSTEM_CONSTANTS.DEFAULT_ROLE;
       this.myStationId = saved.stationId || null;
       this.lastInstructorPin = saved.instructorPin || null;
+      if (this.audioEngine) {
+        this.audioEngine.init();
+      }
       this.socketManager.joinNet(saved.pin, saved.nickname, saved.role, saved.stationId, saved.instructorPin);
     }
   }

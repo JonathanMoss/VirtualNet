@@ -232,7 +232,7 @@ def handle_assign_callsign(data):
         Station.net_id == net_id,
         Station.call_sign == cleaned_callsign,
         Station.id != station_id,
-        Station.status != "DISCONNECTED"
+        ~Station.status.in_(["LEFT", "DISCONNECTED"])
     ).first()
     if duplicate:
         emit('error', {"reason": f"Callsign '{cleaned_callsign}' is already assigned."})

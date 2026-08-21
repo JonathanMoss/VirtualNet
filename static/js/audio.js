@@ -299,8 +299,32 @@ export class WebAudioEngine {
     return float32;
   }
 
+  resamplePcmFloat32(inputData, fromSampleRate, toSampleRate) {
+    if (!inputData || inputData.length === 0 || fromSampleRate === toSampleRate || fromSampleRate <= 0 || toSampleRate <= 0) {
+      return inputData;
+    }
+
+    const ratio = fromSampleRate / toSampleRate;
+    const newLength = Math.round(inputData.length / ratio);
+    const result = new Float32Array(newLength);
+
+    for (let i = 0; i < newLength; i++) {
+      const pos = i * ratio;
+      const index = Math.floor(pos);
+      const frac = pos - index;
+
+      if (index >= inputData.length - 1) {
+        result[i] = inputData[inputData.length - 1];
+      } else {
+        const sample1 = inputData[index];
+        const sample2 = inputData[index + 1];
+        result[i] = sample1 + frac * (sample2 - sample1);
+      }
+    }
+    return result;
+  }
+
   resampleFloat32(inputData) {
-    // Deprecated manual JS cubic interpolation: WebAudio AudioBuffer handles native hardware C++ resampling automatically
     return inputData;
   }
 
@@ -418,9 +442,14 @@ export class WebAudioEngine {
       return;
     }
 
-    // Create AudioBuffer with sender's native sample rate.
-    // WebAudio automatically handles hardware-accelerated resampling to receiver's AudioContext.
-    const audioBuf = this.audioContext.createBuffer(1, float32.length, srcSampleRate);
+    // Resample PCM Float32 to match receiver's local AudioContext sample rate.
+    // This prevents mobile browsers (iOS WebKit / Android Chromium) from running low-quality C++ streaming resamplers that cause slow/noisy audio.
+    const targetSampleRate = this.audioContext.sampleRate;
+    if (srcSampleRate !== targetSampleRate) {
+      float32 = this.resamplePcmFloat32(float32, srcSampleRate, targetSampleRate);
+    }
+
+    const audioBuf = this.audioContext.createBuffer(1, float32.length, targetSampleRate);
     audioBuf.getChannelData(0).set(float32);
 
     const currentTime = this.audioContext.currentTime;

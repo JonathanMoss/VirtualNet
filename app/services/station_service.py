@@ -105,6 +105,8 @@ def detach_station(db, station: Station, reason_status: str):
     station.status = reason_status
     station.transmission_status = "IDLE"
     station.last_seen = datetime.utcnow()
+    if reason_status == "LEFT":
+        station.call_sign = None
 
     # Clean up global PTT lock if this station was speaking
     transmission = db.query(Transmission).filter_by(

@@ -877,3 +877,51 @@ def test_station_impersonation_protection(app, socket_client):
     assert rejoin_resp['success'] is False
     assert "mismatch" in rejoin_resp['reason'].lower() or "active" in rejoin_resp['reason'].lower()
     impostor.disconnect()
+
+
+def test_student_leave_releases_callsign_for_reassignment(app, socket_client):
+    # pylint: disable=redefined-outer-name
+    """Test that when a student leaves a net, their callsign is released and can be reassigned to another student."""
+    valid_pin = get_today_instructor_pin()
+    socket_client.emit('create_net', {
+        'name': 'Leave Reassign Net',
+        'callsign_indicator': 'R',
+        'instructor_pin': valid_pin
+    })
+    create_resp = next(i for i in socket_client.get_received() if i['name'] == 'create_response')['args'][0]
+    pin = create_resp['pin']
+
+    socket_client.emit('join_net', {'pin': pin, 'nickname': 'InstructorA', 'role': 'INSTRUCTOR'})
+    socket_client.get_received()
+
+    # Student 1 joins and is assigned callsign R11
+    s1 = socketio.test_client(app)
+    s1.emit('join_net', {'pin': pin, 'nickname': 'Student1'})
+    join1_resp = next(i for i in s1.get_received() if i['name'] == 'join_response')['args'][0]
+    s1_id = join1_resp['stationId']
+
+    socket_client.emit('assign_callsign', {'stationId': s1_id, 'callSign': '11', 'role': 'SUB_STATION'})
+    socket_client.get_received()
+
+    # Student 1 leaves the net
+    s1.emit('leave_net', {})
+    s1.get_received()
+    s1.disconnect()
+
+    # Student 2 joins the net
+    s2 = socketio.test_client(app)
+    s2.emit('join_net', {'pin': pin, 'nickname': 'Student2'})
+    join2_resp = next(i for i in s2.get_received() if i['name'] == 'join_response')['args'][0]
+    s2_id = join2_resp['stationId']
+
+    # Instructor re-assigns callsign R11 to Student 2 (should succeed without duplicate error)
+    socket_client.emit('assign_callsign', {'stationId': s2_id, 'callSign': '11', 'role': 'SUB_STATION'})
+    assign_events = socket_client.get_received()
+    error_event = next((i for i in assign_events if i['name'] == 'error'), None)
+    assert error_event is None, f"Reassigning callsign R11 after student left should not fail, got error: {error_event}"
+
+    s2_events = s2.get_received()
+    assigned_event = next((i for i in s2_events if i['name'] == 'callsign_assigned'), None)
+    assert assigned_event is not None
+    assert assigned_event['args'][0]['assignedCallSign'] == 'R11'
+    s2.disconnect()
