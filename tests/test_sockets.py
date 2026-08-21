@@ -925,3 +925,27 @@ def test_student_leave_releases_callsign_for_reassignment(app, socket_client):
     assert assigned_event is not None
     assert assigned_event['args'][0]['assignedCallSign'] == 'R11'
     s2.disconnect()
+
+
+def test_audio_rx_playback_complete_socket_event(app, socket_client):
+    # pylint: disable=redefined-outer-name
+    """Test audio_rx_playback_complete socket event handling with transmissionId and null transmissionId."""
+    valid_pin = get_today_instructor_pin()
+    socket_client.emit('create_net', {'name': 'Rx ACK Net', 'callsign_indicator': 'K', 'instructor_pin': valid_pin})
+    pin = next(item for item in socket_client.get_received() if item['name'] == 'create_response')['args'][0]['pin']
+
+    student = socketio.test_client(app)
+    student.emit('join_net', {'pin': pin, 'nickname': 'RxStudent', 'role': 'SUB_STATION'})
+    s_id = next(item for item in student.get_received() if item['name'] == 'join_response')['args'][0]['stationId']
+    socket_client.emit('assign_callsign', {'stationId': s_id, 'callSign': '12', 'role': 'SUB_STATION'})
+    socket_client.get_received()
+    student.get_received()
+
+    # Emit audio_rx_playback_complete with valid payload
+    student.emit('audio_rx_playback_complete', {'transmissionId': 'dummy-tx-123'})
+
+    # Emit audio_rx_playback_complete with empty or null payload
+    student.emit('audio_rx_playback_complete', {})
+    student.emit('audio_rx_playback_complete', None)
+
+    student.disconnect()

@@ -325,11 +325,9 @@ def handle_audio_chunk(data):
 @socketio.on('audio_rx_playback_complete')
 def handle_audio_rx_playback_complete(data):
     """Receiver station acknowledges completion of audio playback for a transmission ID."""
-    if not data or not isinstance(data, dict):
-        return
+    if not isinstance(data, dict):
+        data = {}
     tx_id = data.get('transmissionId')
-    if not tx_id:
-        return
     db = get_db()
     station = get_station_from_sid(db, request.sid)
     if station and station.call_sign:

@@ -54,12 +54,29 @@ def get_tx_status_string(tx_id: str, tx: Transmission = None) -> str:
 
 def record_audio_rx_playback_complete(db, tx_id: str, callsign: str):
     """Record station audio playback receipt for tx_id and broadcast updated summary to SUNRAY."""
-    receipt_data = active_tx_receipts.get(tx_id)
-    if not receipt_data or not callsign:
+    if not callsign:
+        return
+
+    target_tx_id = tx_id
+    if not target_tx_id or target_tx_id not in active_tx_receipts:
+        station = db.query(Station).filter_by(call_sign=callsign).first() if db else None
+        net_id = station.net_id if station else None
+        for active_id, receipt in reversed(list(active_tx_receipts.items())):
+            if net_id and receipt.get("net_id") == net_id:
+                target_tx_id = active_id
+                break
+            is_expected = callsign in receipt.get("expected_callsigns", set())
+            is_rx_station = callsign != receipt.get("sender_callsign")
+            if not net_id and (is_expected or is_rx_station):
+                target_tx_id = active_id
+                break
+
+    receipt_data = active_tx_receipts.get(target_tx_id)
+    if not receipt_data:
         return
     receipt_data["received_callsigns"].add(callsign)
     net_id = receipt_data["net_id"]
-    tx = db.query(Transmission).filter_by(id=tx_id).first()
+    tx = db.query(Transmission).filter_by(id=target_tx_id).first()
     if tx:
         notify_sunray_transmission_log(db, net_id, tx)
 
@@ -188,6 +205,10 @@ def grant_ptt_lock(db, station: Station, sid: str, net_id: str, broadcast_roster
     }
 
     register_transmitting_sid(sid, net_id)
+    socketio.emit('transmission_started', {
+        'transmissionId': tx.id,
+        'senderCallSign': station.call_sign
+    }, room=net_id)
     broadcast_roster(db, net_id)
     notify_sunray_transmission_log(db, net_id, tx)
 

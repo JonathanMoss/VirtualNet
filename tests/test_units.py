@@ -8,7 +8,7 @@ from app import socketio
 from app.database import db_session
 from app.models import NetSession, Station, Transmission
 from app.schemas import NetSessionCreate, StationCreate
-from app.services import transmission_service
+from app.services import session_service, station_service, transmission_service
 
 
 
@@ -242,7 +242,8 @@ def test_sunray_transmission_activity_log_telemetry(app, db):
     assert transmission_service.get_tx_status_string(tx_id) == "TRANSMITTING"
     assert transmission_service.get_rx_summary_string(tx_id) == "NOT R/X: R12, R15"
 
-    transmission_service.record_audio_rx_playback_complete(db, tx_id, "R12")
+    # Test fallback when tx_id is None (mobile receiver fallback)
+    transmission_service.record_audio_rx_playback_complete(db, None, "R12")
     assert transmission_service.get_rx_summary_string(tx_id) == "NOT R/X: R15"
 
     transmission_service.record_audio_rx_playback_complete(db, tx_id, "R15")
@@ -311,9 +312,7 @@ def test_handle_ptt_release_with_none_tx_id(db):
 
 
 def test_restore_or_recreate_sunray_session_unit(db):
-    # pylint: disable=import-outside-toplevel
     """Test unit coverage for restore_or_recreate_sunray_session in session_service."""
-    from app.services import session_service, station_service
 
     valid_pin = get_today_instructor_pin()
 
@@ -362,3 +361,77 @@ def test_grace_period_disconnect_timer_unit(db):
 
     reloaded = db.query(Station).filter_by(id=station_id).first()
     assert reloaded.status == "LEFT"
+
+
+def test_transmission_service_edge_cases(db):
+    """Test transmission_service edge cases for PTT lock, mutes, channel busy, and break-in override."""
+    session = NetSession(name="PTT Edge Net", pin="PE11", callsign_indicator="P", status="SUSPENDED")
+    db.add(session)
+    db.commit()
+
+    st_awaiting = Station(net_id=session.id, nickname="User1", role="SUB_STATION", status="AWAITING_ASSIGNMENT")
+    st_muted = Station(net_id=session.id, nickname="User2", role="SUB_STATION", call_sign="P12", status="MUTED")
+    st_speaker = Station(net_id=session.id, nickname="Speaker", role="SUB_STATION", call_sign="P11", status="CONNECTED")
+    st_sunray = Station(net_id=session.id, nickname="Sunray", role="SUNRAY", call_sign="0", status="CONNECTED")
+    db.add_all([st_awaiting, st_muted, st_speaker, st_sunray])
+    db.commit()
+
+    def dummy_broadcast(_d, _n):
+        pass
+
+    # 1. Awaiting assignment rejection
+    res_await = transmission_service.handle_ptt_request(
+        db, st_awaiting, "s1", station_service.registry, dummy_broadcast
+    )
+    assert res_await["allowed"] is False
+
+    # 2. Muted station rejection
+    res_muted = transmission_service.handle_ptt_request(
+        db, st_muted, "s2", station_service.registry, dummy_broadcast
+    )
+    assert res_muted["allowed"] is False
+
+    # 3. Suspended session rejection
+    res_susp = transmission_service.handle_ptt_request(
+        db, st_speaker, "s3", station_service.registry, dummy_broadcast
+    )
+    assert res_susp["allowed"] is False
+
+    # Re-enable session
+    session.status = "FREE"
+    db.commit()
+
+    # 4. Speaker gets PTT lock
+    res_speaker = transmission_service.handle_ptt_request(
+        db, st_speaker, "s3", station_service.registry, dummy_broadcast
+    )
+    assert res_speaker["allowed"] is True
+    tx_id = res_speaker["transmissionId"]
+    assert transmission_service.get_audio_net_id("s3") == session.id
+
+    st_student2 = Station(
+        net_id=session.id, nickname="Student2", role="SUB_STATION", call_sign="P13", status="CONNECTED"
+    )
+    db.add(st_student2)
+    db.commit()
+
+    # 5. Channel busy for another student
+    res_busy = transmission_service.handle_ptt_request(
+        db, st_student2, "s2", station_service.registry, dummy_broadcast
+    )
+    assert res_busy["allowed"] is False
+    assert "Channel Busy" in res_busy["reason"]
+
+    # 6. SUNRAY Break-In override
+    res_override = transmission_service.handle_ptt_request(
+        db, st_sunray, "s4", station_service.registry, dummy_broadcast
+    )
+    assert res_override["allowed"] is True
+    assert res_override["transmissionId"] != tx_id
+
+    # Cleanup transmitting SIDs
+    transmission_service.unregister_transmitting_sid("s3")
+    transmission_service.unregister_transmitting_sid("s4")
+    transmission_service.grace_sids.pop("s3", None)
+    transmission_service.grace_sids.pop("s4", None)
+    assert transmission_service.get_audio_net_id("s3") is None

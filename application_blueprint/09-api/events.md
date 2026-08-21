@@ -75,6 +75,12 @@ Emitted by server to SUNRAY stations with updated transmission status, duration,
   - `status`: String (`TRANSMITTING`, `PTT RELEASED`, `COMPLETED`, `OVERRIDDEN`)
   - `rxSummary`: String (`ALL CALLSIGNS R/X` or `NOT R/X: R12, R15`)
 
+### `TransmissionStartedEvent`
+Broadcasted to all stations in the net session room when PTT is granted to a transmitting station.
+- **Payload**:
+  - `transmissionId`: String (UUID)
+  - `senderCallSign`: String
+
 ---
 
 ---
