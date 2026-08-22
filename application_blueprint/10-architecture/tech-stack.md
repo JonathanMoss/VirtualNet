@@ -50,5 +50,18 @@ To ensure code quality and prevent regressions, every push and pull request exec
   - `docker-compose.yml`: Development composition mounting live source volumes.
   - `docker-compose.test.yml`: Testing environment composition.
   - `docker-compose.preprod.yml`: Pre-production staging configuration with Nginx reverse proxy.
-  - `docker-compose.prod.yml`: Production configuration deploying `nginxproxy/nginx-proxy` and `nginxproxy/acme-companion` for zero-downtime automated Let's Encrypt TLS certificate generation and renewal.
+  - `docker-compose.prod.yml`: Production configuration targeting `virtualnet.uk` (`https://virtualnet.uk`) deploying `nginxproxy/nginx-proxy` and `nginxproxy/acme-companion` for zero-downtime automated Let's Encrypt TLS certificate generation and renewal.
+
+---
+
+## 4. Production Security Hardening & Container Probes
+
+- **Domain-Restricted CORS (`CORS_ALLOWED_ORIGINS`)**:
+  - Socket.IO origin validation enforces domain restrictions via `CORS_ALLOWED_ORIGINS=https://virtualnet.uk,https://www.virtualnet.uk`.
+- **HTTP Security Headers**:
+  - All HTTP responses carry `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Permissions-Policy: microphone=(self)`, `Referrer-Policy: strict-origin-when-cross-origin`, and `HSTS` in production HTTPS.
+- **Session Cookie Security**:
+  - Configures `SESSION_COOKIE_HTTPONLY=True`, `SESSION_COOKIE_SAMESITE='Lax'`, and `SESSION_COOKIE_SECURE=True` in production.
+- **Container Health Check Probe (`/healthz`)**:
+  - GET `/healthz` HTTP endpoint returns `200 OK {"status": "ok", "database": "connected"}` for Kubernetes/Docker liveness and readiness container health probes.
 

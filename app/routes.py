@@ -1,14 +1,28 @@
 """HTTP routes and API endpoints for VirtualNet."""
 import os
 import markdown
+from sqlalchemy import text
 from flask import Blueprint, jsonify, render_template, request
-from app.database import get_db
+from app.database import get_db, db_session
 from app.models import NetSession, Station, Transmission
 from app.services import transmission_service
 from app.services.transmission_service import format_transmission_dtg
 
 bp = Blueprint('routes', __name__)
 DOCS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'docs'))
+
+
+@bp.route('/healthz')
+def health_check():
+    """Liveness and readiness container health check probe endpoint."""
+    try:
+        db_session.execute(text("SELECT 1"))
+        db_status = "connected"
+    except Exception as err:  # pylint: disable=broad-exception-caught
+        db_status = f"error: {str(err)}"
+        return jsonify({"status": "unhealthy", "database": db_status}), 500
+
+    return jsonify({"status": "ok", "database": db_status}), 200
 
 
 def render_guide_markdown(filename, title, guide_id, guide_type):

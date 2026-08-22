@@ -1423,3 +1423,84 @@ def test_student_roster_nickname_privacy_e2e(browser_instance, target_url):
         context_stud.close()
         assert not errors_inst, f"Instructor trapped JS errors: {errors_inst}"
         assert not errors_stud, f"Student trapped JS errors: {errors_stud}"
+
+
+def test_e2e_multi_session_isolation(browser_instance, target_url):
+    """E2E Test: Verify 2 parallel active net sessions run in 100% isolation in real Chromium browsers."""
+    context_inst_a = browser_instance.new_context()
+    context_inst_b = browser_instance.new_context()
+    context_stud_a = browser_instance.new_context()
+    context_stud_b = browser_instance.new_context()
+
+    page_inst_a, errors_inst_a = create_trapped_page(context_inst_a)
+    page_inst_b, errors_inst_b = create_trapped_page(context_inst_b)
+    page_stud_a, errors_stud_a = create_trapped_page(context_stud_a)
+    page_stud_b, errors_stud_b = create_trapped_page(context_stud_b)
+
+    try:
+        # Create Session A
+        page_inst_a.goto(target_url)
+        page_inst_a.wait_for_selector("#landing-section:not(.d-none)")
+        page_inst_a.click("#toggle-create-view")
+        page_inst_a.fill("#create-name", "Session ISO ALPHA")
+        page_inst_a.fill("#create-instructor-pin", get_today_instructor_pin())
+        page_inst_a.click("#btn-create-net")
+        page_inst_a.wait_for_selector("#dashboard-section:not(.d-none)", timeout=5000)
+        pin_a = page_inst_a.inner_text("#header-net-pin").replace("PIN:", "").strip()
+
+        # Create Session B
+        page_inst_b.goto(target_url)
+        page_inst_b.wait_for_selector("#landing-section:not(.d-none)")
+        page_inst_b.click("#toggle-create-view")
+        page_inst_b.fill("#create-name", "Session ISO BRAVO")
+        page_inst_b.fill("#create-instructor-pin", get_today_instructor_pin())
+        page_inst_b.click("#btn-create-net")
+        page_inst_b.wait_for_selector("#dashboard-section:not(.d-none)", timeout=5000)
+        pin_b = page_inst_b.inner_text("#header-net-pin").replace("PIN:", "").strip()
+
+        # Student A joins Session A
+        page_stud_a.goto(target_url)
+        page_stud_a.fill("#join-pin", pin_a)
+        page_stud_a.fill("#join-nickname", "StudentA")
+        page_stud_a.click("#btn-join-net")
+        page_stud_a.wait_for_selector("#dashboard-section:not(.d-none)", timeout=5000)
+
+        # Student B joins Session B
+        page_stud_b.goto(target_url)
+        page_stud_b.fill("#join-pin", pin_b)
+        page_stud_b.fill("#join-nickname", "StudentB")
+        page_stud_b.click("#btn-join-net")
+        page_stud_b.wait_for_selector("#dashboard-section:not(.d-none)", timeout=5000)
+
+        # Assign callsigns R11 in Session A and R11 in Session B
+        page_inst_a.wait_for_selector("#admissions-tbody button.btn-do-assign", timeout=5000)
+        page_inst_a.fill("#admissions-tbody input.input-assign-cs", "R11")
+        page_inst_a.click("#admissions-tbody button.btn-do-assign")
+
+        page_inst_b.wait_for_selector("#admissions-tbody button.btn-do-assign", timeout=5000)
+        page_inst_b.fill("#admissions-tbody input.input-assign-cs", "R11")
+        page_inst_b.click("#admissions-tbody button.btn-do-assign")
+
+        page_stud_a.wait_for_selector("#roster-list li:has-text('R11')", timeout=5000)
+        page_stud_b.wait_for_selector("#roster-list li:has-text('R11')", timeout=5000)
+
+        # Verify SUNRAY B ending Session B does NOT affect Student A in Session A
+        page_inst_b.click("#btn-end-session")
+        page_inst_b.wait_for_selector("#modal-confirm-end:not(.d-none)", timeout=3000)
+        page_inst_b.click("#btn-confirm-end-session")
+
+        page_stud_b.wait_for_selector("#landing-section:not(.d-none)", timeout=5000)
+
+        # Student A remains connected to Session A on dashboard
+        page_stud_a.wait_for_selector("#dashboard-section:not(.d-none)", timeout=3000)
+        assert page_stud_a.is_visible("#status-badge:has-text('CONNECTED')")
+
+    finally:
+        context_inst_a.close()
+        context_inst_b.close()
+        context_stud_a.close()
+        context_stud_b.close()
+        assert not errors_inst_a, f"Inst A trapped JS errors: {errors_inst_a}"
+        assert not errors_inst_b, f"Inst B trapped JS errors: {errors_inst_b}"
+        assert not errors_stud_a, f"Stud A trapped JS errors: {errors_stud_a}"
+        assert not errors_stud_b, f"Stud B trapped JS errors: {errors_stud_b}"
