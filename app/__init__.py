@@ -1,5 +1,6 @@
 """Application factory and initialization module for VirtualNet."""
 import os
+import secrets
 
 # pylint: disable=wrong-import-position,wrong-import-order
 import eventlet
@@ -27,7 +28,9 @@ def create_app(testing=False):
     app = Flask(__name__, static_folder='../static', static_url_path='/static', template_folder='../static/templates')
     if testing or IS_TESTING:
         app.config['TESTING'] = True
-    app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'virtualnet-secret-key-1234')
+        app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'virtualnet-secret-key-1234')
+    else:
+        app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
 
     # Initialize Database Schema
     init_db()
