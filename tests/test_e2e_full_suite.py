@@ -623,7 +623,8 @@ def test_e2e_reference_resources_tabs_and_pan_zoom(browser_instance, target_url)
         # 4. SLATE CARDS TAB & Select dropdown
         page.click("#tab-slates-link", force=True)
         page.wait_for_selector("#tab-slates.active", timeout=5000)
-        page.select_option("#main-slate-select", "CONTACT")
+        page.wait_for_selector("select#main-slate-select", timeout=5000)
+        page.select_option("select#main-slate-select", "CONTACT")
         page.click('#tab-slates button.btn-zoom-in[data-target="main-slate-img"]', force=True)
         page.click('#tab-slates button.btn-zoom-reset[data-target="main-slate-img"]', force=True)
 

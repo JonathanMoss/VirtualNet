@@ -58,6 +58,10 @@ export class RosterController {
       return;
     }
 
+    const myStation = stations.find(s => (s.id || s.stationId) === this.app.myStationId);
+    const isSunrayViewer = (this.app.myRole && ['SUNRAY', 'CONTROL', 'INSTRUCTOR'].includes(this.app.myRole)) ||
+      (myStation && ['SUNRAY', 'CONTROL', 'INSTRUCTOR'].includes(myStation.role));
+
     stations.forEach(st => {
       const li = document.createElement('li');
       li.className = 'list-group-item bg-transparent border-0 d-flex justify-content-between align-items-center py-1 px-2 monospace small';
@@ -85,7 +89,6 @@ export class RosterController {
         : '';
 
       const isMe = st.id === this.app.myStationId ? ' <span class="text-warning fw-bold">(YOU)</span>' : '';
-      const isSunrayViewer = this.app.myRole === 'SUNRAY' || this.app.myRole === 'CONTROL' || this.app.myRole === 'INSTRUCTOR';
       const nickSpan = isSunrayViewer ? ` <span class="text-desert-sand small">(${st.nickname || 'N/A'})</span>` : '';
 
       li.innerHTML = `

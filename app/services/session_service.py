@@ -152,12 +152,11 @@ def end_net_session_by_id(db, net_id: str, station_registry, transmission_servic
     session = db.query(NetSession).filter_by(id=net_id).first()
     if session:
         session.status = "CLOSED"
-        socketio.emit('session_ended', {"reason": reason}, room=net_id)
-
         stations = db.query(Station).filter_by(net_id=net_id).all()
         for s in stations:
             sid = station_registry.get_sid(s.id)
             if sid:
+                socketio.emit('session_ended', {"reason": reason}, to=sid)
                 leave_room(net_id, sid=sid)
                 transmission_service.unregister_transmitting_sid(sid)
                 station_registry.unregister_sid(sid)
