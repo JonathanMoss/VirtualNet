@@ -73,7 +73,8 @@ Card container for instructors to host a session (`#create-net-card`):
     - **Call Sign**: Transmitting station callsign.
     - **Duration**: Live countup while PTT is held, finalized upon release.
     - **Status**: Live state (`TRANSMITTING` glowing green vs `PTT RELEASED`, `COMPLETED`, or `OVERRIDDEN`).
-    - **RX Summary**: Receipt verification summary (`ALL CALLSIGNS R/X` in green badge vs `NOT R/X: R12, R15` in amber badge).
+    - **RX Summary**: Receipt verification summary (`STREAMING` in cyan info badge while PTT is held live; `ALL CALLSIGNS R/X` in green badge vs `NOT R/X: R12, R15` in amber badge upon playback completion).
+  - **Clear Activity Log Button (`#btn-clear-tx-log`)**: Prompts Net Control with confirmation modal and issues `clear_transmission_log` event to wipe log rows across clients and backend.
 
 ### 2.4 Header Bar
 Top navigation bar styled as a military command header:

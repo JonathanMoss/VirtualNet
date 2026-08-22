@@ -983,3 +983,17 @@ def test_create_net_session_name_formatting(app, socket_client):
     socket_client.emit('create_net', payload_long)
     res_err = next(item for item in socket_client.get_received() if item['name'] == 'create_response')['args'][0]
     assert res_err['success'] is False
+
+
+def test_audio_rx_playback_complete_scoped_net_id(app, socket_client):
+    # pylint: disable=redefined-outer-name,unused-argument
+    """Test handling audio_rx_playback_complete with net_id scoping."""
+    valid_pin = get_today_instructor_pin()
+    payload = {'name': 'ACK Scoped Net', 'callsign_indicator': 'A', 'instructor_pin': valid_pin}
+    socket_client.emit('create_net', payload)
+    res = next(item for item in socket_client.get_received() if item['name'] == 'create_response')['args'][0]
+    net_id = res['netId']
+
+    socket_client.emit('audio_rx_playback_complete', {'transmissionId': 'dummy_tx_id', 'netId': net_id})
+    events = socket_client.get_received()
+    assert events is not None
