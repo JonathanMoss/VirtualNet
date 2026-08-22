@@ -1332,6 +1332,10 @@ def test_e2e_sunray_tx_log_rx_receipt_verification(browser_instance, target_url)
             if (window.virtualNetApp) window.virtualNetApp.startTransmission();
         }""")
         time.sleep(0.5)
+        live_log_text = page_inst.inner_text("#sunray-tx-log-tbody tr:first-child")
+        assert "TRANSMITTING" in live_log_text
+        assert "STREAMING" in live_log_text
+
         page_inst.evaluate("() => window.virtualNetApp.stopTransmission()")
         time.sleep(0.5)
 
