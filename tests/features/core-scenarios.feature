@@ -113,3 +113,10 @@ Feature: VirtualNet Core Radio Net Operations
     When student "John" views the online net roster
     Then the student roster payload should hide nicknames from student views
 
+  Scenario: Concurrent active net sessions run in complete isolation
+    Given SUNRAY 1 hosts net session "EX ISO A" with indicator "A"
+    And SUNRAY 2 hosts net session "EX ISO B" with indicator "B"
+    When student "John" joins net session "EX ISO A"
+    And student "Bob" joins net session "EX ISO B"
+    Then net session "EX ISO A" and net session "EX ISO B" operate concurrently without cross-session bleed
+

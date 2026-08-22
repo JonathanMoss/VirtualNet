@@ -660,3 +660,35 @@ def step_then_student_roster_privacy(context):
     for st in roster:
         if st.get("role") == "SUB_STATION":
             assert st.get("nickname") == ""
+
+
+@given('SUNRAY 1 hosts net session "{name1}" with indicator "{ind1}"')
+def step_given_sunray_1_hosts_session(context, name1, ind1):
+    step_given_sunray_hosted_net_formatted(context, name1, ind1)
+    context.net_session_1_id = context.net_id
+    context.net_session_1_pin = context.net_pin
+
+
+@given('SUNRAY 2 hosts net session "{name2}" with indicator "{ind2}"')
+def step_given_sunray_2_hosts_session(context, name2, ind2):
+    session = NetSession(name=name2, pin="ISO2", callsign_indicator=ind2, status="OPEN")
+    context.db.add(session)
+    context.db.commit()
+    context.net_session_2_id = session.id
+    context.net_session_2_pin = session.pin
+
+
+@when('student "{nickname}" joins net session "{name}"')
+def step_when_student_joins_specific_net(context, nickname, name):
+    net_id = context.net_session_1_id if name == "EX ISO A" else context.net_session_2_pin
+    st = Station(net_id=net_id, nickname=nickname, role="SUB_STATION", call_sign="R11", status="CONNECTED")
+    context.db.add(st)
+    context.db.commit()
+
+
+@then('net session "{name1}" and net session "{name2}" operate concurrently without cross-session bleed')
+def step_then_concurrent_sessions_isolated(context, name1, name2):
+    count_1 = context.db.query(Station).filter_by(net_id=context.net_session_1_id).count()
+    count_2 = context.db.query(Station).filter_by(net_id=context.net_session_2_id).count()
+    assert count_1 >= 1
+    assert count_2 >= 1

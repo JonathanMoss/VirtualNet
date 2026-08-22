@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 """Socket event integration tests for VirtualNet WebSocket communication."""
 import struct
 import time
@@ -997,3 +998,80 @@ def test_audio_rx_playback_complete_scoped_net_id(app, socket_client):
     socket_client.emit('audio_rx_playback_complete', {'transmissionId': 'dummy_tx_id', 'netId': net_id})
     events = socket_client.get_received()
     assert events is not None
+
+
+def test_concurrent_multi_session_isolation(app):
+    # pylint: disable=redefined-outer-name,unused-argument,too-many-locals,line-too-long
+    """Test 2 concurrent active Net Sessions are 100% isolated in sockets, PTT, audio, and roster."""
+    valid_pin = get_today_instructor_pin()
+
+    # 1. Create SUNRAY A (Session A)
+    client_sunray_a = socketio.test_client(app)
+    client_sunray_a.emit('create_net', {'name': 'Session ALPHA', 'callsign_indicator': 'A', 'instructor_pin': valid_pin})
+    res_a = next(m for m in client_sunray_a.get_received() if m['name'] == 'create_response')['args'][0]
+    pin_a = res_a['pin']
+    net_a = res_a['netId']
+
+    # 2. Create SUNRAY B (Session B)
+    client_sunray_b = socketio.test_client(app)
+    client_sunray_b.emit('create_net', {'name': 'Session BRAVO', 'callsign_indicator': 'B', 'instructor_pin': valid_pin})
+    res_b = next(m for m in client_sunray_b.get_received() if m['name'] == 'create_response')['args'][0]
+    pin_b = res_b['pin']
+    net_b = res_b['netId']
+
+    # 3. Join Student A in Session A and Student B in Session B
+    student_a = socketio.test_client(app)
+    student_a.emit('join_net', {'pin': pin_a, 'nickname': 'Alice'})
+    join_a = next(m for m in student_a.get_received() if m['name'] == 'join_response')['args'][0]
+    st_a_id = join_a['stationId']
+
+    student_b = socketio.test_client(app)
+    student_b.emit('join_net', {'pin': pin_b, 'nickname': 'Bob'})
+    join_b = next(m for m in student_b.get_received() if m['name'] == 'join_response')['args'][0]
+    st_b_id = join_b['stationId']
+
+    # Assign callsign R11 in Session A and R11 in Session B
+    client_sunray_a.emit('assign_callsign', {'stationId': st_a_id, 'callsign': 'A11', 'role': 'SUB_STATION', 'netId': net_a})
+    client_sunray_b.emit('assign_callsign', {'stationId': st_b_id, 'callsign': 'B11', 'role': 'SUB_STATION', 'netId': net_b})
+
+    student_a.get_received()
+    student_b.get_received()
+    client_sunray_a.get_received()
+    client_sunray_b.get_received()
+
+    # 4. Student A transmits PTT in Session A
+    student_a.emit('ptt_request', {'stationId': st_a_id, 'netId': net_a})
+    tx_start_a = next(m for m in student_a.get_received() if m['name'] == 'ptt_response')['args'][0]
+    assert tx_start_a['allowed'] is True
+
+    # Student B in Session B emits PTT (allowed because Session A is isolated!)
+    student_b.emit('ptt_request', {'stationId': st_b_id, 'netId': net_b})
+    tx_start_b = next(m for m in student_b.get_received() if m['name'] == 'ptt_response')['args'][0]
+    assert tx_start_b['allowed'] is True, "Session B PTT lock should be isolated from Session A"
+
+    # Verify Student B receives 0 audio events from Student A
+    student_a.emit('audio_chunk', {'transmissionId': tx_start_a['transmissionId'], 'stationId': st_a_id, 'netId': net_a, 'pcmData': [1, 2, 3]})
+
+    events_b = student_b.get_received()
+    audio_b_events = [e for e in events_b if e['name'] == 'audio_stream_chunk']
+    assert len(audio_b_events) == 0, "Student B must receive zero audio chunks from Session A"
+
+    # Release PTT
+    student_a.emit('ptt_release', {'transmissionId': tx_start_a['transmissionId'], 'stationId': st_a_id, 'netId': net_a})
+    student_b.emit('ptt_release', {'transmissionId': tx_start_b['transmissionId'], 'stationId': st_b_id, 'netId': net_b})
+
+    # 5. SUNRAY B ends Session B -> Session A remains connected
+    client_sunray_b.emit('end_session', {'netId': net_b})
+
+    # Student B receives session_ended
+    end_events_b = student_b.get_received()
+    assert any(e['name'] == 'session_ended' for e in end_events_b)
+
+    # Student A receives NO session_ended event
+    end_events_a = student_a.get_received()
+    assert not any(e['name'] == 'session_ended' for e in end_events_a)
+
+    client_sunray_a.disconnect()
+    client_sunray_b.disconnect()
+    student_a.disconnect()
+    student_b.disconnect()

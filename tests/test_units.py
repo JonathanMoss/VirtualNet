@@ -5,7 +5,7 @@ import pytest
 from conftest import get_today_instructor_pin
 
 from app import socketio
-from app.database import db_session
+from app.database import db_session, init_db, get_db
 from app.models import NetSession, Station, Transmission
 from app.schemas import NetSessionCreate, StationCreate
 from app.services import session_service, station_service, transmission_service
@@ -486,3 +486,64 @@ def test_purge_station(app):
     station_id = station.id
     station_service.purge_station(db, station)
     assert db.query(Station).filter_by(id=station_id).first() is None
+
+
+def test_health_check_endpoint(app):
+    """Test GET /healthz returns HTTP 200 with status ok and connected database."""
+    client = app.test_client()
+    res = client.get('/healthz')
+    assert res.status_code == 200
+    data = res.get_json()
+    assert data['status'] == 'ok'
+    assert data['database'] == 'connected'
+
+
+def test_security_headers(app):
+    """Test HTTP response security headers applied by Flask after_request hook."""
+    client = app.test_client()
+    res = client.get('/healthz')
+    assert res.headers.get('X-Frame-Options') == 'DENY'
+    assert res.headers.get('X-Content-Type-Options') == 'nosniff'
+    assert res.headers.get('Permissions-Policy') == 'microphone=(self)'
+    assert res.headers.get('Referrer-Policy') == 'strict-origin-when-cross-origin'
+
+
+def test_routes_coverage(app):
+    """Test HTTP routes for index, guides, and 404 handler coverage."""
+    client = app.test_client()
+    assert client.get('/').status_code == 200
+    assert client.get('/guide/student').status_code == 200
+    assert client.get('/guide/sunray').status_code == 200
+    assert client.get('/guide/nonexistent').status_code == 404
+
+
+def test_database_and_station_service_coverage(app):
+    # pylint: disable=unused-argument
+    """Test init_db, get_db, detach_station, and pin_service verification coverage."""
+    db = db_session
+    init_db()
+
+    session = get_db()
+    assert session is not None
+
+    net_session = NetSession(name="Detach Test", pin="DET1", callsign_indicator="D")
+    db.add(net_session)
+    db.commit()
+
+    st = Station(net_id=net_session.id, nickname="Detacher", role="SUB_STATION", call_sign="D11", status="CONNECTED")
+    db.add(st)
+    db.commit()
+
+    # Active transmission lock detach
+    tx = Transmission(net_id=net_session.id, sender_call_sign="D11", start_time=datetime.utcnow())
+    db.add(tx)
+    db.commit()
+
+    st_id, net_id = station_service.detach_station(db, st, "LEFT")
+    assert st_id == st.id
+    assert net_id == net_session.id
+    assert tx.end_time is not None
+    assert tx.termination_reason == "LEFT"
+
+    # Purge station with None/invalid input branch coverage
+    assert station_service.purge_station(db, None) == (None, None)

@@ -52,10 +52,16 @@ services:
       - DATABASE_URL=${DATABASE_URL:-sqlite:////app/data/virtualnet.db}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
       - SECRET_KEY=${SECRET_KEY}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS:-https://virtualnet.uk,https://www.virtualnet.uk}
       - VIRTUAL_HOST=${DOMAIN_NAME:-virtualnet.uk}
       - VIRTUAL_PORT=5000
       - LETSENCRYPT_HOST=${DOMAIN_NAME:-virtualnet.uk}
       - LETSENCRYPT_EMAIL=${LETSENCRYPT_EMAIL:-joth.moss@googlemail.com}
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:5000/healthz\")'"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
     volumes:
       - ./data:/app/data
 

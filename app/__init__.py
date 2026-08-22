@@ -23,14 +23,30 @@ socketio = SocketIO()
 from . import sockets
 
 
+def parse_cors_origins():
+    """Parse CORS_ALLOWED_ORIGINS environment variable into string or origin list."""
+    raw_cors = os.environ.get('CORS_ALLOWED_ORIGINS', '*').strip()
+    if raw_cors == '*' or not raw_cors:
+        return '*'
+    origins = [origin.strip() for origin in raw_cors.split(',') if origin.strip()]
+    return origins if len(origins) > 1 else (origins[0] if origins else '*')
+
+
 def create_app(testing=False):
     """Create and configure the Flask application instance."""
     app = Flask(__name__, static_folder='../static', static_url_path='/static', template_folder='../static/templates')
-    if testing or IS_TESTING:
+    is_test_env = testing or IS_TESTING
+    if is_test_env:
         app.config['TESTING'] = True
         app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'virtualnet-secret-key-1234')
     else:
         app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY') or secrets.token_hex(32)
+
+    # Session Cookie Security Hardening
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    if not is_test_env and os.environ.get('FLASK_ENV') == 'production':
+        app.config['SESSION_COOKIE_SECURE'] = True
 
     # Initialize Database Schema
     init_db()
@@ -45,12 +61,25 @@ def create_app(testing=False):
     def shutdown_session(_exception=None):
         db_session.remove()
 
+    # Apply Production HTTP Security Headers
+    @app.after_request
+    def apply_security_headers(response):
+        response.headers['X-Frame-Options'] = 'DENY'
+        response.headers['X-Content-Type-Options'] = 'nosniff'
+        response.headers['Permissions-Policy'] = 'microphone=(self)'
+        response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        if not is_test_env and os.environ.get('FLASK_ENV') == 'production':
+            response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        return response
+
+    cors_allowed = parse_cors_origins()
+
     # Initialize SocketIO app context with full server configuration
     socketio.init_app(
         app,
-        cors_allowed_origins="*",
+        cors_allowed_origins=cors_allowed,
         async_mode='eventlet',
-        message_queue=REDIS_URL if (REDIS_URL and ENABLE_REDIS_QUEUE and not (testing or IS_TESTING)) else None,
+        message_queue=REDIS_URL if (REDIS_URL and ENABLE_REDIS_QUEUE and not is_test_env) else None,
         logger=False,
         engineio_logger=False,
         pingInterval=2,

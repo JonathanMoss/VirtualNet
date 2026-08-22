@@ -9,7 +9,7 @@ pylint --fail-under=10.0 app tests
 echo "=========================================="
 echo "  2/6: Running Pytest (Units & Load) with 90% Coverage"
 echo "=========================================="
-pytest --ignore=tests/test_e2e_browser.py --maxfail=1 --disable-warnings --cov=app --cov-fail-under=90
+PYTHONPATH=. pytest --ignore=tests/test_e2e_browser.py --ignore=tests/test_e2e_full_suite.py --maxfail=1 --disable-warnings --cov=app --cov-fail-under=90
 
 echo "=========================================="
 echo "  3/6: Running Behave BDD Feature Suite"
@@ -39,10 +39,12 @@ echo "  6/6: Running Security & Dependency Audits"
 echo "=========================================="
 if command -v pip-audit >/dev/null 2>&1; then
     pip-audit --local || pip-audit --ignore-code PYSEC-2026-196 --ignore-code PYSEC-2026-1795 --ignore-code PYSEC-2026-1796 --ignore-code PYSEC-2026-2875 --ignore-code PYSEC-2026-2876 --ignore-code PYSEC-2026-3447
+elif python3 -m pip_audit --version >/dev/null 2>&1; then
+    python3 -m pip_audit --local || python3 -m pip_audit --ignore-code PYSEC-2026-196 --ignore-code PYSEC-2026-1795 --ignore-code PYSEC-2026-1796 --ignore-code PYSEC-2026-2875 --ignore-code PYSEC-2026-2876 --ignore-code PYSEC-2026-3447
 else
-    echo "pip-audit not installed on host - security audit deferred"
+    echo "pip-audit not installed on host - security audit deferred to container suite (./run_e2e.sh)"
 fi
-if [ -f package-lock.json ] && command -v npm >/dev/null 2>&1; then npm audit --audit-level=high; else echo "npm audit: package-lock.json clean (or container deferred)"; fi
+if [ -f package-lock.json ] && command -v npm >/dev/null 2>&1; then npm audit --audit-level=high; else echo "npm audit: package-lock.json clean (or container deferred to ./run_e2e.sh)"; fi
 
 echo "=========================================="
 echo "  ✅ All Checks Passed Successfully!"

@@ -50,5 +50,5 @@ services:
       - PYTHONUNBUFFERED=1
       - PYTHONPATH=/app
     working_dir: /app
-    command: ["sh", "-c", "pytest tests/test_e2e_full_suite.py -v -s --tb=short 2>&1 | tee /app/data/e2e_test_report.log"]
+    command: ["sh", "-c", "pip-audit --local || pip-audit --ignore-code PYSEC-2026-196 --ignore-code PYSEC-2026-1795 --ignore-code PYSEC-2026-1796 --ignore-code PYSEC-2026-2875 --ignore-code PYSEC-2026-2876 --ignore-code PYSEC-2026-3447; npm audit --audit-level=high; pytest tests/test_e2e_full_suite.py -v -s --tb=short 2>&1 | tee /app/data/e2e_test_report.log"]
     restart: "no"

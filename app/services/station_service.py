@@ -136,6 +136,7 @@ def purge_station(db, station: Station, sid: str = None):
 def detach_station(db, station: Station, reason_status: str):
     """Detach station, update transmission lock, clean up registry, and update roster."""
     net_id = station.net_id
+    call_sign = station.call_sign
     station.status = reason_status
     station.transmission_status = "IDLE"
     station.last_seen = datetime.utcnow()
@@ -143,14 +144,15 @@ def detach_station(db, station: Station, reason_status: str):
         station.call_sign = None
 
     # Clean up global PTT lock if this station was speaking
-    transmission = db.query(Transmission).filter_by(
-        net_id=net_id,
-        sender_call_sign=station.call_sign,
-        end_time=None
-    ).first()
-    if transmission:
-        transmission.end_time = datetime.utcnow()
-        transmission.termination_reason = reason_status
+    if call_sign:
+        transmission = db.query(Transmission).filter_by(
+            net_id=net_id,
+            sender_call_sign=call_sign,
+            end_time=None
+        ).first()
+        if transmission:
+            transmission.end_time = datetime.utcnow()
+            transmission.termination_reason = reason_status
 
     db.commit()
 
