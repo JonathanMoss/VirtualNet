@@ -244,11 +244,11 @@ def test_sunray_transmission_activity_log_telemetry(app, db):
     tx_id = res["transmissionId"]
 
     assert transmission_service.get_tx_status_string(tx_id) == "TRANSMITTING"
-    assert transmission_service.get_rx_summary_string(tx_id) == "NOT R/X: R12, R15"
+    assert transmission_service.get_rx_summary_string(tx_id) == "STREAMING"
 
     # Test fallback when tx_id is None (mobile receiver fallback)
     transmission_service.record_audio_rx_playback_complete(db, None, "R12", net_id=session.id)
-    assert transmission_service.get_rx_summary_string(tx_id) == "NOT R/X: R15"
+    assert transmission_service.get_rx_summary_string(tx_id) == "STREAMING"
 
     transmission_service.record_audio_rx_playback_complete(db, tx_id, "R15", net_id=session.id)
     assert transmission_service.get_rx_summary_string(tx_id) == "ALL CALLSIGNS R/X"

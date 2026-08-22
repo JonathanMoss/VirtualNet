@@ -253,6 +253,8 @@ export class SunrayController {
     let rxBadgeClass = 'bg-success';
     if (rxSummaryText.startsWith('NOT R/X')) {
       rxBadgeClass = 'bg-warning text-dark';
+    } else if (rxSummaryText === 'STREAMING' || rxSummaryText === 'RECEIVING') {
+      rxBadgeClass = 'bg-info text-dark';
     }
     const rxBadge = `<span class="badge ${rxBadgeClass} font-mono">${rxSummaryText}</span>`;
 

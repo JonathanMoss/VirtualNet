@@ -24,7 +24,7 @@ def format_transmission_dtg(dt: datetime) -> str:
 
 
 def get_rx_summary_string(tx_id: str) -> str:
-    """Returns formatted receipt summary: 'ALL CALLSIGNS R/X' or 'NOT R/X: R12, R15'."""
+    """Returns formatted receipt summary: STREAMING while live, or ALL CALLSIGNS R/X / NOT R/X upon completion."""
     receipt_data = active_tx_receipts.get(tx_id)
     if not receipt_data:
         return "ALL CALLSIGNS R/X"
@@ -35,6 +35,8 @@ def get_rx_summary_string(tx_id: str) -> str:
     missing = expected - received
     if not missing:
         return "ALL CALLSIGNS R/X"
+    if receipt_data.get("status") == "TRANSMITTING":
+        return "STREAMING"
     return f"NOT R/X: {', '.join(sorted(list(missing)))}"
 
 
