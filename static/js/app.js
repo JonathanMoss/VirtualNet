@@ -90,6 +90,7 @@ export class VirtualNetApp {
     this.rosterController.setupFoldToggle();
     this.sunrayController.setupFoldToggle();
     this.sunrayController.setupSessionEndTrigger();
+    this.sunrayController.setupClearTxLogTrigger();
 
     this.setupPTTMinimiseToggle();
     this.setupHeaderCollapseToggle();
@@ -371,6 +372,14 @@ export class VirtualNetApp {
       const sunrayCallsign = (document.getElementById('create-sunray-callsign')?.value || "0").trim();
       if (!name || !instructorPin) {
         await showAlert("Please fill in all Net Session fields.", { title: "INPUT REQUIRED" });
+        return;
+      }
+      if (name.length > 20) {
+        await showAlert("Net Session Name cannot exceed 20 characters.", { title: "INVALID INPUT" });
+        return;
+      }
+      if (!/^[a-zA-Z0-9\s\-./()]+$/.test(name)) {
+        await showAlert("Net Session Name can only contain letters, numbers, spaces, hyphens, periods, slashes, and parentheses.", { title: "INVALID INPUT" });
         return;
       }
       this.lastInstructorPin = instructorPin;
@@ -826,6 +835,10 @@ export class VirtualNetApp {
 
   handleSunrayTxLog(data) {
     this.sunrayController.handleSunrayTxLog(data);
+  }
+
+  handleSunrayTxLogCleared() {
+    this.sunrayController.clearTxLog();
   }
 
   resetToLanding() {

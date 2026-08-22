@@ -85,12 +85,13 @@ export class RosterController {
         : '';
 
       const isMe = st.id === this.app.myStationId ? ' <span class="text-warning fw-bold">(YOU)</span>' : '';
+      const isSunrayViewer = this.app.myRole === 'SUNRAY' || this.app.myRole === 'CONTROL' || this.app.myRole === 'INSTRUCTOR';
+      const nickSpan = isSunrayViewer ? ` <span class="text-desert-sand small">(${st.nickname || 'N/A'})</span>` : '';
 
       li.innerHTML = `
         <div class="text-truncate me-2">
           ${roleBadge}
-          <strong class="text-phosphor-green">${st.callSign || 'N/A'}</strong>
-          <span class="text-desert-sand small">(${st.nickname || 'N/A'})</span>${isMe}
+          <strong class="text-phosphor-green">${st.callSign || 'N/A'}</strong>${nickSpan}${isMe}
         </div>
         <span class="badge ${badgeClass} text-uppercase font-weight-bold" style="font-size: 0.75rem;">${statusText}</span>
       `;

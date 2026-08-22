@@ -52,10 +52,24 @@ def get_tx_status_string(tx_id: str, tx: Transmission = None) -> str:
     return "PTT RELEASED"
 
 
+def clear_session_transmissions(db, net_id: str):
+    """Delete all completed/active transmission records for a session and broadcast log cleared event."""
+    db.query(Transmission).filter_by(net_id=net_id).delete()
+    db.commit()
+
+    tx_ids_to_remove = [tx_id for tx_id, r in active_tx_receipts.items() if r.get("net_id") == net_id]
+    for tx_id in tx_ids_to_remove:
+        active_tx_receipts.pop(tx_id, None)
+
+    socketio.emit('sunray_tx_log_cleared', {}, room=net_id)
+
+
 def record_audio_rx_playback_complete(db, tx_id: str, callsign: str):
     """Record station audio playback receipt for tx_id and broadcast updated summary to SUNRAY."""
     if not callsign:
         return
+
+    clean_callsign = callsign.strip().upper()
 
     target_tx_id = tx_id
     if not target_tx_id or target_tx_id not in active_tx_receipts:
@@ -65,8 +79,8 @@ def record_audio_rx_playback_complete(db, tx_id: str, callsign: str):
             if net_id and receipt.get("net_id") == net_id:
                 target_tx_id = active_id
                 break
-            is_expected = callsign in receipt.get("expected_callsigns", set())
-            is_rx_station = callsign != receipt.get("sender_callsign")
+            is_expected = clean_callsign in receipt.get("expected_callsigns", set())
+            is_rx_station = clean_callsign != receipt.get("sender_callsign")
             if not net_id and (is_expected or is_rx_station):
                 target_tx_id = active_id
                 break
@@ -74,7 +88,7 @@ def record_audio_rx_playback_complete(db, tx_id: str, callsign: str):
     receipt_data = active_tx_receipts.get(target_tx_id)
     if not receipt_data:
         return
-    receipt_data["received_callsigns"].add(callsign)
+    receipt_data["received_callsigns"].add(clean_callsign)
     net_id = receipt_data["net_id"]
     tx = db.query(Transmission).filter_by(id=target_tx_id).first()
     if tx:
@@ -188,18 +202,24 @@ def grant_ptt_lock(db, station: Station, sid: str, net_id: str, broadcast_roster
 
     connected_stations = db.query(Station).filter(
         Station.net_id == net_id,
-        Station.status == "CONNECTED",
-        Station.role == "SUB_STATION",
+        ~Station.status.in_(["LEFT", "DISCONNECTED"]),
+        ~Station.role.in_(["SUNRAY", "CONTROL", "INSTRUCTOR"]),
         Station.call_sign.isnot(None),
-        Station.call_sign != station.call_sign
+        Station.id != station.id
     ).all()
+
+    sender_cs = station.call_sign.strip().upper() if station.call_sign else ""
+    expected_cs = set(
+        s.call_sign.strip().upper() for s in connected_stations
+        if s.call_sign and s.call_sign.strip().upper() != sender_cs
+    )
 
     active_tx_receipts[tx.id] = {
         "net_id": net_id,
-        "sender_callsign": station.call_sign,
+        "sender_callsign": sender_cs,
         "start_time": tx.start_time,
         "end_time": None,
-        "expected_callsigns": set(s.call_sign for s in connected_stations if s.call_sign),
+        "expected_callsigns": expected_cs,
         "received_callsigns": set(),
         "status": "TRANSMITTING"
     }

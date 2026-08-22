@@ -75,6 +75,10 @@ Emitted by server to SUNRAY stations with updated transmission status, duration,
   - `status`: String (`TRANSMITTING`, `PTT RELEASED`, `COMPLETED`, `OVERRIDDEN`)
   - `rxSummary`: String (`ALL CALLSIGNS R/X` or `NOT R/X: R12, R15`)
 
+### `SunrayTxLogClearedEvent` (`sunray_tx_log_cleared`)
+Emitted by server to SUNRAY stations when SUNRAY clears the transmission activity log.
+- **Payload**: `{}` (Empty JSON object)
+
 ### `TransmissionStartedEvent`
 Broadcasted to all stations in the net session room when PTT is granted to a transmitting station.
 - **Payload**:

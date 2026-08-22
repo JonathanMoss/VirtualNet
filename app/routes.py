@@ -1,7 +1,7 @@
 """HTTP routes and API endpoints for VirtualNet."""
 import os
 import markdown
-from flask import Blueprint, jsonify, render_template
+from flask import Blueprint, jsonify, render_template, request
 from app.database import get_db
 from app.models import NetSession, Station, Transmission
 from app.services import transmission_service
@@ -106,13 +106,17 @@ def get_session_roster(pin):
     return jsonify({"pin": pin, "roster": roster_data})
 
 
-@bp.route('/api/session/<pin>/transmissions')
-def get_session_transmissions(pin):
-    """API endpoint to get completed transmission log for Sunray review."""
+@bp.route('/api/session/<pin>/transmissions', methods=['GET', 'DELETE'])
+def session_transmissions(pin):
+    """API endpoint to get or clear completed transmission log for Sunray review."""
     db = get_db()
     session = db.query(NetSession).filter_by(pin=pin.upper()).first()
     if not session:
         return jsonify({"error": "Session not found"}), 404
+
+    if request.method == 'DELETE':
+        transmission_service.clear_session_transmissions(db, session.id)
+        return jsonify({"pin": pin, "status": "cleared", "transmissions": []})
 
     transmissions = db.query(Transmission).filter(
         Transmission.net_id == session.id,

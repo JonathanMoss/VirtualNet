@@ -119,6 +119,10 @@ export class SocketManager {
       this.app.handleSunrayTxLog(data);
     });
 
+    this.socket.on('sunray_tx_log_cleared', () => {
+      this.app.handleSunrayTxLogCleared();
+    });
+
     this.socket.on('session_ended', () => {
       showAlert("This net session has been ended by SUNRAY.", { title: "SESSION ENDED", titleColor: "var(--color-hot-red)" });
       this.app.clearSavedSession();
@@ -225,6 +229,10 @@ export class SocketManager {
 
   endSession() {
     this.socket.emit('end_session', { netId: this.app.netId });
+  }
+
+  clearTransmissionLog() {
+    this.socket.emit('clear_tx_log', { netId: this.app.netId });
   }
 
   disconnect() {

@@ -1,6 +1,7 @@
 """Service module for managing connected stations and socket mappings."""
 from datetime import datetime
 import eventlet
+from flask_socketio import leave_room
 from app import socketio
 from app.database import get_db
 from app.models import Station, Transmission
@@ -99,6 +100,39 @@ def grace_period_disconnect_timer(station_id: str, net_id: str):
         db.rollback()
 
 
+def purge_station(db, station: Station, sid: str = None):
+    """Evict station from socket room, unregister SID, and delete station record from DB."""
+    if not station:
+        return None, None
+
+    net_id = station.net_id
+    station_id = station.id
+    target_sid = sid or registry.get_sid(station_id)
+
+    if target_sid:
+        try:
+            leave_room(net_id, sid=target_sid)
+        except (RuntimeError, KeyError, AttributeError):
+            pass
+        registry.unregister_sid(target_sid)
+
+    # Clean up global PTT lock if this station was speaking
+    if station.call_sign:
+        transmission = db.query(Transmission).filter_by(
+            net_id=net_id,
+            sender_call_sign=station.call_sign,
+            end_time=None
+        ).first()
+        if transmission:
+            transmission.end_time = datetime.utcnow()
+            transmission.termination_reason = "DISCONNECTED"
+
+    db.delete(station)
+    db.commit()
+
+    return station_id, net_id
+
+
 def detach_station(db, station: Station, reason_status: str):
     """Detach station, update transmission lock, clean up registry, and update roster."""
     net_id = station.net_id
@@ -143,8 +177,7 @@ def process_station_leave(db, sid: str, transmission_service, session_service=No
         if station.role in ["SUNRAY", "CONTROL", "INSTRUCTOR"] and session_service:
             session_service.end_net_session(db, station, registry, transmission_service)
         else:
-            _, net_id = detach_station(db, station, "LEFT")
-            registry.unregister_sid(sid)
+            _, net_id = purge_station(db, station, sid)
             broadcast_roster(db, net_id)
 
 

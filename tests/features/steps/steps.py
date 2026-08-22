@@ -466,11 +466,22 @@ def step_then_sunray_header_badge(context, pin):
 @given('a student "{callsign}" was connected to net session "{pin}"')
 def step_given_student_connected_session(context, callsign, pin):
     step_given_sunray_hosting_session(context, pin)
+    nick = "John"
+    cs = callsign
+    if "(" in callsign and ")" in callsign:
+        parts = callsign.split("(")
+        cs = parts[0].strip()
+        nick = parts[1].replace(")", "").strip()
     student = socketio.test_client(context.app)
-    student.emit('join_net', {'pin': context.net_pin, 'nickname': 'John'})
+    student.emit('join_net', {'pin': context.net_pin, 'nickname': nick})
     join_resp = next(m for m in student.get_received() if m['name'] == 'join_response')['args'][0]
     context.student_station_id = join_resp['stationId']
     context.student_client = student
+    st = context.db.query(Station).filter_by(id=join_resp['stationId']).first()
+    if st:
+        st.call_sign = cs
+        st.status = 'CONNECTED'
+        context.db.commit()
     student.disconnect()
 
 
@@ -505,6 +516,7 @@ def step_then_credentials_wiped(context, nickname):
 
 
 @given('student "{callsign}" is connected to active net session "{pin}"')
+@given('student "{callsign}" is connected to net session "{pin}"')
 def step_given_student_connected_active_net(context, callsign, pin):
     step_given_student_connected_session(context, callsign, pin)
 
@@ -573,5 +585,52 @@ def step_when_ack_audio_playback(context, nickname):
 @then('SUNRAY\'s transmission log should display status "{status}" and RX summary "{rx_summary}"')
 def step_then_tx_log_status_and_rx_summary(context, status, rx_summary):
     tx_id = context.active_tx_res["transmissionId"]
-    assert transmission_service.get_tx_status_string(tx_id) == status
-    assert transmission_service.get_rx_summary_string(tx_id) == rx_summary
+    actual_status = transmission_service.get_tx_status_string(tx_id)
+    actual_rx = transmission_service.get_rx_summary_string(tx_id)
+    assert actual_status == status, f"Expected status '{status}', got '{actual_status}'"
+    assert actual_rx == rx_summary, f"Expected rx_summary '{rx_summary}', got '{actual_rx}'"
+
+
+@given('SUNRAY has hosted net session "{name}" with indicator "{indicator}"')
+def step_given_sunray_hosted_net_formatted(context, name, indicator):
+    session = NetSession(name=name, pin="CLR1", callsign_indicator=indicator, status="OPEN")
+    context.db.add(session)
+    context.db.commit()
+    context.net_id = session.id
+    context.net_pin = session.pin
+
+
+@given('student "{callsign} ({nickname})" has completed a voice transmission')
+def step_given_student_completed_tx(context, callsign, nickname):
+    session = context.db.query(NetSession).first()
+    st = Station(net_id=session.id, nickname=nickname, role="SUB_STATION", call_sign="R11", status="CONNECTED")
+    context.db.add(st)
+    context.db.commit()
+    res = transmission_service.grant_ptt_lock(context.db, st, "sid_11", session.id, broadcast_roster)
+    transmission_service.handle_ptt_release(context.db, st, res["transmissionId"], "sid_11", broadcast_roster)
+
+
+@when('SUNRAY clicks clear transmission log')
+def step_when_sunray_clears_tx_log(context):
+    session = context.db.query(NetSession).first()
+    transmission_service.clear_session_transmissions(context.db, session.id)
+
+
+@then('SUNRAY\'s transmission log should be empty')
+def step_then_tx_log_empty(context):
+    session = context.db.query(NetSession).first()
+    tx_count = context.db.query(Transmission).filter_by(net_id=session.id).count()
+    assert tx_count == 0
+
+
+@when('SUNRAY kicks station "{callsign}"')
+def step_when_sunray_kicks_station(context, callsign):
+    station = context.db.query(Station).filter_by(call_sign=callsign).first()
+    if station:
+        station_service.purge_station(context.db, station)
+
+
+@then('"{nickname}" station record should no longer exist in database')
+def step_then_station_purged_from_db(context, nickname):
+    st = context.db.query(Station).filter_by(nickname=nickname).first()
+    assert st is None

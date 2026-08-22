@@ -92,3 +92,14 @@ Feature: VirtualNet Core Radio Net Operations
     And "Mike" acknowledges audio playback
     Then SUNRAY's transmission log should display status "PTT RELEASED" and RX summary "ALL CALLSIGNS R/X"
 
+  Scenario: SUNRAY clears transmission activity log
+    Given SUNRAY has hosted net session "Clear.1 / (Test)" with indicator "R"
+    And student "R11 (John)" has completed a voice transmission
+    When SUNRAY clicks clear transmission log
+    Then SUNRAY's transmission log should be empty
+
+  Scenario: Kicked student is evicted and receives no post-session notifications
+    Given student "R11 (John)" is connected to net session "A3F9"
+    When SUNRAY kicks station "R11"
+    Then "John" station record should no longer exist in database
+

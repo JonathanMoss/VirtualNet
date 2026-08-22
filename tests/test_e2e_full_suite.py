@@ -1324,6 +1324,14 @@ def test_e2e_sunray_tx_log_rx_receipt_verification(browser_instance, target_url)
         assert "PTT RELEASED" in final_log_text or "COMPLETED" in final_log_text
         assert "ALL CALLSIGNS R/X" in final_log_text or "R/X" in final_log_text
 
+        # Test Clear Transmission Log UI
+        page_inst.click("#btn-clear-tx-log")
+        page_inst.wait_for_selector("#tactical-dialog-overlay:not(.d-none)", timeout=3000)
+        page_inst.click("#tactical-dialog-btn-confirm")
+        time.sleep(0.5)
+        cleared_text = page_inst.inner_text("#sunray-tx-log-tbody")
+        assert "No transmission records logged yet" in cleared_text
+
     finally:
         context_inst.close()
         context_stud1.close()
@@ -1331,3 +1339,54 @@ def test_e2e_sunray_tx_log_rx_receipt_verification(browser_instance, target_url)
         assert not errors_inst, f"Instructor trapped JS errors: {errors_inst}"
         assert not errors_stud1, f"Student 1 trapped JS errors: {errors_stud1}"
         assert not errors_stud2, f"Student 2 trapped JS errors: {errors_stud2}"
+
+
+def test_student_roster_nickname_privacy_e2e(browser_instance, target_url):
+    """E2E Test: Verify nicknames are hidden from student views in NET ROSTER sidebar."""
+    context_inst = browser_instance.new_context()
+    context_stud = browser_instance.new_context()
+    page_inst, errors_inst = create_trapped_page(context_inst)
+    page_stud, errors_stud = create_trapped_page(context_stud)
+
+    try:
+        # Instructor hosts net
+        page_inst.goto(target_url)
+        page_inst.wait_for_selector("#landing-section:not(.d-none)")
+        page_inst.click("#toggle-create-view")
+        page_inst.fill("#create-name", "Privacy Net")
+        page_inst.fill("#create-sunray-callsign", "0")
+        page_inst.fill("#create-instructor-pin", get_today_instructor_pin())
+        page_inst.click("#btn-create-net")
+        page_inst.wait_for_selector("#dashboard-section:not(.d-none)")
+
+        pin = page_inst.inner_text("#header-net-pin").replace("PIN: ", "").strip()
+
+        # Student joins net
+        page_stud.goto(target_url)
+        page_stud.wait_for_selector("#landing-section:not(.d-none)")
+        page_stud.fill("#join-pin", pin)
+        page_stud.fill("#join-nickname", "PrivateNick")
+        page_stud.click("#btn-join-net")
+        page_stud.wait_for_selector("#dashboard-section:not(.d-none)")
+
+        # Instructor assigns callsign
+        page_inst.wait_for_selector("#admissions-tbody button.btn-do-assign", timeout=5000)
+        page_inst.fill("#admissions-tbody input.input-assign-cs", "R11")
+        page_inst.click("#admissions-tbody button.btn-do-assign")
+
+        # Verify student roster sidebar does NOT show "(PrivateNick)"
+        page_stud.wait_for_selector("#roster-list li", timeout=5000)
+        stud_roster_text = page_stud.inner_text("#roster-list")
+        assert "R11" in stud_roster_text
+        assert "(PrivateNick)" not in stud_roster_text
+
+        # Verify instructor roster sidebar DOES show "(PrivateNick)"
+        inst_roster_text = page_inst.inner_text("#roster-list")
+        assert "R11" in inst_roster_text
+        assert "(PrivateNick)" in inst_roster_text
+
+    finally:
+        context_inst.close()
+        context_stud.close()
+        assert not errors_inst, f"Instructor trapped JS errors: {errors_inst}"
+        assert not errors_stud, f"Student trapped JS errors: {errors_stud}"
