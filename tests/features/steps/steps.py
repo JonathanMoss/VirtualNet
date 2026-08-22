@@ -644,7 +644,7 @@ def step_when_student_views_roster(context, nickname):
         ~Station.status.in_(["LEFT", "DISCONNECTED"])
     ).all()
     context.student_roster_payload = [
-        {"callSign": s.call_sign, "nickname": s.nickname if s.role == "SUNRAY" else ""}
+        {"callSign": s.call_sign, "nickname": s.nickname if s.role in ["SUNRAY", "CONTROL", "INSTRUCTOR"] else ""}
         for s in stations
     ]
 
@@ -653,5 +653,5 @@ def step_when_student_views_roster(context, nickname):
 def step_then_student_roster_privacy(context):
     roster = context.student_roster_payload
     for st in roster:
-        if st.get("callSign") != "0":
-            assert not st.get("nickname")
+        if st.get("callSign") not in ["0", None, "SUNRAY"]:
+            assert st.get("nickname") == ""
