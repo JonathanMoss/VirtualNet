@@ -57,6 +57,32 @@ export class SunrayController {
     }
   }
 
+  setupClearTxLogTrigger() {
+    const btnClear = document.getElementById('btn-clear-tx-log');
+    if (btnClear) {
+      btnClear.addEventListener('click', async () => {
+        const confirmed = await showConfirm(
+          "Are you sure you want to clear the transmission activity log?",
+          {
+            title: "CLEAR TRANSMISSION LOG",
+            confirmText: "CLEAR LOG",
+            confirmClass: "btn btn-warning btn-sm text-uppercase font-weight-bold"
+          }
+        );
+        if (confirmed && this.app.socketManager) {
+          this.app.socketManager.clearTransmissionLog();
+        }
+      });
+    }
+  }
+
+  clearTxLog() {
+    const txLogTbody = document.getElementById('sunray-tx-log-tbody');
+    if (txLogTbody) {
+      txLogTbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">No transmission records logged yet.</td></tr>';
+    }
+  }
+
   renderAdmissionsQueue(queue) {
     const tbody = document.getElementById('admissions-tbody');
     const headerBar = document.getElementById('app-header-bar');

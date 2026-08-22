@@ -949,3 +949,37 @@ def test_audio_rx_playback_complete_socket_event(app, socket_client):
     student.emit('audio_rx_playback_complete', None)
 
     student.disconnect()
+
+
+def test_clear_tx_log_socket_event(app, socket_client):
+    # pylint: disable=redefined-outer-name,unused-argument
+    """Test SUNRAY clearing transmission activity log over Socket.IO."""
+    valid_pin = get_today_instructor_pin()
+    payload = {'name': 'Clear Log Net', 'callsign_indicator': 'K', 'instructor_pin': valid_pin}
+    socket_client.emit('create_net', payload)
+    socket_client.get_received()
+
+    socket_client.emit('clear_tx_log', {})
+    events = socket_client.get_received()
+    cleared_event = next((item for item in events if item['name'] == 'sunray_tx_log_cleared'), None)
+    assert cleared_event is not None
+
+
+def test_create_net_session_name_formatting(app, socket_client):
+    # pylint: disable=redefined-outer-name,unused-argument
+    """Test hosting net with allowed characters . / () and max length 20."""
+    valid_pin = get_today_instructor_pin()
+    payload_valid = {'name': 'Drill 1 / (Alpha.A)', 'callsign_indicator': 'K', 'instructor_pin': valid_pin}
+    socket_client.emit('create_net', payload_valid)
+    res = next(item for item in socket_client.get_received() if item['name'] == 'create_response')['args'][0]
+    assert res['success'] is True
+
+    # Test rejection of session name >20 characters
+    payload_long = {
+        'name': 'This Name Exceeds Twenty Characters',
+        'callsign_indicator': 'K',
+        'instructor_pin': valid_pin
+    }
+    socket_client.emit('create_net', payload_long)
+    res_err = next(item for item in socket_client.get_received() if item['name'] == 'create_response')['args'][0]
+    assert res_err['success'] is False

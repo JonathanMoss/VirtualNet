@@ -276,12 +276,25 @@ def handle_kick_station(data):
 
     target_sid = registry.get_sid(station.id)
     net_id = station.net_id
-    station_service.detach_station(db, station, "DISCONNECTED")
+
     if target_sid:
-        registry.unregister_sid(target_sid)
         socketio.emit('kicked', {"reason": "You have been kicked from the net session by SUNRAY."}, to=target_sid)
 
+    station_service.purge_station(db, station, target_sid)
     broadcast_roster(db, net_id)
+
+
+@socketio.on('clear_tx_log')
+def handle_clear_tx_log(data):
+    """SUNRAY clears the session transmission log."""
+    # pylint: disable=unused-argument
+    db = get_db()
+    instructor = get_station_from_sid(db, request.sid)
+    if not instructor or instructor.role not in ["SUNRAY", "CONTROL", "INSTRUCTOR"]:
+        emit('error', {"reason": "Unauthorized action."})
+        return
+
+    transmission_service.clear_session_transmissions(db, instructor.net_id)
 
 
 @socketio.on('ptt_request')

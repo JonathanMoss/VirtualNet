@@ -23,7 +23,7 @@ def test_high_concurrency_socket_load(app, db):
     assert instructor_client.is_connected()
 
     instructor_client.emit('create_net', {
-        "name": "Stress Test Net Alpha",
+        "name": "Stress Test Net A",
         "callsign_indicator": "R",
         "instructor_pin": valid_pin
     })

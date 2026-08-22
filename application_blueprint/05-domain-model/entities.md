@@ -10,8 +10,8 @@ Represents an active virtual radio network frequency.
 
 ### Pydantic Schema: `NetSessionSchema`
 - `net_id`: `uuid.UUID`
-- `net_name`: `str` (Constraint: 1-50 chars, alphanumeric/spaces)
-- `pin`: `str` (Constraint: exactly 4 alphanumeric characters, capitalized)
+- `net_name`: `str` (Constraint: 1-20 characters, alphanumeric, spaces, hyphens, periods, slashes, and parentheses)
+- `pin`: `str` (Constraint: 4-character uppercase alphanumeric string)
 - `port`: `int` (Constraint: 1024-65535, default 5000)
 - `status`: `str` (Allowed values: `"OPEN"`, `"SUSPENDED"`, `"CLOSED"`)
 - `net_state`: `str` (Allowed values: `"FREE"`, `"DIRECTED"`, default `"DIRECTED"`)
@@ -19,7 +19,7 @@ Represents an active virtual radio network frequency.
 
 ### Database Columns: `net_sessions` Table
 - `id`: `String(36)`, Primary Key (UUID)
-- `name`: `String(50)`, Not Null
+- `name`: `String(20)`, Not Null
 - `pin`: `String(4)`, Unique, Not Null, Index
 - `port`: `Integer`, Not Null
 - `status`: `String(15)`, Not Null (default `"OPEN"`)

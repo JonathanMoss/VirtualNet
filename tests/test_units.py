@@ -19,16 +19,20 @@ from app.services import session_service, station_service, transmission_service
 def test_net_session_create_validation():
     """Test NetSessionCreate schema validation rules."""
     valid_pin = get_today_instructor_pin()
-    # Valid parameters
-    payload = {"name": "Exercise Drill One", "callsign_indicator": "R", "instructor_pin": valid_pin}
+    # Valid parameters including . / () and max length 20
+    payload = {"name": "Ex. 1 / (Alpha)", "callsign_indicator": "R", "instructor_pin": valid_pin}
     model = NetSessionCreate(**payload)
-    assert model.name == "Exercise Drill One"
+    assert model.name == "Ex. 1 / (Alpha)"
     assert model.callsign_indicator == "R"
     assert model.instructor_pin == valid_pin
 
-    # Invalid names
+    # Invalid names (symbols not allowed)
     with pytest.raises(ValidationError):
         NetSessionCreate(name="!!! Invalid Net !!!", callsign_indicator="R", instructor_pin=valid_pin)
+
+    # Invalid names (>20 characters)
+    with pytest.raises(ValidationError):
+        NetSessionCreate(name="Net Name Over Twenty Characters", callsign_indicator="R", instructor_pin=valid_pin)
 
     # Invalid callsign indicator (Z is reserved, length must be 1)
     with pytest.raises(ValidationError):
@@ -435,3 +439,50 @@ def test_transmission_service_edge_cases(db):
     transmission_service.grace_sids.pop("s3", None)
     transmission_service.grace_sids.pop("s4", None)
     assert transmission_service.get_audio_net_id("s3") is None
+
+
+def test_clear_session_transmissions(app):
+    # pylint: disable=unused-argument
+    """Test clearing session transmission activity log."""
+    db = db_session
+    session = NetSession(name="Test Clear Log", pin="CLR1", callsign_indicator="R")
+    db.add(session)
+    db.commit()
+
+    now = datetime.utcnow()
+    tx1 = Transmission(net_id=session.id, sender_call_sign="R11", start_time=now, end_time=now)
+    tx2 = Transmission(net_id=session.id, sender_call_sign="R12", start_time=now, end_time=now)
+    db.add_all([tx1, tx2])
+    db.commit()
+
+    transmission_service.active_tx_receipts[tx1.id] = {"net_id": session.id, "sender_callsign": "R11"}
+    transmission_service.active_tx_receipts[tx2.id] = {"net_id": session.id, "sender_callsign": "R12"}
+
+    assert db.query(Transmission).filter_by(net_id=session.id).count() == 2
+    transmission_service.clear_session_transmissions(db, session.id)
+    assert db.query(Transmission).filter_by(net_id=session.id).count() == 0
+    assert tx1.id not in transmission_service.active_tx_receipts
+    assert tx2.id not in transmission_service.active_tx_receipts
+
+
+def test_purge_station(app):
+    # pylint: disable=unused-argument
+    """Test station purge completely removes station DB record."""
+    db = db_session
+    session = NetSession(name="Test Purge", pin="PRG1", callsign_indicator="R")
+    db.add(session)
+    db.commit()
+
+    station = Station(
+        net_id=session.id,
+        nickname="KickedStudent",
+        role="SUB_STATION",
+        call_sign="R19",
+        status="CONNECTED"
+    )
+    db.add(station)
+    db.commit()
+
+    station_id = station.id
+    station_service.purge_station(db, station)
+    assert db.query(Station).filter_by(id=station_id).first() is None

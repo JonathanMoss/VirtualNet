@@ -18,7 +18,7 @@ PIN_REGEX = re.compile(r"^[A-Z0-9]{4}$")
 class NetSessionCreate(BaseModel):
     """Validation schema for hosting a new net session."""
     # pylint: disable=too-few-public-methods
-    name: str = Field(..., min_length=1, max_length=50)
+    name: str = Field(..., min_length=1, max_length=20)
     callsign_indicator: Optional[str] = Field(default="", max_length=5)
     instructor_pin: str = Field(..., min_length=6, max_length=6)
     sunray_callsign: Optional[str] = Field(default="0", max_length=15)
@@ -27,8 +27,8 @@ class NetSessionCreate(BaseModel):
     @classmethod
     def validate_name(cls, v: str) -> str:
         """Validate net session name."""
-        if not re.match(r"^[a-zA-Z0-9\s\-]+$", v):
-            raise ValueError("Net name must be alphanumeric and spaces/hyphens only")
+        if not re.match(r"^[a-zA-Z0-9\s\-./()]+$", v):
+            raise ValueError("Net name must be alphanumeric and spaces, hyphens, periods, slashes, or parentheses only")
         return v
 
     @field_validator('callsign_indicator')
