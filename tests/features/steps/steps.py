@@ -680,7 +680,7 @@ def step_given_sunray_2_hosts_session(context, name2, ind2):
 
 @when('student "{nickname}" joins net session "{name}"')
 def step_when_student_joins_specific_net(context, nickname, name):
-    net_id = context.net_session_1_id if name == "EX ISO A" else context.net_session_2_pin
+    net_id = context.net_session_1_id if name == "EX ISO A" else context.net_session_2_id
     st = Station(net_id=net_id, nickname=nickname, role="SUB_STATION", call_sign="R11", status="CONNECTED")
     context.db.add(st)
     context.db.commit()
