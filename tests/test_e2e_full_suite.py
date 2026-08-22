@@ -1325,6 +1325,34 @@ def test_e2e_sunray_tx_log_rx_receipt_verification(browser_instance, target_url)
         assert "PTT RELEASED" in final_log_text or "COMPLETED" in final_log_text
         assert "ALL CALLSIGNS R/X" in final_log_text or "R/X" in final_log_text
 
+        # Step 7: SUNRAY transmits and verifies student ACKs transition log to ALL CALLSIGNS R/X
+        page_inst.evaluate("""() => {
+            const btn = document.getElementById('ptt-btn');
+            if (btn) btn.disabled = false;
+            if (window.virtualNetApp) window.virtualNetApp.startTransmission();
+        }""")
+        time.sleep(0.5)
+        page_inst.evaluate("() => window.virtualNetApp.stopTransmission()")
+        time.sleep(0.5)
+
+        sunray_tx_id = page_inst.get_attribute("#sunray-tx-log-tbody tr:first-child", "data-tx-id")
+
+        # Students 1 and 2 acknowledge SUNRAY's transmission
+        page_stud1.evaluate(f"""() => {{
+            if (window.virtualNetApp && window.virtualNetApp.socketManager) {{
+                window.virtualNetApp.socketManager.emitAudioRxPlaybackComplete('{sunray_tx_id}');
+            }}
+        }}""")
+        page_stud2.evaluate(f"""() => {{
+            if (window.virtualNetApp && window.virtualNetApp.socketManager) {{
+                window.virtualNetApp.socketManager.emitAudioRxPlaybackComplete('{sunray_tx_id}');
+            }}
+        }}""")
+        time.sleep(0.5)
+
+        sunray_log_row = page_inst.inner_text("#sunray-tx-log-tbody tr:first-child")
+        assert "ALL CALLSIGNS R/X" in sunray_log_row
+
         # Test Clear Transmission Log UI
         page_inst.click("#btn-clear-tx-log")
         page_inst.wait_for_selector("#tactical-dialog-overlay:not(.d-none)", timeout=3000)
