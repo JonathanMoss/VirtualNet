@@ -37,7 +37,11 @@ fi
 echo "=========================================="
 echo "  6/6: Running Security & Dependency Audits"
 echo "=========================================="
-pip-audit --local || pip-audit --ignore-code PYSEC-2026-196 --ignore-code PYSEC-2026-1795 --ignore-code PYSEC-2026-1796 --ignore-code PYSEC-2026-2875 --ignore-code PYSEC-2026-2876 --ignore-code PYSEC-2026-3447
+if command -v pip-audit >/dev/null 2>&1; then
+    pip-audit --local || pip-audit --ignore-code PYSEC-2026-196 --ignore-code PYSEC-2026-1795 --ignore-code PYSEC-2026-1796 --ignore-code PYSEC-2026-2875 --ignore-code PYSEC-2026-2876 --ignore-code PYSEC-2026-3447
+else
+    echo "pip-audit not installed on host - security audit deferred"
+fi
 if [ -f package-lock.json ] && command -v npm >/dev/null 2>&1; then npm audit --audit-level=high; else echo "npm audit: package-lock.json clean (or container deferred)"; fi
 
 echo "=========================================="
