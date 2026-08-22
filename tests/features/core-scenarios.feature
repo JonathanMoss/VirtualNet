@@ -103,3 +103,13 @@ Feature: VirtualNet Core Radio Net Operations
     When SUNRAY kicks station "R11"
     Then "John" station record should no longer exist in database
 
+  Scenario: SUNRAY monitors live STREAMING badge while PTT is held
+    Given student "R11 (John)" and student "R12 (Mike)" are connected to net session "A3F9"
+    When "John" holds PTT to start voice transmission
+    Then SUNRAY's transmission log should display status "TRANSMITTING" and RX summary "STREAMING"
+
+  Scenario: Student net roster hides nicknames from peer student stations
+    Given student "R11 (John)" and student "R12 (Mike)" are connected to net session "A3F9"
+    When student "John" views the online net roster
+    Then the student roster payload should hide nicknames from student views
+

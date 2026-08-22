@@ -200,9 +200,28 @@ Sent back to the transmitting station to acknowledge receipt of an emitted audio
 }
 ```
 
+### Event: `audio_rx_playback_complete` (Client -> Server)
+Sent by student receiving clients upon completion of audio buffer playback.
+
+**Payload**:
+```json
+{
+  "transmissionId": "77a8dfbb-6a7f-44e2-9b2f-3dcd8e1e7fca",
+  "netId": "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d"
+}
+```
+
 ---
 
-## 6. Log Synchronization
+## 6. Log Synchronization & Activity Control
+
+### Event: `clear_transmission_log` (Client -> Server)
+Sent by SUNRAY Net Control to wipe all recorded transmission activity log rows across clients and backend memory.
+
+**Payload**: `{}`
+
+### Event: `sunray_tx_log_cleared` (Server -> Client Broadcast)
+Broadcast by the server to SUNRAY clients when transmission log is cleared.
 
 ### Event: `sync_log_entry` (Client -> Server)
 Sent by clients in real time to save log entries to the backend database.

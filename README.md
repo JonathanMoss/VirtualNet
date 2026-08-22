@@ -74,23 +74,24 @@ docker compose -f docker-compose.prod.yml up -d
 
 ## 🧪 Development Pipelines & Quality Gates
 
-All contributions must pass a 5-stage quality pipeline defined in [`run_checks.sh`](file:///home/jmoss2/VirtualNet/run_checks.sh):
+All contributions must pass a 6-stage quality pipeline defined in [`run_checks.sh`](file:///home/jmoss2/VirtualNet/run_checks.sh):
 
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
-## 5-Stage Check Runner (run_checks.sh)                                  │
+## 6-Stage Check Runner (run_checks.sh)                                  │
 ├────────────────────────────────────────────────────────────────────────┤
 │ Stage 1: Pylint Python Static Analysis    (--fail-under=10.0)          │
 │ Stage 2: Pytest Unit & Integration Tests  (--cov-fail-under=90)        │
 │ Stage 3: Behave BDD Feature Suite         (behave tests/features)      │
 │ Stage 4: ESLint JavaScript Analysis       (npm run lint:js)            │
 │ Stage 5: Node.js JavaScript Unit Tests    (npm run test:js)            │
+│ Stage 6: Security & Dependency Audits     (npm audit)                  │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Additional Test Suites
 - **DOM Contract Tests** (`tests/test_dom_contract.py`): Parses Jinja2 card templates to guarantee required element IDs (`#btn-join-net`, `#join-pin`, etc.) are maintained for JS/CSS hooks.
-- **Playwright E2E Browser Tests** (`tests/test_e2e_browser.py`): Executes headless Chromium user journeys testing station join, callsign assignment, PTT audio streaming, tab reconnection, and session teardown.
+- **Containerized Playwright E2E Suite** (`./run_e2e.sh` / `tests/test_e2e_full_suite.py`): Orchestrates multi-container Playwright E2E browser tests (22 test scenarios) in isolated Docker containers with automated teardown.
 
 ---
 

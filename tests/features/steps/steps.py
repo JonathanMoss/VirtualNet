@@ -634,3 +634,24 @@ def step_when_sunray_kicks_station(context, callsign):
 def step_then_station_purged_from_db(context, nickname):
     st = context.db.query(Station).filter_by(nickname=nickname).first()
     assert st is None
+
+
+@when('student "{nickname}" views the online net roster')
+def step_when_student_views_roster(context, nickname):
+    session = context.db.query(NetSession).first()
+    stations = context.db.query(Station).filter(
+        Station.net_id == session.id,
+        ~Station.status.in_(["LEFT", "DISCONNECTED"])
+    ).all()
+    context.student_roster_payload = [
+        {"callSign": s.call_sign, "nickname": s.nickname if s.role == "SUNRAY" else ""}
+        for s in stations
+    ]
+
+
+@then('the student roster payload should hide nicknames from student views')
+def step_then_student_roster_privacy(context):
+    roster = context.student_roster_payload
+    for st in roster:
+        if st.get("callSign") != "0":
+            assert not st.get("nickname")

@@ -107,3 +107,10 @@ Represents scenario events loaded to drive training.
 - `description`: `Text`, Not Null
 - `target_call_sign`: `String(15)`, Nullable
 - `status`: `String(15)`, Not Null (default `"PENDING"`)
+
+---
+
+## 6. Secret Key Security Specification
+
+- **Environment Variable**: `SECRET_KEY`
+- **Production Fallback**: If `SECRET_KEY` is omitted in non-testing environments, the server automatically generates a cryptographically secure 256-bit random key at startup using Python's `secrets.token_hex(32)`.
