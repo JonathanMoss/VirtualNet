@@ -344,7 +344,7 @@ def handle_audio_rx_playback_complete(data):
     db = get_db()
     station = get_station_from_sid(db, request.sid)
     if station and station.call_sign:
-        transmission_service.record_audio_rx_playback_complete(db, tx_id, station.call_sign)
+        transmission_service.record_audio_rx_playback_complete(db, tx_id, station.call_sign, net_id=station.net_id)
 
 
 @socketio.on('set_signal_quality')

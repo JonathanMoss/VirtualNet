@@ -247,10 +247,10 @@ def test_sunray_transmission_activity_log_telemetry(app, db):
     assert transmission_service.get_rx_summary_string(tx_id) == "NOT R/X: R12, R15"
 
     # Test fallback when tx_id is None (mobile receiver fallback)
-    transmission_service.record_audio_rx_playback_complete(db, None, "R12")
+    transmission_service.record_audio_rx_playback_complete(db, None, "R12", net_id=session.id)
     assert transmission_service.get_rx_summary_string(tx_id) == "NOT R/X: R15"
 
-    transmission_service.record_audio_rx_playback_complete(db, tx_id, "R15")
+    transmission_service.record_audio_rx_playback_complete(db, tx_id, "R15", net_id=session.id)
     assert transmission_service.get_rx_summary_string(tx_id) == "ALL CALLSIGNS R/X"
 
     transmission_service.handle_ptt_release(db, st1, tx_id, "sid1", dummy_broadcast)

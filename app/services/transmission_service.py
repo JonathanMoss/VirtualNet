@@ -64,7 +64,7 @@ def clear_session_transmissions(db, net_id: str):
     socketio.emit('sunray_tx_log_cleared', {}, room=net_id)
 
 
-def record_audio_rx_playback_complete(db, tx_id: str, callsign: str):
+def record_audio_rx_playback_complete(db, tx_id: str, callsign: str, net_id: str = None):
     """Record station audio playback receipt for tx_id and broadcast updated summary to SUNRAY."""
     if not callsign:
         return
@@ -73,15 +73,21 @@ def record_audio_rx_playback_complete(db, tx_id: str, callsign: str):
 
     target_tx_id = tx_id
     if not target_tx_id or target_tx_id not in active_tx_receipts:
-        station = db.query(Station).filter_by(call_sign=callsign).first() if db else None
-        net_id = station.net_id if station else None
+        target_net_id = net_id
+        if not target_net_id and db:
+            station = db.query(Station).filter(
+                Station.call_sign == clean_callsign,
+                ~Station.status.in_(["LEFT", "DISCONNECTED"])
+            ).order_by(Station.connected_at.desc()).first()
+            target_net_id = station.net_id if station else None
+
         for active_id, receipt in reversed(list(active_tx_receipts.items())):
-            if net_id and receipt.get("net_id") == net_id:
+            if target_net_id and receipt.get("net_id") == target_net_id:
                 target_tx_id = active_id
                 break
             is_expected = clean_callsign in receipt.get("expected_callsigns", set())
             is_rx_station = clean_callsign != receipt.get("sender_callsign")
-            if not net_id and (is_expected or is_rx_station):
+            if not target_net_id and (is_expected or is_rx_station):
                 target_tx_id = active_id
                 break
 
@@ -202,7 +208,7 @@ def grant_ptt_lock(db, station: Station, sid: str, net_id: str, broadcast_roster
 
     connected_stations = db.query(Station).filter(
         Station.net_id == net_id,
-        ~Station.status.in_(["LEFT", "DISCONNECTED"]),
+        Station.status == "CONNECTED",
         ~Station.role.in_(["SUNRAY", "CONTROL", "INSTRUCTOR"]),
         Station.call_sign.isnot(None),
         Station.id != station.id
