@@ -555,6 +555,9 @@ export class VirtualNetApp {
 
       document.getElementById('landing-section').classList.add('d-none');
       document.getElementById('dashboard-section').classList.remove('d-none');
+      if (this.sunrayController) {
+        this.sunrayController.clearTxLog();
+      }
       const instSec = document.getElementById('instructor-section');
       if (instSec) instSec.classList.remove('d-none');
       const lockOverlay = document.getElementById('callsign-lock-overlay');
@@ -857,6 +860,9 @@ export class VirtualNetApp {
     const landSec = document.getElementById('landing-section');
     if (landSec) landSec.classList.remove('d-none');
 
+    if (this.sunrayController) {
+      this.sunrayController.clearTxLog();
+    }
     const instSec = document.getElementById('instructor-section');
     if (instSec) instSec.classList.add('d-none');
 

@@ -269,16 +269,17 @@ export class SunrayController {
 
   async loadSunrayTransmissionHistory(pin) {
     if (!pin) return;
+    this.clearTxLog();
     try {
       const res = await fetch(`/api/session/${pin}/transmissions`);
       if (!res.ok) return;
       const data = await res.json();
-      const txLogTbody = document.getElementById('sunray-tx-log-tbody');
-      if (!txLogTbody || !data.transmissions) return;
+      const tbody = document.getElementById('sunray-tx-log-tbody');
+      if (!tbody || !data.transmissions) return;
 
-      txLogTbody.innerHTML = '';
+      tbody.innerHTML = '';
       if (data.transmissions.length === 0) {
-        txLogTbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">No transmission records logged yet.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center text-muted py-3">No transmission records logged yet.</td></tr>';
         return;
       }
 
@@ -288,7 +289,7 @@ export class SunrayController {
           tr.dataset.txId = tx.id || tx.transmissionId;
         }
         tr.innerHTML = this.renderTxLogRowContent(tx);
-        txLogTbody.appendChild(tr);
+        tbody.appendChild(tr);
       });
     } catch (err) {
       console.warn("Error loading transmission history:", err);

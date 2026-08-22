@@ -98,6 +98,7 @@ def restore_or_recreate_sunray_session(db, pin: str, instructor_pin: str, nickna
         db.flush()
     else:
         session.status = "OPEN"
+        db.query(Transmission).filter_by(net_id=session.id).delete()
 
     sunray_callsign = f"{session.callsign_indicator}0" if session.callsign_indicator else "0"
 
